@@ -324,10 +324,17 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
   const cardRotate = useTransform(dragX, [-280, 280], [-18, 18]);
-  const cardOpacity = useTransform(dragX, [-420, -180, 0, 180, 420], [0, 1, 1, 1, 0]);
 
-  const yesOpacity = useTransform(dragX, [25, 75], [0, 1]);
-  const nopeOpacity = useTransform(dragX, [-75, -25], [1, 0]);
+  // Opacity fades on all three exit directions
+  const cardOpacity = useTransform([dragX, dragY] as MotionValue<number>[], ([x, y]: number[]) => {
+    const opX = Math.abs(x) > 180 ? Math.max(0, 1 - (Math.abs(x) - 180) / 240) : 1;
+    const opY = y > 180 ? Math.max(0, 1 - (y - 180) / 240) : 1;
+    return Math.min(opX, opY);
+  });
+
+  const yesOpacity   = useTransform(dragX, [25, 75], [0, 1]);
+  const nopeOpacity  = useTransform(dragX, [-75, -25], [1, 0]);
+  const maybeOpacity = useTransform(dragY, [25, 75], [0, 1]);
 
   function handleAction(dir: "left" | "right" | "maybe") {
     if (action !== "none") return;
@@ -341,7 +348,9 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
     } else if (dir === "left") {
       animate(dragX, -520, { duration: 0.42, ease: "easeIn" });
     } else {
-      animate(dragY, [0, -10, 0], { duration: 0.35, times: [0, 0.45, 1], ease: "easeOut" });
+      // Slide card downward off screen
+      animate(dragX, 0, { type: "spring", stiffness: 500, damping: 40 });
+      animate(dragY, 560, { duration: 0.42, ease: "easeIn" });
     }
 
     // For "no", wait longer so snap burst has time to play
@@ -354,12 +363,21 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
   function handleDragEnd(_: PointerEvent, info: PanInfo) {
     if (action !== "none") return;
     const { offset, velocity } = info;
-    if (offset.x > 80 || velocity.x > 500) {
+
+    const absX = Math.abs(offset.x);
+    const absY = Math.max(0, offset.y); // only care about downward
+
+    // Downward swipe wins if it's the dominant axis and passes threshold
+    if (absY > absX && (offset.y > 80 || velocity.y > 500)) {
+      handleAction("maybe");
+    } else if (offset.x > 80 || velocity.x > 500) {
       handleAction("right");
     } else if (offset.x < -80 || velocity.x < -500) {
       handleAction("left");
     } else {
+      // Snap everything back to centre
       animate(dragX, 0, { type: "spring", stiffness: 320, damping: 30 });
+      animate(dragY, 0, { type: "spring", stiffness: 320, damping: 30 });
     }
   }
 
@@ -380,9 +398,9 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
           </div>
 
           <motion.div
-            drag="x"
-            dragConstraints={{ left: -500, right: 500 }}
-            dragElastic={0.05}
+            drag
+            dragConstraints={{ left: -500, right: 500, top: 0, bottom: 500 }}
+            dragElastic={{ left: 0.05, right: 0.05, top: 0.02, bottom: 0.05 }}
             style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity }}
             onDragEnd={handleDragEnd as never}
             className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
@@ -401,6 +419,13 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                 initial={false}
               >
                 NOPE
+              </motion.div>
+              <motion.div
+                style={{ opacity: maybeOpacity }}
+                className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 border-4 border-amber-400 text-amber-400 font-black text-xl px-4 py-1 rounded-lg select-none pointer-events-none whitespace-nowrap"
+                initial={false}
+              >
+                MAYBE
               </motion.div>
 
               <div className="absolute inset-0" style={{ background: profile.gradient }}>
