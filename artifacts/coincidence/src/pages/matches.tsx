@@ -98,7 +98,12 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
               {match.profile.name},{" "}
               <span className="text-muted-foreground font-normal">{match.profile.age}</span>
             </p>
-            {isAligned && (
+            {match.superLike && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-foreground text-background text-[9px] font-semibold tracking-wide shrink-0">
+                ✦✦ Double String
+              </span>
+            )}
+            {isAligned && !match.superLike && (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-foreground/8 border border-foreground/12 text-[9px] font-semibold tracking-wide text-foreground/70 shrink-0">
                 ✦ Stars Aligned
               </span>

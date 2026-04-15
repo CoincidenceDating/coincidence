@@ -9,6 +9,7 @@ import {
   type MotionValue,
 } from "framer-motion";
 import { Heart, X, HelpCircle, MapPin } from "lucide-react";
+import { StringIcon } from "@/components/StringIcon";
 import type { Profile } from "@/lib/data";
 
 type Action = "none" | "yes" | "no" | "maybe";
@@ -340,9 +341,11 @@ interface SwipeCardProps {
   progress?: string;
   peekProfiles?: Profile[];
   blurName?: boolean;
+  onDoubleString?: () => void;
+  boostCredits?: number;
 }
 
-export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false }: SwipeCardProps) {
+export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false, onDoubleString, boostCredits = 0 }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -563,6 +566,26 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             <Heart className="w-6 h-6" />
           </button>
         </div>
+
+        {/* Double String button */}
+        {onDoubleString && (
+          <div className="flex justify-center mt-3">
+            <button
+              onClick={onDoubleString}
+              disabled={action !== "none" || boostCredits < 2}
+              className={`flex items-center gap-2 px-5 py-2 rounded-full border transition-all active:scale-95
+                ${boostCredits >= 2
+                  ? "border-foreground/30 hover:border-foreground hover:bg-foreground hover:text-background text-foreground"
+                  : "border-border text-muted-foreground opacity-40 cursor-not-allowed"
+                }`}
+            >
+              <StringIcon className="w-3.5 h-3.5" />
+              <StringIcon className="w-3.5 h-3.5 -ml-2" />
+              <span className="text-xs font-semibold ml-0.5">Double String</span>
+              <span className="text-[10px] opacity-60 ml-1">2 credits</span>
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

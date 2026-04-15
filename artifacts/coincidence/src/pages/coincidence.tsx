@@ -23,9 +23,11 @@ interface CoincidencePageProps {
   onSendMessage: (match: Match) => void;
   checkedInLocations: Set<string>;
   lookingFor: string;
+  boostCredits: number;
+  onDoubleStringCredit: () => void;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMessage, checkedInLocations, lookingFor }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -75,6 +77,21 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
         onMaybe(matchData);
       }
     }
+    const next = currentIndex + 1;
+    if (next >= users.length) setDone(true);
+    else setCurrentIndex(next);
+  }
+
+  function handleDoubleString() {
+    if (!currentUser || !location || boostCredits < 2) return;
+    const matchData: Match = {
+      profile: currentUser, source: location.id,
+      locationName: location.name, locationIcon: location.icon,
+      matchedAt: Date.now(), superLike: true,
+    };
+    onMatch(matchData);
+    onDoubleStringCredit();
+    setCoincidenceMatch(matchData);
     const next = currentIndex + 1;
     if (next >= users.length) setDone(true);
     else setCurrentIndex(next);
@@ -433,6 +450,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                 locationName={location?.name}
                 progress={`${currentIndex + 1} of ${users.length} people here`}
                 blurName
+                onDoubleString={handleDoubleString}
+                boostCredits={boostCredits}
               />
             ) : null}
           </>

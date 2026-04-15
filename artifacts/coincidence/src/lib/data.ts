@@ -34,6 +34,7 @@ export interface Match {
   locationName?: string;
   locationIcon?: string;
   matchedAt: number;
+  superLike?: boolean;
 }
 
 export interface CheckIn {

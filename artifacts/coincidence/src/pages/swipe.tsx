@@ -19,6 +19,7 @@ interface SwipePageProps {
   boostRadius: number;
   boostCredits: number;
   onActivateBoost: () => void;
+  onDoubleStringCredit: () => void;
   lookingFor: string;
 }
 
@@ -30,6 +31,7 @@ export default function SwipePage({
   boostRadius,
   boostCredits,
   onActivateBoost,
+  onDoubleStringCredit,
   lookingFor,
 }: SwipePageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,6 +48,14 @@ export default function SwipePage({
         onMaybe({ profile, source: "swipe", matchedAt: Date.now() });
       }
     }
+    setCurrentIndex((prev) => (prev + 1) % Math.max(filteredProfiles.length, 1));
+  }
+
+  function handleDoubleString() {
+    const profile = filteredProfiles[currentIndex];
+    if (!profile || boostCredits < 2) return;
+    onMatch({ profile, source: "swipe", matchedAt: Date.now(), superLike: true });
+    onDoubleStringCredit();
     setCurrentIndex((prev) => (prev + 1) % Math.max(filteredProfiles.length, 1));
   }
 
@@ -116,6 +126,8 @@ export default function SwipePage({
           profile={profile}
           onSwipe={handleSwipe}
           peekProfiles={filteredProfiles.slice(currentIndex + 1, currentIndex + 3)}
+          onDoubleString={handleDoubleString}
+          boostCredits={boostCredits}
         />
       ) : (
         <div className="flex flex-col items-center gap-4 text-center px-6">
