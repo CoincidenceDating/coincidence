@@ -2,11 +2,7 @@ import { useState } from "react";
 import { locations, type Profile, type Match } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SwipeCard } from "@/components/SwipeCard";
 import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User } from "lucide-react";
@@ -20,9 +16,10 @@ const iconMap: Record<string, React.ReactNode> = {
 
 interface CoincidencePageProps {
   onMatch: (match: Match) => void;
+  onMaybe: (match: Match) => void;
 }
 
-export default function CoincidencePage({ onMatch }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -34,34 +31,25 @@ export default function CoincidencePage({ onMatch }: CoincidencePageProps) {
 
   function handleActivate() {
     if (!selectedLocation) return;
-    setCurrentIndex(0);
-    setDone(false);
-    setIsActive(true);
+    setCurrentIndex(0); setDone(false); setIsActive(true);
   }
 
   function handleDeactivate() {
-    setIsActive(false);
-    setSelectedLocation("");
-    setCurrentIndex(0);
-    setDone(false);
+    setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false);
   }
 
-  function handleSwipe(dir: "left" | "right") {
-    if (dir === "right" && currentUser && location) {
-      onMatch({
-        profile: currentUser,
-        source: location.id,
-        locationName: location.name,
-        locationIcon: location.icon,
-        matchedAt: Date.now(),
-      });
+  function handleSwipe(dir: "left" | "right" | "maybe") {
+    if (currentUser && location) {
+      const matchData: Match = {
+        profile: currentUser, source: location.id,
+        locationName: location.name, locationIcon: location.icon, matchedAt: Date.now(),
+      };
+      if (dir === "right") onMatch(matchData);
+      else if (dir === "maybe") onMaybe(matchData);
     }
     const next = currentIndex + 1;
-    if (next >= users.length) {
-      setDone(true);
-    } else {
-      setCurrentIndex(next);
-    }
+    if (next >= users.length) setDone(true);
+    else setCurrentIndex(next);
   }
 
   return (
@@ -70,57 +58,36 @@ export default function CoincidencePage({ onMatch }: CoincidencePageProps) {
         {!isActive ? (
           <>
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                <Zap className="w-8 h-8 text-primary" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
+                <Zap className="w-8 h-8 text-foreground" />
               </div>
               <h1 className="text-2xl font-bold">Coincidence Mode</h1>
-              <p className="text-muted-foreground text-sm mt-1">
-                Pick a spot and see who is around
-              </p>
+              <p className="text-muted-foreground text-sm mt-1">Pick a spot and see who is around</p>
             </div>
-
             <div className="space-y-4">
-              <Select
-                value={selectedLocation}
-                onValueChange={setSelectedLocation}
-              >
+              <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choose a location" />
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map((loc) => (
                     <SelectItem key={loc.id} value={loc.id}>
-                      <span className="flex items-center gap-2">
-                        {iconMap[loc.icon]}
-                        {loc.name}
-                      </span>
+                      <span className="flex items-center gap-2">{iconMap[loc.icon]}{loc.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={!selectedLocation}
-                onClick={handleActivate}
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Activate Coincidence Mode
+              <Button className="w-full" size="lg" disabled={!selectedLocation} onClick={handleActivate}>
+                <Zap className="w-4 h-4 mr-2" />Activate Coincidence Mode
               </Button>
             </div>
           </>
         ) : (
           <>
             <div className="flex items-center gap-2 mb-6">
-              <MapPin className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-sm font-medium text-primary truncate">
-                {location?.name}
-              </span>
-              <button
-                onClick={handleDeactivate}
-                className="ml-auto text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0"
-              >
+              <MapPin className="w-4 h-4 text-foreground shrink-0" />
+              <span className="text-sm font-medium truncate">{location?.name}</span>
+              <button onClick={handleDeactivate} className="ml-auto text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0">
                 Leave
               </button>
             </div>
@@ -134,14 +101,9 @@ export default function CoincidencePage({ onMatch }: CoincidencePageProps) {
             ) : done ? (
               <div className="text-center py-16 text-muted-foreground">
                 <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="font-medium">You have seen everyone here</p>
+                <p className="font-medium">You've seen everyone here</p>
                 <p className="text-xs mt-1">Come back later for new faces</p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-6"
-                  onClick={handleDeactivate}
-                >
+                <Button variant="outline" size="sm" className="mt-6" onClick={handleDeactivate}>
                   Leave Location
                 </Button>
               </div>

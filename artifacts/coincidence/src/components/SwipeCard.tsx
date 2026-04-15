@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   useMotionValue,
   useTransform,
@@ -6,92 +6,88 @@ import {
   motion,
   AnimatePresence,
 } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Heart, X } from "lucide-react";
+import { Heart, X, Star, MapPin } from "lucide-react";
 import type { Profile } from "@/lib/data";
 
-type Action = "none" | "yes" | "no";
+type Action = "none" | "yes" | "no" | "maybe";
 type Phase = "rope" | "snap-flash" | "broken" | "connected" | "hidden";
+type Slide = "left" | "right" | "up" | null;
 
-/**
- * Rope visual — hangs between the card and buttons.
- *
- * Rope path: M 50 0 Q cx 40 50 80 (quadratic bezier, viewBox 0 0 100 80)
- * Midpoint at t=0.5 when cx=4 (max stretch):
- *   x = 0.25*50 + 0.5*4 + 0.25*50 = 27
- *   y = 0.25*0  + 0.5*40 + 0.25*80 = 40
- * Sub-beziers (de Casteljau at t=0.5):
- *   Top half:    M 50 0  Q 27 20 27 40
- *   Bottom half: M 27 40 Q 27 60 50 80
- */
 const BREAK_X = 27;
 const BREAK_Y = 40;
 
 const FIBERS = [
-  { angle: -75, len: 10 },
-  { angle: -50, len: 13 },
-  { angle: -25, len: 9 },
-  { angle:   0, len: 12 },
-  { angle:  25, len: 11 },
-  { angle:  50, len: 13 },
-  { angle:  75, len: 9  },
-  { angle: 110, len: 10 },
-  { angle:-110, len: 11 },
+  { angle: -75, len: 10 }, { angle: -50, len: 13 }, { angle: -25, len: 9 },
+  { angle: 0, len: 12 }, { angle: 25, len: 11 }, { angle: 50, len: 13 },
+  { angle: 75, len: 9 }, { angle: 110, len: 10 }, { angle: -110, len: 11 },
 ];
 
-function RopeStrands({
-  d,
-  isYes,
-}: {
-  d: string | ReturnType<typeof useTransform>;
-  isYes?: boolean;
-}) {
+const CONFETTI_COLORS = [
+  "#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#FF6FD8",
+  "#FFA552", "#C77DFF", "#000000", "#333333", "#ffffff",
+];
+
+function ConfettiBurst() {
+  const particles = useMemo(() =>
+    Array.from({ length: 48 }, (_, i) => {
+      const angle = Math.random() * 2 * Math.PI;
+      const speed = 100 + Math.random() * 220;
+      const spread = Math.random() < 0.5 ? -1 : 1;
+      return {
+        id: i,
+        x: Math.cos(angle) * speed * (0.6 + Math.random() * 0.8),
+        y: -(60 + Math.abs(Math.sin(angle)) * speed + Math.random() * 160),
+        rotate: spread * (180 + Math.random() * 360),
+        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+        w: 7 + Math.random() * 9,
+        h: 4 + Math.random() * 5,
+        delay: Math.random() * 0.08,
+        isCircle: i % 5 === 0,
+      };
+    }), []
+  );
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden z-[9998]" aria-hidden>
+      {particles.map((p) => (
+        <motion.div
+          key={p.id}
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "42%",
+            width: p.isCircle ? p.w : p.w,
+            height: p.isCircle ? p.w : p.h,
+            backgroundColor: p.color,
+            borderRadius: p.isCircle ? "50%" : 2,
+          }}
+          initial={{ x: 0, y: 0, opacity: 1, rotate: 0, scale: 1 }}
+          animate={{ x: p.x, y: p.y, opacity: 0, rotate: p.rotate, scale: 0.4 }}
+          transition={{ duration: 1.1 + Math.random() * 0.3, delay: p.delay, ease: [0.1, 0.6, 0.8, 1] }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function RopeStrands({ d }: { d: string | ReturnType<typeof useTransform> }) {
   return (
     <>
-      {/* Shadow / depth layer */}
-      <motion.path
-        d={d as unknown as string}
-        stroke="#3A2008"
-        strokeWidth={7}
-        fill="none"
-        strokeLinecap="round"
-      />
-      {/* Main rope body */}
-      <motion.path
-        d={d as unknown as string}
-        stroke={isYes ? "#c0392b" : "#8B5E1A"}
-        strokeWidth={5}
-        fill="none"
-        strokeLinecap="round"
-        style={{
-          filter: isYes
-            ? "drop-shadow(0 0 6px rgba(244,63,94,0.8))"
-            : "none",
-        }}
-      />
-      {/* Lighter twist strand — one side of braid */}
-      <motion.path
-        d={d as unknown as string}
-        stroke={isYes ? "#ff8fa3" : "#C9952E"}
-        strokeWidth={2}
-        strokeDasharray="5 6"
-        strokeDashoffset={0}
-        fill="none"
-        strokeLinecap="round"
-        style={{ opacity: 0.8 }}
-      />
-      {/* Darker twist strand — other side of braid */}
-      <motion.path
-        d={d as unknown as string}
-        stroke="#4A2E08"
-        strokeWidth={1.5}
-        strokeDasharray="5 6"
-        strokeDashoffset={5}
-        fill="none"
-        strokeLinecap="round"
-        style={{ opacity: 0.6 }}
-      />
+      <motion.path d={d as unknown as string} stroke="#3A2008" strokeWidth={7} fill="none" strokeLinecap="round" />
+      <motion.path d={d as unknown as string} stroke="#8B5E1A" strokeWidth={5} fill="none" strokeLinecap="round" />
+      <motion.path d={d as unknown as string} stroke="#C9952E" strokeWidth={2} strokeDasharray="5 6" strokeDashoffset={0} fill="none" strokeLinecap="round" style={{ opacity: 0.8 }} />
+      <motion.path d={d as unknown as string} stroke="#4A2E08" strokeWidth={1.5} strokeDasharray="5 6" strokeDashoffset={5} fill="none" strokeLinecap="round" style={{ opacity: 0.6 }} />
+    </>
+  );
+}
+
+function RopeStrandsGlow({ d }: { d: string | ReturnType<typeof useTransform> }) {
+  return (
+    <>
+      <motion.path d={d as unknown as string} stroke="#3A2008" strokeWidth={7} fill="none" strokeLinecap="round" />
+      <motion.path d={d as unknown as string} stroke="#c0392b" strokeWidth={5} fill="none" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 6px rgba(244,63,94,0.8))" }} />
+      <motion.path d={d as unknown as string} stroke="#ff8fa3" strokeWidth={2} strokeDasharray="5 6" strokeDashoffset={0} fill="none" strokeLinecap="round" style={{ opacity: 0.8 }} />
+      <motion.path d={d as unknown as string} stroke="#4A2E08" strokeWidth={1.5} strokeDasharray="5 6" strokeDashoffset={5} fill="none" strokeLinecap="round" style={{ opacity: 0.6 }} />
     </>
   );
 }
@@ -108,74 +104,44 @@ function StringVisual({ action }: { action: Action }) {
 
   useEffect(() => {
     if (action === "no") {
-      setPhase("rope");
-      setIsYes(false);
-
-      // Stretch the rope hard left
+      setPhase("rope"); setIsYes(false);
       animate(cx, 4, { duration: 0.26, ease: [0.4, 0, 1, 1] });
-
-      // Flash moment — rope at maximum tension
-      const t1 = setTimeout(() => {
-        setPhase("snap-flash");
-        cx.set(53); // reset cx for next time
-      }, 270);
-
-      // Show broken halves
+      const t1 = setTimeout(() => { setPhase("snap-flash"); cx.set(53); }, 270);
       const t2 = setTimeout(() => setPhase("broken"), 310);
-
-      // All done
       const t3 = setTimeout(() => setPhase("hidden"), 750);
-
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-        clearTimeout(t3);
-      };
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
     }
-
     if (action === "yes") {
-      setPhase("rope");
-      setIsYes(false);
+      setPhase("rope"); setIsYes(false);
       animate(cx, 50, { duration: 0.2, ease: "easeOut" });
       setTimeout(() => setIsYes(true), 200);
       setTimeout(() => setPhase("hidden"), 560);
     }
-
+    if (action === "maybe") {
+      setPhase("rope"); setIsYes(false);
+      animate(cx, [53, 75, 31, 68, 38, 58, 48, 53], {
+        duration: 0.75,
+        times: [0, 0.15, 0.32, 0.48, 0.62, 0.75, 0.88, 1],
+        ease: "easeInOut",
+      });
+      setTimeout(() => setPhase("hidden"), 760);
+    }
     if (action === "none") {
-      setPhase("rope");
-      setIsYes(false);
-      cx.set(53);
+      setPhase("rope"); setIsYes(false); cx.set(53);
     }
   }, [action]);
 
-  if (phase === "hidden") return <div style={{ height: 80 }} />;
+  if (phase === "hidden") return <div style={{ height: 72 }} />;
 
   return (
-    <div className="flex justify-center" style={{ height: 80 }}>
-      <svg
-        width="120"
-        height="80"
-        viewBox="0 0 100 80"
-        style={{ overflow: "visible" }}
-      >
+    <div className="flex justify-center" style={{ height: 72 }}>
+      <svg width="120" height="72" viewBox="0 0 100 80" style={{ overflow: "visible" }}>
         <AnimatePresence mode="sync">
-          {/* ── Intact rope (idle / stretching / connected) ─────────────── */}
           {(phase === "rope" || phase === "snap-flash") && (
-            <motion.g
-              key="intact"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.05 }}
-            >
-              <RopeStrands d={mainD} isYes={isYes} />
-
-              {/* Yes: glowing dot at midpoint */}
+            <motion.g key="intact" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.05 }}>
+              {isYes ? <RopeStrandsGlow d={mainD} /> : <RopeStrands d={mainD} />}
               {isYes && (
-                <motion.circle
-                  cx={50}
-                  cy={40}
-                  r={6}
-                  fill="#f43f5e"
+                <motion.circle cx={50} cy={40} r={6} fill="#f43f5e"
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ scale: [0, 2, 0], opacity: [0, 1, 0] }}
                   transition={{ duration: 0.45, ease: "easeOut", times: [0, 0.4, 1] }}
@@ -184,182 +150,38 @@ function StringVisual({ action }: { action: Action }) {
             </motion.g>
           )}
 
-          {/* ── Snap flash: bright burst at break point ──────────────────── */}
           {phase === "snap-flash" && (
             <motion.g key="flash">
-              <motion.circle
-                cx={BREAK_X}
-                cy={BREAK_Y}
-                r={3}
-                fill="#FFD580"
-                initial={{ scale: 0, opacity: 1 }}
-                animate={{ scale: 4, opacity: 0 }}
+              <motion.circle cx={BREAK_X} cy={BREAK_Y} r={3} fill="#FFD580"
+                initial={{ scale: 0, opacity: 1 }} animate={{ scale: 4, opacity: 0 }}
                 transition={{ duration: 0.12 }}
               />
             </motion.g>
           )}
 
-          {/* ── Broken halves + fibers ───────────────────────────────────── */}
           {phase === "broken" && (
             <motion.g key="broken">
-              {/* Top half — recoils up and to the right */}
-              <motion.g
-                initial={{ x: 0, y: 0 }}
-                animate={{ x: 28, y: -26 }}
-                transition={{ duration: 0.38, ease: [0.1, 0, 0.6, 1] }}
-              >
-                <motion.path
-                  d="M 50 0 Q 27 20 27 40"
-                  stroke="#3A2008"
-                  strokeWidth={7}
-                  fill="none"
-                  strokeLinecap="round"
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 0.38, delay: 0.08 }}
-                />
-                <motion.path
-                  d="M 50 0 Q 27 20 27 40"
-                  stroke="#8B5E1A"
-                  strokeWidth={5}
-                  fill="none"
-                  strokeLinecap="round"
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 0.38, delay: 0.08 }}
-                />
-                <motion.path
-                  d="M 50 0 Q 27 20 27 40"
-                  stroke="#C9952E"
-                  strokeWidth={2}
-                  strokeDasharray="5 6"
-                  fill="none"
-                  strokeLinecap="round"
-                  style={{ opacity: 0.8 }}
-                  initial={{ opacity: 0.8 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 0.38, delay: 0.08 }}
-                />
-                {/* Frayed end — a few loose fibers at the break */}
-                {[
-                  { angle: 20,  len: 8 },
-                  { angle: 60,  len: 6 },
-                  { angle: 100, len: 9 },
-                  { angle: 140, len: 6 },
-                ].map(({ angle, len }, i) => {
+              <motion.g initial={{ x: 0, y: 0 }} animate={{ x: 28, y: -26 }} transition={{ duration: 0.38, ease: [0.1, 0, 0.6, 1] }}>
+                <motion.path d="M 50 0 Q 27 20 27 40" stroke="#3A2008" strokeWidth={7} fill="none" strokeLinecap="round" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.38, delay: 0.08 }} />
+                <motion.path d="M 50 0 Q 27 20 27 40" stroke="#8B5E1A" strokeWidth={5} fill="none" strokeLinecap="round" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.38, delay: 0.08 }} />
+                {[{ angle: 20, len: 8 }, { angle: 60, len: 6 }, { angle: 100, len: 9 }, { angle: 140, len: 6 }].map(({ angle, len }, i) => {
                   const rad = (angle * Math.PI) / 180;
-                  return (
-                    <motion.line
-                      key={i}
-                      x1={BREAK_X} y1={BREAK_Y}
-                      x2={BREAK_X + Math.cos(rad) * len}
-                      y2={BREAK_Y + Math.sin(rad) * len}
-                      stroke={i % 2 === 0 ? "#C9952E" : "#8B5E1A"}
-                      strokeWidth={1.5}
-                      strokeLinecap="round"
-                      initial={{ opacity: 1 }}
-                      animate={{ opacity: 0 }}
-                      transition={{ duration: 0.32, delay: 0.05 }}
-                    />
-                  );
+                  return <motion.line key={i} x1={BREAK_X} y1={BREAK_Y} x2={BREAK_X + Math.cos(rad) * len} y2={BREAK_Y + Math.sin(rad) * len} stroke={i % 2 === 0 ? "#C9952E" : "#8B5E1A"} strokeWidth={1.5} strokeLinecap="round" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.32, delay: 0.05 }} />;
                 })}
               </motion.g>
-
-              {/* Bottom half — recoils down and to the left */}
-              <motion.g
-                initial={{ x: 0, y: 0 }}
-                animate={{ x: -28, y: 26 }}
-                transition={{ duration: 0.38, ease: [0.1, 0, 0.6, 1] }}
-              >
-                <motion.path
-                  d="M 27 40 Q 27 60 50 80"
-                  stroke="#3A2008"
-                  strokeWidth={7}
-                  fill="none"
-                  strokeLinecap="round"
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 0.38, delay: 0.08 }}
-                />
-                <motion.path
-                  d="M 27 40 Q 27 60 50 80"
-                  stroke="#8B5E1A"
-                  strokeWidth={5}
-                  fill="none"
-                  strokeLinecap="round"
-                  initial={{ opacity: 1 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 0.38, delay: 0.08 }}
-                />
-                <motion.path
-                  d="M 27 40 Q 27 60 50 80"
-                  stroke="#C9952E"
-                  strokeWidth={2}
-                  strokeDasharray="5 6"
-                  strokeDashoffset={3}
-                  fill="none"
-                  strokeLinecap="round"
-                  initial={{ opacity: 0.8 }}
-                  animate={{ opacity: 0 }}
-                  transition={{ duration: 0.38, delay: 0.08 }}
-                />
-                {/* Frayed end at the break */}
-                {[
-                  { angle: -160, len: 8 },
-                  { angle: -120, len: 6 },
-                  { angle:  -80, len: 9 },
-                  { angle:  -40, len: 6 },
-                ].map(({ angle, len }, i) => {
+              <motion.g initial={{ x: 0, y: 0 }} animate={{ x: -28, y: 26 }} transition={{ duration: 0.38, ease: [0.1, 0, 0.6, 1] }}>
+                <motion.path d="M 27 40 Q 27 60 50 80" stroke="#3A2008" strokeWidth={7} fill="none" strokeLinecap="round" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.38, delay: 0.08 }} />
+                <motion.path d="M 27 40 Q 27 60 50 80" stroke="#8B5E1A" strokeWidth={5} fill="none" strokeLinecap="round" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.38, delay: 0.08 }} />
+                {[{ angle: -160, len: 8 }, { angle: -120, len: 6 }, { angle: -80, len: 9 }, { angle: -40, len: 6 }].map(({ angle, len }, i) => {
                   const rad = (angle * Math.PI) / 180;
-                  return (
-                    <motion.line
-                      key={i}
-                      x1={BREAK_X} y1={BREAK_Y}
-                      x2={BREAK_X + Math.cos(rad) * len}
-                      y2={BREAK_Y + Math.sin(rad) * len}
-                      stroke={i % 2 === 0 ? "#C9952E" : "#8B5E1A"}
-                      strokeWidth={1.5}
-                      strokeLinecap="round"
-                      initial={{ opacity: 1 }}
-                      animate={{ opacity: 0 }}
-                      transition={{ duration: 0.32, delay: 0.05 }}
-                    />
-                  );
+                  return <motion.line key={i} x1={BREAK_X} y1={BREAK_Y} x2={BREAK_X + Math.cos(rad) * len} y2={BREAK_Y + Math.sin(rad) * len} stroke={i % 2 === 0 ? "#C9952E" : "#8B5E1A"} strokeWidth={1.5} strokeLinecap="round" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: 0.32, delay: 0.05 }} />;
                 })}
               </motion.g>
-
-              {/* Radiating fibers at the snap point */}
               {FIBERS.map(({ angle, len }, i) => {
                 const rad = (angle * Math.PI) / 180;
-                return (
-                  <motion.line
-                    key={`fiber-${i}`}
-                    x1={BREAK_X}
-                    y1={BREAK_Y}
-                    x2={BREAK_X + Math.cos(rad) * len}
-                    y2={BREAK_Y + Math.sin(rad) * len}
-                    stroke={i % 3 === 0 ? "#FFD580" : i % 3 === 1 ? "#C9952E" : "#8B5E1A"}
-                    strokeWidth={i % 2 === 0 ? 1.5 : 1}
-                    strokeLinecap="round"
-                    initial={{ scale: 0.1, opacity: 1, originX: `${BREAK_X}px`, originY: `${BREAK_Y}px` }}
-                    animate={{ scale: 1, opacity: 0 }}
-                    transition={{ duration: 0.28, delay: i * 0.015, ease: "easeOut" }}
-                  />
-                );
+                return <motion.line key={`fiber-${i}`} x1={BREAK_X} y1={BREAK_Y} x2={BREAK_X + Math.cos(rad) * len} y2={BREAK_Y + Math.sin(rad) * len} stroke={i % 3 === 0 ? "#FFD580" : i % 3 === 1 ? "#C9952E" : "#8B5E1A"} strokeWidth={i % 2 === 0 ? 1.5 : 1} strokeLinecap="round" initial={{ scale: 0.1, opacity: 1, originX: `${BREAK_X}px`, originY: `${BREAK_Y}px` }} animate={{ scale: 1, opacity: 0 }} transition={{ duration: 0.28, delay: i * 0.015, ease: "easeOut" }} />;
               })}
-
-              {/* Bright burst ring */}
-              <motion.circle
-                cx={BREAK_X}
-                cy={BREAK_Y}
-                r={4}
-                fill="none"
-                stroke="#FFD580"
-                strokeWidth={2}
-                initial={{ scale: 0, opacity: 1 }}
-                animate={{ scale: 3.5, opacity: 0 }}
-                transition={{ duration: 0.22, ease: "easeOut" }}
-              />
+              <motion.circle cx={BREAK_X} cy={BREAK_Y} r={4} fill="none" stroke="#FFD580" strokeWidth={2} initial={{ scale: 0, opacity: 1 }} animate={{ scale: 3.5, opacity: 0 }} transition={{ duration: 0.22, ease: "easeOut" }} />
             </motion.g>
           )}
         </AnimatePresence>
@@ -370,95 +192,129 @@ function StringVisual({ action }: { action: Action }) {
 
 interface SwipeCardProps {
   profile: Profile;
-  onSwipe: (direction: "left" | "right") => void;
+  onSwipe: (direction: "left" | "right" | "maybe") => void;
   locationIcon?: React.ReactNode;
   locationName?: string;
   progress?: string;
 }
 
-export function SwipeCard({
-  profile,
-  onSwipe,
-  locationIcon,
-  locationName,
-  progress,
-}: SwipeCardProps) {
+export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
-  const [sliding, setSliding] = useState<"left" | "right" | null>(null);
+  const [sliding, setSliding] = useState<Slide>(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
-  function handleSwipe(dir: "left" | "right") {
+  function handleAction(dir: "left" | "right" | "maybe") {
     if (action !== "none") return;
-    const act: Action = dir === "left" ? "no" : "yes";
+    const act: Action = dir === "left" ? "no" : dir === "right" ? "yes" : "maybe";
     setAction(act);
-    setTimeout(() => setSliding(dir), 160);
+
+    if (dir === "right") {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 1500);
+      setTimeout(() => setSliding("right"), 160);
+    } else if (dir === "left") {
+      setTimeout(() => setSliding("left"), 160);
+    } else {
+      setTimeout(() => setSliding("up"), 160);
+    }
+
     setTimeout(() => {
       onSwipe(dir);
       setAction("none");
       setSliding(null);
-    }, 480);
+    }, dir === "maybe" ? 780 : 500);
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto">
-      {progress && (
-        <p className="text-xs text-muted-foreground text-center mb-4 uppercase tracking-wide">
-          {progress}
-        </p>
-      )}
+    <>
+      {showConfetti && <ConfettiBurst />}
 
-      <div
-        className={`transition-all duration-300 ease-out ${
-          sliding === "left"
-            ? "-translate-x-40 -rotate-12 opacity-0"
-            : sliding === "right"
-              ? "translate-x-40 rotate-12 opacity-0"
-              : ""
-        }`}
-      >
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-primary/70 to-primary text-primary-foreground text-2xl font-bold mb-4">
-              {profile.avatar}
-            </div>
-            <h2 className="text-xl font-semibold text-center">
-              {profile.name}, {profile.age}
-            </h2>
-            <p className="text-muted-foreground text-center mt-2 text-sm">
-              {profile.bio}
-            </p>
-            {locationIcon && locationName && (
-              <div className="flex items-center justify-center gap-1.5 mt-3">
-                {locationIcon}
-                <span className="text-xs text-muted-foreground">
-                  {locationName}
+      <div className="w-full max-w-sm mx-auto">
+        {progress && (
+          <p className="text-xs text-muted-foreground text-center mb-3 uppercase tracking-wide">
+            {progress}
+          </p>
+        )}
+
+        {/* Card */}
+        <div
+          className={`transition-all duration-300 ease-out ${
+            sliding === "left"
+              ? "-translate-x-44 -rotate-12 opacity-0"
+              : sliding === "right"
+                ? "translate-x-44 rotate-12 opacity-0"
+                : sliding === "up"
+                  ? "-translate-y-6 scale-95 opacity-0"
+                  : ""
+          }`}
+        >
+          <div className="rounded-3xl overflow-hidden shadow-xl" style={{ height: 430 }}>
+            {/* Photo area */}
+            <div className="relative w-full h-full" style={{ background: profile.gradient }}>
+              {/* Large avatar letters as texture */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-9xl font-black text-white/10 select-none tracking-tight">
+                  {profile.avatar}
                 </span>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
-      <StringVisual action={action} />
+              {/* Location pill */}
+              {locationIcon && locationName && (
+                <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
+                  {locationIcon}
+                  <span>{locationName}</span>
+                </div>
+              )}
 
-      <div className="flex justify-center gap-6">
-        <Button
-          variant="outline"
-          size="lg"
-          className="rounded-full w-14 h-14 p-0 border-destructive text-destructive hover:bg-destructive/10"
-          onClick={() => handleSwipe("left")}
-          disabled={action !== "none"}
-        >
-          <X className="w-6 h-6" />
-        </Button>
-        <Button
-          size="lg"
-          className="rounded-full w-14 h-14 p-0 bg-primary hover:bg-primary/90"
-          onClick={() => handleSwipe("right")}
-          disabled={action !== "none"}
-        >
-          <Heart className="w-6 h-6" />
-        </Button>
+              {/* Info overlay at bottom */}
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-5 pt-12 pb-5 text-white">
+                <h2 className="text-2xl font-bold leading-tight">
+                  {profile.name}, {profile.age}
+                </h2>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <MapPin className="w-3.5 h-3.5 text-white/60 shrink-0" />
+                  <span className="text-sm text-white/70">{profile.distance}</span>
+                </div>
+                <p className="text-sm text-white/80 mt-2 leading-snug line-clamp-2">
+                  {profile.bio}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <StringVisual action={action} />
+
+        {/* Three action buttons */}
+        <div className="flex justify-center items-center gap-5">
+          {/* No */}
+          <button
+            onClick={() => handleAction("left")}
+            disabled={action !== "none"}
+            className="w-14 h-14 rounded-full border-2 border-destructive/40 text-destructive hover:bg-destructive/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          {/* Maybe */}
+          <button
+            onClick={() => handleAction("maybe")}
+            disabled={action !== "none"}
+            className="w-12 h-12 rounded-full border-2 border-amber-400/60 text-amber-500 hover:bg-amber-50 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
+          >
+            <Star className="w-5 h-5" />
+          </button>
+
+          {/* Yes */}
+          <button
+            onClick={() => handleAction("right")}
+            disabled={action !== "none"}
+            className="w-14 h-14 rounded-full bg-foreground text-background hover:bg-foreground/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
+          >
+            <Heart className="w-6 h-6" />
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

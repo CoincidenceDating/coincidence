@@ -6,14 +6,15 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import SwipePage from "@/pages/swipe";
 import CoincidencePage from "@/pages/coincidence";
 import MatchesPage from "@/pages/matches";
+import UndecidedPage from "@/pages/undecided";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
-import { Heart, Zap, Sparkles, User } from "lucide-react";
+import { Heart, Zap, Sparkles, Star, User } from "lucide-react";
 import type { Match } from "@/lib/data";
 
 const queryClient = new QueryClient();
 
-type Tab = "swipe" | "coincidence" | "matches" | "profile";
+type Tab = "swipe" | "coincidence" | "matches" | "undecided" | "profile";
 
 function getOpeningText(match: Match): string {
   if (match.source === "swipe") return "Hey! We matched 👋 How's your day going?";
@@ -26,13 +27,11 @@ function getOpeningText(match: Match): string {
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
-
   useEffect(() => {
-    const timer = setTimeout(() => setFading(true), 1800);
-    const done = setTimeout(() => onDone(), 2300);
-    return () => { clearTimeout(timer); clearTimeout(done); };
+    const t1 = setTimeout(() => setFading(true), 1800);
+    const t2 = setTimeout(() => onDone(), 2300);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
-
   return (
     <div
       onClick={() => { setFading(true); setTimeout(onDone, 400); }}
@@ -40,7 +39,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
         position: "fixed", inset: 0, height: "100vh",
         display: "flex", flexDirection: "column",
         justifyContent: "center", alignItems: "center",
-        backgroundColor: "#0f0f0f", color: "white",
+        backgroundColor: "#0a0a0a", color: "white",
         textAlign: "center", cursor: "pointer",
         zIndex: 9999, transition: "opacity 0.5s ease",
         opacity: fading ? 0 : 1,
@@ -49,7 +48,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       <h1 style={{ fontSize: "3rem", marginBottom: "1rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
         Coincidence
       </h1>
-      <p style={{ fontSize: "1.2rem", opacity: 0.6, fontStyle: "italic" }}>
+      <p style={{ fontSize: "1.1rem", opacity: 0.5, fontStyle: "italic" }}>
         making the invisible string – visible
       </p>
     </div>
@@ -60,9 +59,10 @@ function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("swipe");
   const [matches, setMatches] = useState<Match[]>([]);
+  const [undecided, setUndecided] = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount] = useState(0);
+  const [newUndecidedCount, setNewUndecidedCount] = useState(0);
   const [activeChat, setActiveChat] = useState<Match | null>(null);
-  // messages keyed by profile id
   const [threads, setThreads] = useState<Record<string, Message[]>>({});
 
   const messageCounts = Object.fromEntries(
@@ -71,24 +71,34 @@ function AppShell() {
 
   function handleMatch(match: Match) {
     setMatches((prev) => {
-      // avoid exact duplicate (same profile + same source)
       const exists = prev.some(
         (m) => m.profile.id === match.profile.id && m.source === match.source
       );
       return exists ? prev : [...prev, match];
     });
-    if (activeTab !== "matches") {
-      setNewMatchCount((c) => c + 1);
-    }
+    if (activeTab !== "matches") setNewMatchCount((c) => c + 1);
+  }
+
+  function handleMaybe(match: Match) {
+    setUndecided((prev) => {
+      const exists = prev.some((m) => m.profile.id === match.profile.id);
+      return exists ? prev : [...prev, match];
+    });
+    if (activeTab !== "undecided") setNewUndecidedCount((c) => c + 1);
+  }
+
+  function handleUndecidedDecision(match: Match, decision: "yes" | "no") {
+    setUndecided((prev) => prev.filter((m) => m.profile.id !== match.profile.id));
+    if (decision === "yes") handleMatch(match);
   }
 
   function handleTabChange(tab: Tab) {
     if (tab === "matches") setNewMatchCount(0);
+    if (tab === "undecided") setNewUndecidedCount(0);
     setActiveTab(tab);
   }
 
   function handleOpenChat(match: Match) {
-    // Seed opening message the first time
     setThreads((prev) => {
       if (prev[match.profile.id]) return prev;
       const opening: Message = {
@@ -105,18 +115,11 @@ function AppShell() {
   function handleSend(profileId: string, text: string) {
     const isTheirReply = profileId.startsWith("__them__");
     const realId = isTheirReply ? profileId.replace("__them__", "") : profileId;
-
     const msg: Message = {
       id: `${realId}-${Date.now()}-${Math.random()}`,
-      text,
-      from: isTheirReply ? "them" : "me",
-      timestamp: Date.now(),
+      text, from: isTheirReply ? "them" : "me", timestamp: Date.now(),
     };
-
-    setThreads((prev) => ({
-      ...prev,
-      [realId]: [...(prev[realId] ?? []), msg],
-    }));
+    setThreads((prev) => ({ ...prev, [realId]: [...(prev[realId] ?? []), msg] }));
   }
 
   if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
@@ -125,22 +128,36 @@ function AppShell() {
     {
       id: "swipe",
       label: "Swipe",
-      icon: (a) => <Heart className={`w-5 h-5 ${a ? "fill-primary" : ""}`} />,
+      icon: (a) => <Heart className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />,
     },
     {
       id: "coincidence",
       label: "Coincidence",
-      icon: (a) => <Zap className={`w-5 h-5 ${a ? "fill-primary" : ""}`} />,
+      icon: (a) => <Zap className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />,
     },
     {
       id: "matches",
       label: "Matches",
       icon: (a) => (
         <div className="relative">
-          <Sparkles className={`w-5 h-5 ${a ? "fill-primary" : ""}`} />
+          <Sparkles className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
           {newMatchCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center leading-none">
               {newMatchCount > 9 ? "9+" : newMatchCount}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "undecided",
+      label: "Maybe",
+      icon: (a) => (
+        <div className="relative">
+          <Star className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
+          {newUndecidedCount > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold flex items-center justify-center leading-none">
+              {newUndecidedCount > 9 ? "9+" : newUndecidedCount}
             </span>
           )}
         </div>
@@ -149,21 +166,20 @@ function AppShell() {
     {
       id: "profile",
       label: "Profile",
-      icon: (a) => <User className={`w-5 h-5 ${a ? "fill-primary" : ""}`} />,
+      icon: (a) => <User className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />,
     },
   ];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} />}
-        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} />}
+        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} />}
         {activeTab === "matches" && (
-          <MatchesPage
-            matches={matches}
-            messageCounts={messageCounts}
-            onOpenChat={handleOpenChat}
-          />
+          <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
+        )}
+        {activeTab === "undecided" && (
+          <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
         {activeTab === "profile" && <ProfilePage matches={matches} />}
       </main>
@@ -174,10 +190,8 @@ function AppShell() {
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-                activeTab === tab.id
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+              className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors ${
+                activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.icon(activeTab === tab.id)}
@@ -187,7 +201,6 @@ function AppShell() {
         </div>
       </nav>
 
-      {/* Chat overlay — slides up over everything */}
       <AnimatePresence>
         {activeChat && (
           <ChatPage
