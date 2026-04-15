@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { swipeProfiles, type Match } from "@/lib/data";
 import { SwipeCard } from "@/components/SwipeCard";
-import { Zap } from "lucide-react";
+import { StringIcon } from "@/components/StringIcon";
 
 function formatBoostTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -54,9 +54,9 @@ export default function SwipePage({ onMatch, onMaybe, isBoostActive, boostTimeLe
                 animate={{ opacity: [1, 0.4, 1] }}
                 transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Zap className="w-3.5 h-3.5 fill-background" />
+                <StringIcon className="w-3.5 h-3.5" />
               </motion.div>
-              Boosted · {boostRadius} mi radius · {formatBoostTime(boostTimeLeft)} left
+              String active · {boostRadius} mi · {formatBoostTime(boostTimeLeft)} left
             </motion.div>
           )}
         </AnimatePresence>

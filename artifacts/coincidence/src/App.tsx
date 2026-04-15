@@ -10,6 +10,7 @@ import UndecidedPage from "@/pages/undecided";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
 import { Heart, Zap, Sparkles, HelpCircle, User } from "lucide-react";
+import { StringIcon } from "@/components/StringIcon";
 import type { Match, CheckIn } from "@/lib/data";
 
 const queryClient = new QueryClient();
@@ -178,7 +179,7 @@ function AppShell() {
           <Heart className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
           {isBoostActive && (
             <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background flex items-center justify-center">
-              <Zap className="w-2 h-2 fill-background text-background" />
+              <StringIcon className="w-2 h-2 text-background" />
             </span>
           )}
         </div>

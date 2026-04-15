@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { myProfile, type Match, type CheckIn } from "@/lib/data";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MapPin, Zap, Wine, Beer, Coffee, Sparkles } from "lucide-react";
+import { Heart, MapPin, Zap, Wine, Beer, Coffee, Sparkles, ShoppingBag, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { StringIcon } from "@/components/StringIcon";
 
 const locationIconMap: Record<string, React.ReactNode> = {
   wine:     <Wine className="w-4 h-4" />,
@@ -12,6 +14,13 @@ const locationIconMap: Record<string, React.ReactNode> = {
 
 const MAX_CREDITS = 5;
 const BOOST_DURATION_MS = 30 * 60 * 1000;
+const RADIUS_OPTIONS = [1, 5, 10, 25];
+
+const STRING_PACKS = [
+  { id: "s3",  count: 3,  label: "3 strings",  price: "$0.99",  tag: "" },
+  { id: "s5",  count: 5,  label: "5 strings",  price: "$1.49",  tag: "Popular" },
+  { id: "s10", count: 10, label: "10 strings", price: "$2.49",  tag: "Best value" },
+];
 
 function formatCheckInTime(ts: number): string {
   const now = Date.now();
@@ -24,14 +33,12 @@ function formatCheckInTime(ts: number): string {
   return `${d.toLocaleDateString([], { month: "short", day: "numeric" })}, ${timeStr}`;
 }
 
-function formatBoostTime(ms: number): string {
+function formatStringTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(total / 60);
   const s = total % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
-
-const RADIUS_OPTIONS = [1, 5, 10, 25];
 
 interface ProfilePageProps {
   matches: Match[];
@@ -54,6 +61,9 @@ export default function ProfilePage({
   onBoostRadiusChange,
   onActivateBoost,
 }: ProfilePageProps) {
+  const [showStore, setShowStore] = useState(false);
+  const [purchasedPack, setPurchasedPack] = useState<string | null>(null);
+
   const totalMatches = matches.length;
   const coincidenceMatches = matches.filter((m) => m.source !== "swipe").length;
 
@@ -68,7 +78,7 @@ export default function ProfilePage({
       {/* Avatar + name */}
       <div className="flex flex-col items-center text-center mb-8">
         <div className="relative mb-4">
-          {/* Boost aura ring */}
+          {/* String aura ring */}
           <AnimatePresence>
             {isBoostActive && (
               <motion.div
@@ -90,7 +100,7 @@ export default function ProfilePage({
                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                 className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-background border-2 border-foreground flex items-center justify-center z-20"
               >
-                <Zap className="w-3.5 h-3.5 fill-foreground" />
+                <StringIcon className="w-3.5 h-3.5" />
               </motion.div>
             )}
           </div>
@@ -125,13 +135,22 @@ export default function ProfilePage({
         </Card>
       </div>
 
-      {/* ── Boost section ── */}
+      {/* ── String section ── */}
       <div className="mb-6">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-          Boost
-        </h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            String
+          </h2>
+          <button
+            onClick={() => setShowStore(true)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ShoppingBag className="w-3.5 h-3.5" />
+            Get more
+          </button>
+        </div>
 
-        {/* Credit pips */}
+        {/* String pips */}
         <div className="flex items-center gap-1.5 mb-3">
           {Array.from({ length: MAX_CREDITS }).map((_, i) => (
             <motion.div
@@ -139,26 +158,26 @@ export default function ProfilePage({
               animate={isBoostActive && i === 0 ? { scale: [1, 1.25, 1] } : {}}
               transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
             >
-              <Zap
+              <StringIcon
                 className={`w-5 h-5 transition-colors ${
                   i < boostCredits
-                    ? "fill-foreground text-foreground"
+                    ? "text-foreground"
                     : "text-muted-foreground/25"
                 }`}
               />
             </motion.div>
           ))}
           <span className="ml-1 text-sm text-muted-foreground">
-            {boostCredits} / {MAX_CREDITS} boost{boostCredits !== 1 ? "s" : ""}
+            {boostCredits} / {MAX_CREDITS} string{boostCredits !== 1 ? "s" : ""}
           </span>
         </div>
 
         {/* Radius selector */}
-        <div className="space-y-2">
+        <div className="space-y-2 mb-3">
           <p className="text-xs text-muted-foreground">
             {isBoostActive
               ? `Visible to everyone within ${boostRadius} mi`
-              : `Visible radius · select before boosting`}
+              : `Visible radius · select before pulling`}
           </p>
           <div className="flex gap-2">
             {RADIUS_OPTIONS.map((r) => (
@@ -193,14 +212,14 @@ export default function ProfilePage({
                   animate={{ opacity: [1, 0.4, 1] }}
                   transition={{ duration: 1.2, repeat: Infinity }}
                 >
-                  <Zap className="w-4 h-4 fill-background" />
+                  <StringIcon className="w-4 h-4" />
                 </motion.div>
                 <span className="text-sm font-semibold">
                   Reaching {boostRadius} mi radius
                 </span>
               </div>
               <span className="text-sm font-mono tabular-nums">
-                {formatBoostTime(boostTimeLeft)}
+                {formatStringTime(boostTimeLeft)}
               </span>
             </motion.div>
           ) : (
@@ -213,8 +232,8 @@ export default function ProfilePage({
               disabled={boostCredits === 0}
               className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-35 hover:bg-foreground/85 active:scale-[0.98] transition-all"
             >
-              <Zap className="w-4 h-4 fill-background" />
-              Boost my visibility
+              <StringIcon className="w-4 h-4" />
+              Pull your string
               {boostCredits > 0 && (
                 <span className="ml-1 text-background/60 text-xs font-normal">
                   · {boostRadius} mi · uses 1 of {boostCredits}
@@ -228,11 +247,11 @@ export default function ProfilePage({
           {isBoostActive
             ? "You're appearing to 3× more people nearby"
             : boostCredits < MAX_CREDITS
-            ? "Earn boosts by checking into new places"
-            : "Boost credits full — start swiping!"}
+            ? "Earn strings by checking into new places"
+            : "Strings full — start swiping!"}
         </p>
 
-        {/* Progress bar showing boost drain */}
+        {/* Progress bar showing string drain */}
         {isBoostActive && (
           <motion.div className="mt-3 h-1 rounded-full bg-muted overflow-hidden">
             <motion.div
@@ -313,6 +332,114 @@ export default function ProfilePage({
           making the invisible string – visible
         </p>
       </div>
+
+      {/* ── String Store overlay ── */}
+      <AnimatePresence>
+        {showStore && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowStore(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 350, damping: 35 }}
+              className="w-full max-w-md bg-background rounded-t-3xl px-6 pt-5 pb-10 space-y-6"
+            >
+              {/* Handle */}
+              <div className="w-10 h-1 rounded-full bg-muted mx-auto" />
+
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">Get more string</h2>
+                  <p className="text-sm text-muted-foreground italic mt-0.5">
+                    see what fate already started
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowStore(false)}
+                  className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* String illustration */}
+              <div className="flex justify-center">
+                <svg viewBox="0 0 120 40" className="w-48 opacity-70">
+                  <path
+                    d="M10 28 C 20 14, 30 10, 40 18 C 50 26, 50 34, 60 34 C 70 34, 70 18, 80 14 C 90 10, 100 18, 110 24"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    fill="none"
+                    strokeLinecap="round"
+                  />
+                  <path
+                    d="M10 28 C 20 14, 30 10, 40 18 C 50 26, 50 34, 60 34 C 70 34, 70 18, 80 14 C 90 10, 100 18, 110 24"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeOpacity="0.25"
+                    fill="none"
+                    strokeLinecap="round"
+                    transform="translate(0, 3)"
+                  />
+                </svg>
+              </div>
+
+              {/* Packs */}
+              <div className="space-y-3">
+                {STRING_PACKS.map((pack) => (
+                  <motion.button
+                    key={pack.id}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setPurchasedPack(pack.id)}
+                    className={`w-full flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${
+                      purchasedPack === pack.id
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border hover:border-foreground/40"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`flex gap-0.5 ${purchasedPack === pack.id ? "text-background" : "text-foreground"}`}>
+                        {Array.from({ length: Math.min(pack.count, 5) }).map((_, i) => (
+                          <StringIcon key={i} className="w-4 h-4" />
+                        ))}
+                        {pack.count > 5 && <span className="text-xs font-bold ml-1">×{pack.count}</span>}
+                      </div>
+                      <div className="text-left">
+                        <p className="font-semibold text-sm">{pack.label}</p>
+                        {pack.tag && (
+                          <p className={`text-xs ${purchasedPack === pack.id ? "text-background/70" : "text-muted-foreground"}`}>
+                            {pack.tag}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="font-bold text-sm">{pack.price}</span>
+                  </motion.button>
+                ))}
+              </div>
+
+              {/* Buy button */}
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                disabled={!purchasedPack}
+                className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-sm disabled:opacity-30 transition-opacity"
+                onClick={() => setShowStore(false)}
+              >
+                {purchasedPack
+                  ? `Get ${STRING_PACKS.find((p) => p.id === purchasedPack)?.label}`
+                  : "Choose a pack"}
+              </motion.button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
