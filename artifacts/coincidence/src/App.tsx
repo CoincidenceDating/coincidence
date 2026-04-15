@@ -278,7 +278,6 @@ function AppShell() {
       localStorage.removeItem(CHECKINS_KEY);
       localStorage.removeItem(BOOST_KEY);
       localStorage.removeItem(BLOCKED_KEY);
-      localStorage.removeItem(SWIPED_KEY);
     } catch {}
     setMatches([]);
     setUndecided([]);
@@ -291,7 +290,6 @@ function AppShell() {
     setBoostActiveUntil(null);
     setBoostTimeLeft(0);
     setBlockedIds([]);
-    setSwipedIds([]);
     setActiveTab("swipe");
     setIsLoggedOut(true);
   }
