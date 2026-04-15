@@ -6,7 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SwipeCard } from "@/components/SwipeCard";
-import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn } from "lucide-react";
+import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
   wine: <Wine className="w-4 h-4" />,
@@ -28,6 +28,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
   const [currentIndex, setCurrentIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [justCheckedIn, setJustCheckedIn] = useState(false);
+  const [coincidenceMatch, setCoincidenceMatch] = useState<{ profile: Profile; locationName: string } | null>(null);
 
   const location = locations.find((l) => l.id === selectedLocation);
   const users: Profile[] = location?.users ?? [];
@@ -60,8 +61,12 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
         profile: currentUser, source: location.id,
         locationName: location.name, locationIcon: location.icon, matchedAt: Date.now(),
       };
-      if (dir === "right") onMatch(matchData);
-      else if (dir === "maybe") onMaybe(matchData);
+      if (dir === "right") {
+        onMatch(matchData);
+        setCoincidenceMatch({ profile: currentUser, locationName: location.name });
+      } else if (dir === "maybe") {
+        onMaybe(matchData);
+      }
     }
     const next = currentIndex + 1;
     if (next >= users.length) setDone(true);
@@ -70,8 +75,111 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
 
   const showCheckedIn = alreadyCheckedIn || justCheckedIn;
 
+  const matchInitials = coincidenceMatch?.profile.name
+    .split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") ?? "";
+
   return (
     <div className="flex flex-col items-center min-h-[calc(100vh-80px)] px-4 py-8">
+
+      {/* ── Coincidence match overlay ── */}
+      <AnimatePresence>
+        {coincidenceMatch && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.35 }}
+            className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-foreground/95 backdrop-blur-sm px-6 text-center"
+          >
+            {/* Floating hearts */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 0, x: 0, scale: 0.5 }}
+                animate={{ opacity: [0, 1, 0], y: -120 - i * 20, x: (i % 2 === 0 ? 1 : -1) * (20 + i * 14), scale: [0.5, 1.2, 0.8] }}
+                transition={{ duration: 1.8, delay: i * 0.18, ease: "easeOut" }}
+                className="absolute bottom-1/3 text-background"
+              >
+                <Heart className="w-5 h-5 fill-background" />
+              </motion.div>
+            ))}
+
+            {/* Avatars */}
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 22, delay: 0.1 }}
+              className="flex items-center gap-3 mb-8"
+            >
+              <div className="w-20 h-20 rounded-full bg-background text-foreground flex items-center justify-center text-2xl font-bold shadow-lg">
+                {matchInitials}
+              </div>
+              <motion.div
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 0.6, delay: 0.4, repeat: 2 }}
+              >
+                <Heart className="w-7 h-7 fill-background text-background" />
+              </motion.div>
+              <div className="w-20 h-20 rounded-full bg-background/20 border-2 border-background text-background flex items-center justify-center text-lg font-bold">
+                You
+              </div>
+            </motion.div>
+
+            {/* Text */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="space-y-2 mb-2"
+            >
+              <p className="text-background/60 text-sm font-medium uppercase tracking-widest">
+                It happened
+              </p>
+              <h2 className="text-background text-3xl font-bold leading-tight">
+                You matched<br />by coincidence
+              </h2>
+              <p className="text-background/60 text-sm mt-2">
+                with <span className="text-background font-semibold">{coincidenceMatch.profile.name}</span>
+                {" "}at {coincidenceMatch.locationName}
+              </p>
+            </motion.div>
+
+            {/* Rope illustration */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.35 }}
+              transition={{ delay: 0.5 }}
+              className="my-6"
+            >
+              <svg viewBox="0 0 120 24" className="w-32 text-background">
+                <path d="M10 12 C 25 4, 35 20, 60 12 C 85 4, 95 20, 110 12"
+                  stroke="currentColor" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              </svg>
+            </motion.div>
+
+            {/* Actions */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex flex-col gap-3 w-full max-w-xs"
+            >
+              <button
+                onClick={() => setCoincidenceMatch(null)}
+                className="w-full py-3.5 rounded-2xl bg-background text-foreground font-semibold text-sm hover:bg-background/90 active:scale-[0.98] transition-all"
+              >
+                Keep swiping
+              </button>
+              <button
+                onClick={() => setCoincidenceMatch(null)}
+                className="w-full py-3 rounded-2xl border border-background/30 text-background/70 text-sm hover:text-background hover:border-background/60 transition-all"
+              >
+                Send a message
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <div className="w-full max-w-sm">
         {!isActive ? (
           <>
