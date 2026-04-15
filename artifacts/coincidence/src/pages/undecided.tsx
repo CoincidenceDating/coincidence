@@ -1,5 +1,5 @@
 import { type Match } from "@/lib/data";
-import { HelpCircle, Check, X, MapPin } from "lucide-react";
+import { HelpCircle, Check, X, MapPin, Star } from "lucide-react";
 
 interface UndecidedPageProps {
   undecided: Match[];
