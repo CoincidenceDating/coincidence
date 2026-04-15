@@ -73,115 +73,138 @@ function RopeWithKnots({
   side: "left" | "right";
   glow?: boolean;
 }) {
-  // Quadratic Bezier: M x0 40 Q 60 cy x1 40
-  // right: x0=0, x1=120   left: x0=120, x1=0
   const pathD = useTransform(controlY, (y) =>
     side === "right"
       ? `M 0 40 Q 60 ${y} 120 40`
       : `M 120 40 Q 60 ${y} 0 40`
   );
 
-  // Knot Y positions at Bezier t = 0.25, 0.5, 0.75
-  // y(t) = (1-t)²·40 + 2t(1-t)·cy + t²·40 = 40 + 2t(1-t)·(cy-40)
-  const k1y = useTransform(controlY, (y) => 40 + 2 * 0.25 * 0.75 * (y - 40)); // t=0.25 → 0.375*(y-40)+40
-  const k2y = useTransform(controlY, (y) => 40 + 2 * 0.5  * 0.5  * (y - 40)); // t=0.5  → 0.5*(y-40)+40
-  const k3y = useTransform(controlY, (y) => 40 + 2 * 0.75 * 0.25 * (y - 40)); // t=0.75 → 0.375*(y-40)+40
+  // Knot Y at Bezier t=0.25, 0.5, 0.75
+  const k1y = useTransform(controlY, (y) => 40 + 2 * 0.25 * 0.75 * (y - 40));
+  const k2y = useTransform(controlY, (y) => 40 + 0.5 * (y - 40));
+  const k3y = useTransform(controlY, (y) => 40 + 2 * 0.75 * 0.25 * (y - 40));
 
-  // Knot X positions (fixed, derived from Bezier)
-  // x(t) = (1-t)²·x0 + 2t(1-t)·60 + t²·x1
-  // right (x0=0,x1=120): t=0.25→30, t=0.5→60, t=0.75→90
-  // left  (x0=120,x1=0): t=0.25→90, t=0.5→60, t=0.75→30
   const kxs = side === "right" ? [30, 60, 90] : [90, 60, 30];
   const kys = [k1y, k2y, k3y];
 
-  const ropeColor  = glow ? "#c0392b" : "#8B5E1A";
-  const twistColor = glow ? "#ff8fa3" : "#C9952E";
-  const glowFilter = glow ? { filter: "drop-shadow(0 0 8px rgba(244,63,94,0.9))" } : undefined;
+  const glowFilter = glow
+    ? { filter: "drop-shadow(0 0 10px rgba(255,255,255,0.95))" }
+    : undefined;
 
   return (
     <>
-      {/* Rope layers — thick twisted rope look */}
-      <motion.path d={pathD as unknown as string} stroke="#1A0C04" strokeWidth={10} fill="none" strokeLinecap="round" />
-      <motion.path d={pathD as unknown as string} stroke={ropeColor} strokeWidth={7} fill="none" strokeLinecap="round" style={glowFilter} />
-      <motion.path d={pathD as unknown as string} stroke="#4A2E08" strokeWidth={3} strokeDasharray="6 7" fill="none" strokeLinecap="round" style={{ opacity: 0.9 }} />
-      <motion.path d={pathD as unknown as string} stroke={twistColor} strokeWidth={2} strokeDasharray="6 7" strokeDashoffset={6} fill="none" strokeLinecap="round" style={{ opacity: 0.75 }} />
-      <motion.path d={pathD as unknown as string} stroke="#FFD580" strokeWidth={1} strokeDasharray="3 10" strokeDashoffset={2} fill="none" strokeLinecap="round" style={{ opacity: 0.5 }} />
+      {/* Black outline — thickest layer */}
+      <motion.path d={pathD as unknown as string} stroke="#000000" strokeWidth={12} fill="none" strokeLinecap="round" />
+      {/* White rope body */}
+      <motion.path d={pathD as unknown as string} stroke="#ffffff" strokeWidth={8} fill="none" strokeLinecap="round" style={glowFilter} />
+      {/* Light gray twist strands for texture */}
+      <motion.path d={pathD as unknown as string} stroke="#d0d0d0" strokeWidth={3} strokeDasharray="7 8" fill="none" strokeLinecap="round" style={{ opacity: 0.85 }} />
+      <motion.path d={pathD as unknown as string} stroke="#aaaaaa" strokeWidth={1.5} strokeDasharray="5 9" strokeDashoffset={7} fill="none" strokeLinecap="round" style={{ opacity: 0.6 }} />
+      {/* Bright centre highlight sheen */}
+      <motion.path d={pathD as unknown as string} stroke="#ffffff" strokeWidth={2} strokeDasharray="2 14" strokeDashoffset={2} fill="none" strokeLinecap="round" style={{ opacity: 0.9 }} />
 
       {/* Knots at t=0.25, 0.5, 0.75 */}
       {kxs.map((kx, i) => (
         <g key={i}>
-          {/* Shadow */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={9} ry={6} fill="#0D0604" opacity={0.7} />
-          {/* Body */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={7} ry={5} fill={glow ? "#6B1212" : "#4A2008"} style={glowFilter} />
-          {/* Mid wrap */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={5} ry={3.5} fill={glow ? "#a02020" : "#7A3A12"} />
-          {/* Top strand */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={3} ry={2} fill={glow ? "#c0392b" : "#A06020"} />
-          {/* Highlight */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={1.5} ry={0.9} fill={glow ? "#ff8fa3" : "#D4A030"} opacity={0.9} />
+          {/* Drop shadow */}
+          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={10} ry={7} fill="#000000" opacity={0.75} />
+          {/* White body with black stroke */}
+          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={8} ry={5.5} fill="#ffffff" stroke="#000000" strokeWidth={1.5} style={glowFilter} />
+          {/* Inner wrap ring */}
+          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={5.5} ry={3.5} fill="#e8e8e8" />
+          {/* Core */}
+          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={3} ry={2} fill="#ffffff" />
+          {/* Top glint */}
+          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={1.5} ry={0.8} fill="#ffffff" opacity={0.95} />
         </g>
       ))}
     </>
   );
 }
 
+const DEFAULT_SAG = 82; // big visible droop at rest
+const TAUT_Y = 40;      // fully taut (horizontal)
+
 function HStringVisual({
   side,
   action,
   dragX,
+  dragY,
 }: {
   side: "left" | "right";
   action: Action;
   dragX: MotionValue<number>;
+  dragY: MotionValue<number>;
 }) {
-  const controlY = useMotionValue(58);
+  const controlY = useMotionValue(DEFAULT_SAG);
   const [phase, setPhase] = useState<Phase>("rope");
   const [isGlowing, setIsGlowing] = useState(false);
   const phaseRef = useRef<Phase>("rope");
   phaseRef.current = phase;
 
-  // Live drag → tautness
+  // Gentle sway on mount so the ropes feel alive
   useEffect(() => {
-    return dragX.on("change", (x) => {
-      if (phaseRef.current !== "rope") return;
-      const relevant = side === "right" ? Math.max(0, x) : Math.max(0, -x);
-      const tautness = Math.min(relevant / 160, 1);
-      controlY.set(58 - tautness * 18); // 58=slack → 40=taut
+    animate(controlY, [DEFAULT_SAG, DEFAULT_SAG + 10, DEFAULT_SAG - 5, DEFAULT_SAG + 7, DEFAULT_SAG], {
+      duration: 1.6,
+      times: [0, 0.28, 0.55, 0.78, 1],
+      ease: "easeInOut",
     });
-  }, [side, dragX, controlY]);
+  }, []);
+
+  // Live drag → flow
+  useEffect(() => {
+    function update() {
+      if (phaseRef.current !== "rope") return;
+      const x = dragX.get();
+      const y = dragY.get();
+      // Downward drag makes both ropes sag more
+      const ySag = Math.min(Math.max(0, y) / 280, 1) * 18;
+      if (side === "right") {
+        // Dragging right: right rope tautens
+        const taut = Math.min(Math.max(0, x) / 190, 1);
+        // Dragging left: right rope sags extra
+        const extraSag = Math.min(Math.max(0, -x) / 190, 1);
+        controlY.set(DEFAULT_SAG - taut * (DEFAULT_SAG - TAUT_Y) + extraSag * 22 + ySag);
+      } else {
+        // Dragging left: left rope tautens
+        const taut = Math.min(Math.max(0, -x) / 190, 1);
+        // Dragging right: left rope sags extra
+        const extraSag = Math.min(Math.max(0, x) / 190, 1);
+        controlY.set(DEFAULT_SAG - taut * (DEFAULT_SAG - TAUT_Y) + extraSag * 22 + ySag);
+      }
+    }
+    const unsubX = dragX.on("change", update);
+    const unsubY = dragY.on("change", update);
+    return () => { unsubX(); unsubY(); };
+  }, [side, dragX, dragY, controlY]);
 
   useEffect(() => {
     if (action === "none") {
       setPhase("rope");
       setIsGlowing(false);
-      animate(controlY, 58, { type: "spring", stiffness: 180, damping: 22 });
+      animate(controlY, DEFAULT_SAG, { type: "spring", stiffness: 140, damping: 18 });
       return;
     }
     if (side === "right" && action === "yes") {
       setPhase("rope");
-      animate(controlY, 40, { duration: 0.2 });
+      animate(controlY, TAUT_Y, { duration: 0.2 });
       setIsGlowing(true);
       setTimeout(() => setPhase("hidden"), 500);
     }
     if (side === "left" && action === "no") {
       setPhase("rope");
-      // Pull taut quickly
-      animate(controlY, 40, { duration: 0.22, ease: [0.4, 0, 1, 1] });
-      // Flash
-      setTimeout(() => { setPhase("snap-flash"); controlY.set(58); }, 230);
-      // Explode
+      animate(controlY, TAUT_Y, { duration: 0.22, ease: [0.4, 0, 1, 1] });
+      setTimeout(() => { setPhase("snap-flash"); controlY.set(DEFAULT_SAG); }, 230);
       setTimeout(() => setPhase("broken"), 280);
-      // Clear
       setTimeout(() => setPhase("hidden"), 900);
     }
     if (action === "maybe") {
       setPhase("rope");
-      animate(controlY, [58, 20, 76, 28, 72, 40, 62, 58], {
-        duration: 0.75,
-        times: [0, 0.15, 0.32, 0.48, 0.62, 0.75, 0.88, 1],
+      animate(controlY, [DEFAULT_SAG, 18, DEFAULT_SAG + 18, 26, DEFAULT_SAG + 12, TAUT_Y + 8, DEFAULT_SAG - 4, DEFAULT_SAG], {
+        duration: 0.82,
+        times: [0, 0.14, 0.30, 0.46, 0.60, 0.73, 0.87, 1],
       });
-      setTimeout(() => setPhase("hidden"), 760);
+      setTimeout(() => setPhase("hidden"), 830);
     }
   }, [action]);
 
@@ -238,15 +261,15 @@ function HStringVisual({
               >
                 <path
                   d={side === "left" ? `M 130 40 Q 110 30 ${bx} ${by}` : `M 0 40 Q 20 30 ${bx} ${by}`}
-                  stroke="#1A0C04" strokeWidth={10} fill="none" strokeLinecap="round"
+                  stroke="#000000" strokeWidth={12} fill="none" strokeLinecap="round"
                 />
                 <path
                   d={side === "left" ? `M 130 40 Q 110 30 ${bx} ${by}` : `M 0 40 Q 20 30 ${bx} ${by}`}
-                  stroke="#8B5E1A" strokeWidth={7} fill="none" strokeLinecap="round"
+                  stroke="#ffffff" strokeWidth={8} fill="none" strokeLinecap="round"
                 />
                 <path
                   d={side === "left" ? `M 130 40 Q 110 30 ${bx} ${by}` : `M 0 40 Q 20 30 ${bx} ${by}`}
-                  stroke="#C9952E" strokeWidth={2} strokeDasharray="6 7" fill="none" strokeLinecap="round" opacity={0.85}
+                  stroke="#cccccc" strokeWidth={2.5} strokeDasharray="6 7" fill="none" strokeLinecap="round" opacity={0.85}
                 />
               </motion.g>
 
@@ -258,15 +281,15 @@ function HStringVisual({
               >
                 <path
                   d={side === "left" ? `M 0 40 Q 45 55 ${bx} ${by}` : `M 130 40 Q 85 55 ${bx} ${by}`}
-                  stroke="#1A0C04" strokeWidth={10} fill="none" strokeLinecap="round"
+                  stroke="#000000" strokeWidth={12} fill="none" strokeLinecap="round"
                 />
                 <path
                   d={side === "left" ? `M 0 40 Q 45 55 ${bx} ${by}` : `M 130 40 Q 85 55 ${bx} ${by}`}
-                  stroke="#8B5E1A" strokeWidth={7} fill="none" strokeLinecap="round"
+                  stroke="#ffffff" strokeWidth={8} fill="none" strokeLinecap="round"
                 />
                 <path
                   d={side === "left" ? `M 0 40 Q 45 55 ${bx} ${by}` : `M 130 40 Q 85 55 ${bx} ${by}`}
-                  stroke="#C9952E" strokeWidth={2} strokeDasharray="6 7" fill="none" strokeLinecap="round" opacity={0.85}
+                  stroke="#cccccc" strokeWidth={2.5} strokeDasharray="6 7" fill="none" strokeLinecap="round" opacity={0.85}
                 />
               </motion.g>
 
@@ -277,7 +300,7 @@ function HStringVisual({
                   <motion.line key={`f-${i}`}
                     x1={bx} y1={by}
                     x2={bx + Math.cos(rad) * len} y2={by + Math.sin(rad) * len}
-                    stroke={i % 4 === 0 ? "white" : i % 4 === 1 ? "#FFD580" : i % 4 === 2 ? "#C9952E" : "#8B5E1A"}
+                    stroke={i % 3 === 0 ? "white" : i % 3 === 1 ? "#cccccc" : "#888888"}
                     strokeWidth={i % 3 === 0 ? 2.5 : i % 3 === 1 ? 1.8 : 1.2}
                     strokeLinecap="round"
                     initial={{ scale: 0.05, opacity: 1 }}
@@ -394,7 +417,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
 
         <div className="flex items-center justify-center" style={{ overflow: "visible" }}>
           <div className="pointer-events-none shrink-0" style={{ marginRight: -8 }}>
-            <HStringVisual side="left" action={action} dragX={dragX} />
+            <HStringVisual side="left" action={action} dragX={dragX} dragY={dragY} />
           </div>
 
           <motion.div
@@ -453,7 +476,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
           </motion.div>
 
           <div className="pointer-events-none shrink-0" style={{ marginLeft: -8 }}>
-            <HStringVisual side="right" action={action} dragX={dragX} />
+            <HStringVisual side="right" action={action} dragX={dragX} dragY={dragY} />
           </div>
         </div>
 
