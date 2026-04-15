@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Send } from "lucide-react";
 import type { Match } from "@/lib/data";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 
 export interface Message {
   id: string;
@@ -94,9 +95,7 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-primary/70 to-primary text-primary-foreground text-sm font-bold shrink-0">
-          {match.profile.avatar}
-        </div>
+        <ProfileAvatar profile={match.profile} size={40} />
         <div className="min-w-0">
           <p className="font-semibold text-sm leading-tight truncate">
             {match.profile.name}
@@ -112,11 +111,7 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
         <div className="flex flex-col items-center pt-3 pb-5">
           <div className="flex items-center">
             {/* Match avatar */}
-            <div
-              style={{ width: 38, height: 38, borderRadius: "50%", background: match.profile.gradient, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold", color: "rgba(255,255,255,0.55)", flexShrink: 0 }}
-            >
-              {match.profile.avatar}
-            </div>
+            <ProfileAvatar profile={match.profile} size={38} />
 
             {/* Rope SVG — sags when no messages, ties when messages exist */}
             <svg viewBox="0 0 130 36" style={{ width: 130, height: 36, overflow: "visible" }} aria-hidden>
@@ -207,9 +202,7 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
               className={`flex ${isMe ? "justify-end" : "justify-start"}`}
             >
               {!isMe && (
-                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary/60 to-primary text-primary-foreground text-xs font-bold shrink-0 mr-2 mt-1 self-end">
-                  {match.profile.avatar}
-                </div>
+                <ProfileAvatar profile={match.profile} size={28} className="mr-2 mt-1 self-end" />
               )}
               <div
                 className={`max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
@@ -232,9 +225,7 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
             exit={{ opacity: 0 }}
             className="flex items-end gap-2"
           >
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-primary/60 to-primary text-primary-foreground text-xs font-bold shrink-0">
-              {match.profile.avatar}
-            </div>
+            <ProfileAvatar profile={match.profile} size={28} />
             <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
               {[0, 1, 2].map((i) => (
                 <motion.span

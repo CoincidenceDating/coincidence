@@ -1,4 +1,5 @@
 import { type Match } from "@/lib/data";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Sparkles, Heart, Wine, Beer, Coffee, Zap, MessageCircle } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -105,9 +106,7 @@ export default function MatchesPage({ matches, messageCounts, onOpenChat }: Matc
                       className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-accent/40 active:scale-[0.98] transition-all text-left"
                     >
                       <div className="relative shrink-0">
-                        <div className="flex items-center justify-center w-11 h-11 rounded-full bg-gradient-to-br from-primary/70 to-primary text-primary-foreground text-sm font-bold">
-                          {match.profile.avatar}
-                        </div>
+                        <ProfileAvatar profile={match.profile} size={44} />
                         {hasMessages && (
                           <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-background" />
                         )}

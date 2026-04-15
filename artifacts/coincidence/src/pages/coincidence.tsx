@@ -6,6 +6,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SwipeCard } from "@/components/SwipeCard";
+import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -77,9 +78,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
   const showCheckedIn = alreadyCheckedIn || justCheckedIn;
 
-  const matchInitials = coincidenceMatch?.profile?.name
-    .split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join("") ?? "";
-
   return (
     <div className="flex flex-col items-center min-h-[calc(100vh-80px)] px-4 py-8">
 
@@ -146,9 +144,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               transition={{ type: "spring", stiffness: 320, damping: 22, delay: 1.1 }}
               className="flex items-center gap-3 mb-8"
             >
-              <div className="w-20 h-20 rounded-full bg-background text-foreground flex items-center justify-center text-2xl font-bold shadow-lg">
-                {matchInitials}
-              </div>
+              <ProfileAvatar profile={coincidenceMatch.profile} size={80} className="shadow-lg ring-2 ring-background" />
               <div className="flex flex-col items-center">
                 <svg viewBox="0 0 80 28" className="w-20 text-background" fill="none">
                   {/* Main rope strand */}
