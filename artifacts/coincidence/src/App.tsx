@@ -283,7 +283,7 @@ function AppShell() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} checkedInLocations={checkedInLocations} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
