@@ -163,6 +163,7 @@ const THREADS_KEY   = "coincidence_threads";
 const CHECKINS_KEY  = "coincidence_checkins";
 const BOOST_KEY     = "coincidence_boost";
 const BLOCKED_KEY   = "coincidence_blocked";
+const SWIPED_KEY    = "coincidence_swiped";
 
 function ls<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); if (raw !== null) return JSON.parse(raw) as T; } catch {}
@@ -198,6 +199,7 @@ function AppShell() {
   const [boostTimeLeft, setBoostTimeLeft] = useState(0);
   const [boostRadius, setBoostRadius] = useState<number>(() => ls<{ radius: number }>(BOOST_KEY, { radius: 5 }).radius);
   const [blockedIds, setBlockedIds] = useState<string[]>(() => ls(BLOCKED_KEY, []));
+  const [swipedIds, setSwipedIds]   = useState<string[]>(() => ls(SWIPED_KEY,  []));
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -214,6 +216,7 @@ function AppShell() {
     try { localStorage.setItem(BOOST_KEY, JSON.stringify({ credits: boostCredits, until: boostActiveUntil, radius: boostRadius })); } catch {}
   }, [boostCredits, boostActiveUntil, boostRadius]);
   useEffect(() => { try { localStorage.setItem(BLOCKED_KEY, JSON.stringify(blockedIds)); } catch {} }, [blockedIds]);
+  useEffect(() => { try { localStorage.setItem(SWIPED_KEY,  JSON.stringify(swipedIds));  } catch {} }, [swipedIds]);
 
   // Countdown tick
   useEffect(() => {
@@ -275,6 +278,7 @@ function AppShell() {
       localStorage.removeItem(CHECKINS_KEY);
       localStorage.removeItem(BOOST_KEY);
       localStorage.removeItem(BLOCKED_KEY);
+      localStorage.removeItem(SWIPED_KEY);
     } catch {}
     setMatches([]);
     setUndecided([]);
@@ -287,6 +291,7 @@ function AppShell() {
     setBoostActiveUntil(null);
     setBoostTimeLeft(0);
     setBlockedIds([]);
+    setSwipedIds([]);
     setActiveTab("swipe");
     setIsLoggedOut(true);
   }
@@ -303,6 +308,7 @@ function AppShell() {
     setBoostActiveUntil(null);
     setBoostTimeLeft(0);
     setBlockedIds([]);
+    setSwipedIds([]);
     setLookingFor("Everyone");
     setShowSplash(true);
     setShowSetup(true);
@@ -493,7 +499,7 @@ function AppShell() {
       </svg>
 
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} swipedIds={swipedIds} onSwiped={(id) => setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id])} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
