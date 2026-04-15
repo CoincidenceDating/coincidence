@@ -82,6 +82,7 @@ interface ProfilePageProps {
   onBoostRadiusChange: (r: number) => void;
   onActivateBoost: () => void;
   onResetSetup: () => void;
+  onDeleteAccount: () => void;
 }
 
 /* ─── persistence ───────────────────────────── */
@@ -111,7 +112,7 @@ export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost,
-  onResetSetup,
+  onResetSetup, onDeleteAccount,
 }: ProfilePageProps) {
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
@@ -121,6 +122,7 @@ export default function ProfilePage({
   const [purchasedPack, setPurchasedPack] = useState<string | null>(null);
   const [hobbyInput, setHobbyInput] = useState("");
   const hobbyRef = useRef<HTMLInputElement>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const initials = editable.name
     .split(" ")
@@ -365,17 +367,86 @@ export default function ProfilePage({
         )}
       </div>
 
-      {/* ── Tagline ── */}
+      {/* ── Tagline + account actions ── */}
       <div className="mt-auto pt-8 flex flex-col items-center gap-3 pb-2">
         <img src="/logo.jpeg" alt="Coincidence" className="w-10 h-10 rounded-xl opacity-60" />
         <p className="text-xs text-muted-foreground italic">making the invisible string – visible</p>
-        <button
-          onClick={onResetSetup}
-          className="mt-1 text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 transition-colors"
-        >
-          Redo profile setup
-        </button>
+        <div className="flex items-center gap-4 mt-1">
+          <button
+            onClick={onResetSetup}
+            className="text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 transition-colors"
+          >
+            Redo setup
+          </button>
+          <span className="text-muted-foreground/30 text-xs">·</span>
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-xs text-red-400/60 hover:text-red-500 underline underline-offset-2 transition-colors"
+          >
+            Delete account
+          </button>
+        </div>
       </div>
+
+      {/* ── Delete account confirmation overlay ── */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 380, damping: 36 }}
+              className="w-full max-w-lg bg-card rounded-t-3xl px-6 pt-6 pb-10 space-y-5"
+            >
+              {/* Handle */}
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-2" />
+
+              {/* Icon */}
+              <div className="flex flex-col items-center gap-3 text-center">
+                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                  </svg>
+                </div>
+                <h2 className="text-lg font-bold">Delete your account?</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+                  This will permanently erase your profile, matches, messages, and check-in history. You'll be taken back to the setup screen to start fresh.
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-2.5 pt-1">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    onDeleteAccount();
+                  }}
+                  className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 active:scale-[0.98] transition-all"
+                >
+                  Yes, delete everything
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="w-full py-3.5 rounded-2xl border-2 border-border text-foreground font-semibold text-sm hover:bg-muted active:scale-[0.98] transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ══════════════════════════════════════
           EDIT PROFILE SHEET

@@ -198,6 +198,22 @@ function AppShell() {
     setShowSetup(true);
   }
 
+  function handleDeleteAccount() {
+    try { localStorage.clear(); } catch {}
+    setMatches([]);
+    setUndecided([]);
+    setNewMatchCount(0);
+    setNewUndecidedCount(0);
+    setThreads({});
+    setCheckIns([]);
+    setBoostCredits(3);
+    setBoostActiveUntil(null);
+    setBoostTimeLeft(0);
+    setLookingFor("Everyone");
+    setShowSplash(true);
+    setShowSetup(true);
+  }
+
   function handleCheckIn(checkIn: CheckIn) {
     setCheckIns((prev) => {
       if (prev.some((c) => c.locationId === checkIn.locationId)) return prev;
@@ -340,7 +356,7 @@ function AppShell() {
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
-        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onResetSetup={handleResetSetup} />}
+        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onResetSetup={handleResetSetup} onDeleteAccount={handleDeleteAccount} />}
       </main>
 
       <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
