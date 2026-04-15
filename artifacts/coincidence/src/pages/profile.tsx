@@ -80,6 +80,28 @@ interface ProfilePageProps {
   onActivateBoost: () => void;
 }
 
+/* ─── persistence ───────────────────────────── */
+const STORAGE_KEY = "coincidence_profile";
+
+function loadProfile(): EditableProfile {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as EditableProfile;
+  } catch {}
+  return {
+    name:     myProfile.name,
+    age:      myProfile.age,
+    bio:      myProfile.bio,
+    hometown: "",
+    height:   "5'8\"",
+    hobbies:  [...myProfile.interests],
+  };
+}
+
+function saveProfile(p: EditableProfile) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+}
+
 /* ─── component ─────────────────────────────── */
 export default function ProfilePage({
   matches, checkIns,
@@ -87,14 +109,7 @@ export default function ProfilePage({
   boostRadius, onBoostRadiusChange, onActivateBoost,
 }: ProfilePageProps) {
 
-  const [editable, setEditable] = useState<EditableProfile>({
-    name:     myProfile.name,
-    age:      myProfile.age,
-    bio:      myProfile.bio,
-    hometown: "",
-    height:   "5'8\"",
-    hobbies:  [...myProfile.interests],
-  });
+  const [editable, setEditable] = useState<EditableProfile>(loadProfile);
   const [draft, setDraft]     = useState<EditableProfile>(editable);
   const [showEdit, setShowEdit] = useState(false);
   const [showStore, setShowStore] = useState(false);
@@ -111,7 +126,12 @@ export default function ProfilePage({
 
   /* edit helpers */
   function openEdit() { setDraft({ ...editable }); setShowEdit(true); }
-  function saveEdit() { setEditable({ ...draft }); setShowEdit(false); }
+  function saveEdit() {
+    const saved = { ...draft };
+    setEditable(saved);
+    saveProfile(saved);
+    setShowEdit(false);
+  }
   function cancelEdit() { setShowEdit(false); }
 
   function addHobby(h: string) {
