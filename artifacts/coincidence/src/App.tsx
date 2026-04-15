@@ -10,7 +10,7 @@ import UndecidedPage from "@/pages/undecided";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
 import { Heart, Zap, Sparkles, Star, User } from "lucide-react";
-import type { Match } from "@/lib/data";
+import type { Match, CheckIn } from "@/lib/data";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +64,16 @@ function AppShell() {
   const [newUndecidedCount, setNewUndecidedCount] = useState(0);
   const [activeChat, setActiveChat] = useState<Match | null>(null);
   const [threads, setThreads] = useState<Record<string, Message[]>>({});
+  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+
+  const checkedInLocations = new Set(checkIns.map((c) => c.locationId));
+
+  function handleCheckIn(checkIn: CheckIn) {
+    setCheckIns((prev) => {
+      if (prev.some((c) => c.locationId === checkIn.locationId)) return prev;
+      return [...prev, checkIn];
+    });
+  }
 
   const messageCounts = Object.fromEntries(
     Object.entries(threads).map(([id, msgs]) => [id, msgs.length])
@@ -174,14 +184,14 @@ function AppShell() {
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
         {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} />}
-        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} />}
+        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} checkedInLocations={checkedInLocations} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
         )}
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
-        {activeTab === "profile" && <ProfilePage matches={matches} />}
+        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} />}
       </main>
 
       <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">

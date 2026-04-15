@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { locations, type Profile, type Match } from "@/lib/data";
+import { motion, AnimatePresence } from "framer-motion";
+import { locations, type Profile, type Match, type CheckIn } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SwipeCard } from "@/components/SwipeCard";
-import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User } from "lucide-react";
+import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
   wine: <Wine className="w-4 h-4" />,
@@ -17,25 +18,40 @@ const iconMap: Record<string, React.ReactNode> = {
 interface CoincidencePageProps {
   onMatch: (match: Match) => void;
   onMaybe: (match: Match) => void;
+  onCheckIn: (checkIn: CheckIn) => void;
+  checkedInLocations: Set<string>;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedInLocations }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [done, setDone] = useState(false);
+  const [justCheckedIn, setJustCheckedIn] = useState(false);
 
   const location = locations.find((l) => l.id === selectedLocation);
   const users: Profile[] = location?.users ?? [];
   const currentUser = users[currentIndex];
+  const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
   function handleActivate() {
     if (!selectedLocation) return;
-    setCurrentIndex(0); setDone(false); setIsActive(true);
+    setCurrentIndex(0); setDone(false); setIsActive(true); setJustCheckedIn(false);
   }
 
   function handleDeactivate() {
-    setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false);
+    setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false); setJustCheckedIn(false);
+  }
+
+  function handleCheckIn() {
+    if (!location || alreadyCheckedIn) return;
+    onCheckIn({
+      locationId: location.id,
+      locationName: location.name,
+      locationIcon: location.icon,
+      checkedInAt: Date.now(),
+    });
+    setJustCheckedIn(true);
   }
 
   function handleSwipe(dir: "left" | "right" | "maybe") {
@@ -51,6 +67,8 @@ export default function CoincidencePage({ onMatch, onMaybe }: CoincidencePagePro
     if (next >= users.length) setDone(true);
     else setCurrentIndex(next);
   }
+
+  const showCheckedIn = alreadyCheckedIn || justCheckedIn;
 
   return (
     <div className="flex flex-col items-center min-h-[calc(100vh-80px)] px-4 py-8">
@@ -84,14 +102,48 @@ export default function CoincidencePage({ onMatch, onMaybe }: CoincidencePagePro
           </>
         ) : (
           <>
-            <div className="flex items-center gap-2 mb-6">
+            {/* Location header */}
+            <div className="flex items-center gap-2 mb-4">
               <MapPin className="w-4 h-4 text-foreground shrink-0" />
-              <span className="text-sm font-medium truncate">{location?.name}</span>
-              <button onClick={handleDeactivate} className="ml-auto text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0">
+              <span className="text-sm font-medium truncate flex-1">{location?.name}</span>
+              <button
+                onClick={handleDeactivate}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0"
+              >
                 Leave
               </button>
             </div>
 
+            {/* Check In button */}
+            <div className="mb-5">
+              <AnimatePresence mode="wait">
+                {!showCheckedIn ? (
+                  <motion.button
+                    key="check-in-btn"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    onClick={handleCheckIn}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border-2 border-dashed border-foreground/20 text-sm font-medium text-foreground/60 hover:border-foreground/40 hover:text-foreground/80 hover:bg-muted/50 active:scale-[0.98] transition-all"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    Check in here
+                  </motion.button>
+                ) : (
+                  <motion.div
+                    key="checked-in"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-green-50 border border-green-200 text-sm font-medium text-green-700"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    Checked in — stamped on your profile
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Swipe content */}
             {users.length === 0 ? (
               <div className="text-center py-16 text-muted-foreground">
                 <User className="w-10 h-10 mx-auto mb-3 opacity-30" />

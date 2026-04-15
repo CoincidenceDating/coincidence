@@ -23,6 +23,13 @@ export interface Match {
   matchedAt: number;
 }
 
+export interface CheckIn {
+  locationId: string;
+  locationName: string;
+  locationIcon: string;
+  checkedInAt: number;
+}
+
 export const myProfile = {
   name: "Jamie Parker",
   age: 27,
