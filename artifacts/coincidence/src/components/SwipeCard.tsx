@@ -421,29 +421,37 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             <HStringVisual side="left" action={action} dragX={dragX} dragY={dragY} />
           </div>
 
-          {/* Card stack wrapper — ghost cards peek from behind */}
-          <div className="relative flex-1" style={{ minWidth: 0, overflow: "visible" }}>
-            {peekProfiles.slice(0, 2).reverse().map((p, i) => {
-              const depth = peekProfiles.length > 1 ? (i === 0 ? 2 : 1) : 1;
+          {/* Card stack wrapper — ghost cards peek from behind, card fills full width */}
+          <div className="relative shrink-0 w-full" style={{ overflow: "visible" }}>
+            {peekProfiles.slice(0, 2).map((p, i) => {
+              const depth = i + 1;
               return (
                 <div
                   key={p.id}
                   className="absolute pointer-events-none"
                   style={{
-                    top: depth * 8,
-                    left: `${depth * 3.5}%`,
-                    right: `${depth * 3.5}%`,
-                    height: 430,
+                    top: depth * 9,
+                    left: `${depth * 4}%`,
+                    right: `${depth * 4}%`,
+                    height: 520,
                     borderRadius: 24,
                     overflow: "hidden",
                     background: p.gradient,
                     zIndex: 10 - depth * 3,
-                    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
                   }}
                 >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-9xl font-black text-white/10 select-none">{p.avatar}</span>
-                  </div>
+                  {p.photo ? (
+                    <img
+                      src={`${import.meta.env.BASE_URL}${p.photo}`}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover object-top opacity-70"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-9xl font-black text-white/10 select-none">{p.avatar}</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -454,9 +462,9 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             dragElastic={{ left: 0.05, right: 0.05, top: 0.02, bottom: 0.05 }}
             style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity, position: "relative", zIndex: 10 }}
             onDragEnd={handleDragEnd as never}
-            className="w-full touch-none cursor-grab active:cursor-grabbing"
+            className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
           >
-            <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 430 }}>
+            <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 520 }}>
               <motion.div
                 style={{ opacity: yesOpacity }}
                 className="absolute top-8 left-5 z-20 border-4 border-emerald-400 text-emerald-400 font-black text-xl px-3 py-1 rounded-lg select-none pointer-events-none"
@@ -480,18 +488,27 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
               </motion.div>
 
               <div className="absolute inset-0" style={{ background: profile.gradient }}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-9xl font-black text-white/10 select-none tracking-tight">
-                    {profile.avatar}
-                  </span>
-                </div>
+                {profile.photo ? (
+                  <img
+                    src={`${import.meta.env.BASE_URL}${profile.photo}`}
+                    alt={profile.name}
+                    className="absolute inset-0 w-full h-full object-cover object-top"
+                    draggable={false}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-9xl font-black text-white/10 select-none tracking-tight">
+                      {profile.avatar}
+                    </span>
+                  </div>
+                )}
                 {locationIcon && locationName && (
                   <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
                     {locationIcon}
                     <span>{locationName}</span>
                   </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent px-5 pt-12 pb-5 text-white">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-5 pt-16 pb-5 text-white">
                   <h2 className="text-2xl font-bold leading-tight">{profile.name}, {profile.age}</h2>
                   <div className="flex items-center gap-1.5 mt-1">
                     <MapPin className="w-3.5 h-3.5 text-white/60 shrink-0" />

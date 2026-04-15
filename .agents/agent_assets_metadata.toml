@@ -1,0 +1,38 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "OrIHR8Tvj41O-D6qk5e2e"
+uri = "file://artifacts/coincidence/public/profiles/p1.png"
+type = "image"
+title = "alex-rivera-profile"
+
+[[generated]]
+id = "qcmXUikEkfkWXr8yeuhn1"
+uri = "file://artifacts/coincidence/public/profiles/p2.png"
+type = "image"
+title = "jordan-lee-profile"
+
+[[generated]]
+id = "5r5F8-kynn077U1cEgd3B"
+uri = "file://artifacts/coincidence/public/profiles/p3.png"
+type = "image"
+title = "sam-taylor-profile"
+
+[[generated]]
+id = "5XBnoL0B4t8ylXSAbQoM7"
+uri = "file://artifacts/coincidence/public/profiles/p4.png"
+type = "image"
+title = "casey-morgan-profile"
+
+[[generated]]
+id = "Ywp2gNnxkYjctwl00Zjdw"
+uri = "file://artifacts/coincidence/public/profiles/p5.png"
+type = "image"
+title = "riley-chen-profile"
+
+[[generated]]
+id = "_WC3SlyK04N3IgX6FbdGZ"
+uri = "file://artifacts/coincidence/public/profiles/p6.png"
+type = "image"
+title = "dakota-james-profile"
