@@ -27,6 +27,26 @@ function getOpeningText(match: Match): string {
   return `What are the odds of running into you at ${loc}? Glad we did 😄`;
 }
 
+function LoggedOutScreen({ onLogin }: { onLogin: () => void }) {
+  return (
+    <div className="h-screen flex flex-col items-center justify-center bg-background px-6 gap-8">
+      <img src="/logo.jpeg" alt="Coincidence" className="w-20 h-20 rounded-2xl object-cover shadow-md" />
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+          You're logged out
+        </h1>
+        <p className="text-sm text-muted-foreground italic">making the invisible string – visible.</p>
+      </div>
+      <button
+        onClick={onLogin}
+        className="w-full max-w-xs py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all"
+      >
+        Log back in
+      </button>
+    </div>
+  );
+}
+
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
 
@@ -118,6 +138,7 @@ const PROFILE_KEY = "coincidence_profile";
 function AppShell() {
   const [showSplash, setShowSplash]   = useState(true);
   const [showSetup, setShowSetup]     = useState(() => !localStorage.getItem(SETUP_FLAG));
+  const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [activeTab, setActiveTab]     = useState<Tab>("swipe");
 
   function readLookingFor(): string {
@@ -196,6 +217,21 @@ function AppShell() {
       localStorage.removeItem(PROFILE_KEY);
     } catch {}
     setShowSetup(true);
+  }
+
+  function handleLogout() {
+    setMatches([]);
+    setUndecided([]);
+    setNewMatchCount(0);
+    setNewUndecidedCount(0);
+    setActiveChat(null);
+    setThreads({});
+    setCheckIns([]);
+    setBoostCredits(3);
+    setBoostActiveUntil(null);
+    setBoostTimeLeft(0);
+    setActiveTab("swipe");
+    setIsLoggedOut(true);
   }
 
   function handleDeleteAccount() {
@@ -281,6 +317,7 @@ function AppShell() {
     setThreads((prev) => ({ ...prev, [realId]: [...(prev[realId] ?? []), msg] }));
   }
 
+  if (isLoggedOut) return <LoggedOutScreen onLogin={() => setIsLoggedOut(false)} />;
   if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
   if (showSetup) return (
     <AnimatePresence>
@@ -356,7 +393,7 @@ function AppShell() {
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
-        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onResetSetup={handleResetSetup} onDeleteAccount={handleDeleteAccount} />}
+        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} />}
       </main>
 
       <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">

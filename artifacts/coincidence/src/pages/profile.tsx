@@ -82,7 +82,7 @@ interface ProfilePageProps {
   boostRadius: number;
   onBoostRadiusChange: (r: number) => void;
   onActivateBoost: () => void;
-  onResetSetup: () => void;
+  onLogout: () => void;
   onDeleteAccount: () => void;
 }
 
@@ -113,7 +113,7 @@ export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost,
-  onResetSetup, onDeleteAccount,
+  onLogout, onDeleteAccount,
 }: ProfilePageProps) {
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
@@ -585,14 +585,14 @@ export default function ProfilePage({
                 </div>
 
                 {/* Log out */}
-                <button onClick={() => { setShowSettings(false); onResetSetup(); }}
+                <button onClick={() => { setShowSettings(false); onLogout(); }}
                   className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
                   <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
                     <LogOut className="w-4 h-4 text-foreground" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold">Log out</p>
-                    <p className="text-xs text-muted-foreground">Sign out and return to setup</p>
+                    <p className="text-xs text-muted-foreground">Sign out of your account</p>
                   </div>
                 </button>
 
