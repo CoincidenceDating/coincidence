@@ -16,6 +16,18 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+### Coincidence (React + Vite)
+- **Path**: `artifacts/coincidence/`
+- **Preview**: `/`
+- **Description**: A simple web app with two tabs — Swipe (fake profiles) and Coincidence (location-based user discovery). All data is in-memory with preloaded fake users.
+- **Key files**:
+  - `src/App.tsx` — Main app shell with tab navigation
+  - `src/pages/swipe.tsx` — Swipe tab with fake profile cards
+  - `src/pages/coincidence.tsx` — Coincidence mode with location selection
+  - `src/lib/data.ts` — In-memory fake user and location data
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
