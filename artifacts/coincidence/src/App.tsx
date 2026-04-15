@@ -186,7 +186,16 @@ function AppShell() {
       }));
       localStorage.setItem(SETUP_FLAG, "1");
     } catch {}
+    setLookingFor(data.lookingFor ?? "Everyone");
     setShowSetup(false);
+  }
+
+  function handleResetSetup() {
+    try {
+      localStorage.removeItem(SETUP_FLAG);
+      localStorage.removeItem(PROFILE_KEY);
+    } catch {}
+    setShowSetup(true);
   }
 
   function handleCheckIn(checkIn: CheckIn) {
@@ -331,7 +340,7 @@ function AppShell() {
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
-        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} />}
+        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onResetSetup={handleResetSetup} />}
       </main>
 
       <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">

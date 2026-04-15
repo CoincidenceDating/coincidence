@@ -81,6 +81,7 @@ interface ProfilePageProps {
   boostRadius: number;
   onBoostRadiusChange: (r: number) => void;
   onActivateBoost: () => void;
+  onResetSetup: () => void;
 }
 
 /* ─── persistence ───────────────────────────── */
@@ -110,6 +111,7 @@ export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost,
+  onResetSetup,
 }: ProfilePageProps) {
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
@@ -364,9 +366,15 @@ export default function ProfilePage({
       </div>
 
       {/* ── Tagline ── */}
-      <div className="mt-auto pt-8 flex flex-col items-center gap-3">
+      <div className="mt-auto pt-8 flex flex-col items-center gap-3 pb-2">
         <img src="/logo.jpeg" alt="Coincidence" className="w-10 h-10 rounded-xl opacity-60" />
         <p className="text-xs text-muted-foreground italic">making the invisible string – visible</p>
+        <button
+          onClick={onResetSetup}
+          className="mt-1 text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 transition-colors"
+        >
+          Redo profile setup
+        </button>
       </div>
 
       {/* ══════════════════════════════════════
