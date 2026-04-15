@@ -114,12 +114,40 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
               <div className="w-20 h-20 rounded-full bg-background text-foreground flex items-center justify-center text-2xl font-bold shadow-lg">
                 {matchInitials}
               </div>
-              <motion.div
-                animate={{ scale: [1, 1.3, 1] }}
-                transition={{ duration: 0.6, delay: 0.4, repeat: 2 }}
-              >
-                <Heart className="w-7 h-7 fill-background text-background" />
-              </motion.div>
+              <div className="flex flex-col items-center">
+                <svg viewBox="0 0 80 28" className="w-20 text-background" fill="none">
+                  {/* Main rope strand */}
+                  <motion.path
+                    d="M4 14 C 16 4, 24 24, 40 14 C 56 4, 64 24, 76 14"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 1 }}
+                    transition={{ duration: 0.8, delay: 0.3, ease: "easeInOut" }}
+                  />
+                  {/* Shadow strand */}
+                  <motion.path
+                    d="M4 14 C 16 4, 24 24, 40 14 C 56 4, 64 24, 76 14"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeOpacity="0.3"
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 1 }}
+                    transform="translate(0, 3)"
+                    transition={{ duration: 0.8, delay: 0.35, ease: "easeInOut" }}
+                  />
+                  {/* Knot in the middle */}
+                  <motion.circle
+                    cx="40" cy="14" r="3.5"
+                    fill="currentColor"
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.9, type: "spring", stiffness: 400, damping: 18 }}
+                  />
+                </svg>
+              </div>
               <div className="w-20 h-20 rounded-full bg-background/20 border-2 border-background text-background flex items-center justify-center text-lg font-bold">
                 You
               </div>
