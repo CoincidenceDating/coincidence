@@ -82,6 +82,7 @@ interface ProfilePageProps {
   boostRadius: number;
   onBoostRadiusChange: (r: number) => void;
   onActivateBoost: () => void;
+  onAddCredits: (count: number) => void;
   onLogout: () => void;
   onDeleteAccount: () => void;
 }
@@ -112,7 +113,7 @@ function saveProfile(p: EditableProfile) {
 export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
-  boostRadius, onBoostRadiusChange, onActivateBoost,
+  boostRadius, onBoostRadiusChange, onActivateBoost, onAddCredits,
   onLogout, onDeleteAccount,
 }: ProfilePageProps) {
 
@@ -121,6 +122,7 @@ export default function ProfilePage({
   const [showEdit, setShowEdit] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [purchasedPack, setPurchasedPack] = useState<string | null>(null);
+  const [purchaseSuccess, setPurchaseSuccess] = useState(false);
   const [hobbyInput, setHobbyInput] = useState("");
   const hobbyRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -880,8 +882,24 @@ export default function ProfilePage({
 
               <motion.button whileTap={{ scale: 0.97 }} disabled={!purchasedPack}
                 className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-sm disabled:opacity-30 transition-opacity"
-                onClick={() => setShowStore(false)}>
-                {purchasedPack ? `Get ${STRING_PACKS.find(p => p.id === purchasedPack)?.label}` : "Choose a pack"}
+                onClick={() => {
+                  if (!purchasedPack) return;
+                  const pack = STRING_PACKS.find(p => p.id === purchasedPack);
+                  if (pack) {
+                    onAddCredits(pack.count);
+                    setPurchaseSuccess(true);
+                    setTimeout(() => {
+                      setPurchaseSuccess(false);
+                      setPurchasedPack(null);
+                      setShowStore(false);
+                    }, 1200);
+                  }
+                }}>
+                {purchaseSuccess
+                  ? `✦ ${STRING_PACKS.find(p => p.id === purchasedPack)?.label} added!`
+                  : purchasedPack
+                  ? `Get ${STRING_PACKS.find(p => p.id === purchasedPack)?.label}`
+                  : "Choose a pack"}
               </motion.button>
             </motion.div>
           </motion.div>
