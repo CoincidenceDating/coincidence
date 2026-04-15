@@ -115,7 +115,6 @@ export default function SwipePage({
           key={profile.id}
           profile={profile}
           onSwipe={handleSwipe}
-          progress={`${currentIndex + 1} / ${filteredProfiles.length}`}
           peekProfiles={filteredProfiles.slice(currentIndex + 1, currentIndex + 3)}
         />
       ) : (

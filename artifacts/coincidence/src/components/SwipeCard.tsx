@@ -410,12 +410,6 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
       {showConfetti && <ConfettiBurst />}
 
       <div className="w-full max-w-sm mx-auto">
-        {progress && (
-          <p className="text-xs text-muted-foreground text-center mb-3 uppercase tracking-wide">
-            {progress}
-          </p>
-        )}
-
         <div className="flex items-center justify-center" style={{ overflow: "visible" }}>
           <div className="pointer-events-none shrink-0" style={{ marginRight: -8 }}>
             <HStringVisual side="left" action={action} dragX={dragX} dragY={dragY} />
