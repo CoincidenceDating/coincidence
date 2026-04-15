@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { locations, type Profile } from "@/lib/data";
+import { locations, type Profile, type Match } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -18,7 +18,11 @@ const iconMap: Record<string, React.ReactNode> = {
   sparkles: <Sparkles className="w-4 h-4" />,
 };
 
-export default function CoincidencePage() {
+interface CoincidencePageProps {
+  onMatch: (match: Match) => void;
+}
+
+export default function CoincidencePage({ onMatch }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -42,7 +46,16 @@ export default function CoincidencePage() {
     setDone(false);
   }
 
-  function handleSwipe(_dir: "left" | "right") {
+  function handleSwipe(dir: "left" | "right") {
+    if (dir === "right" && currentUser && location) {
+      onMatch({
+        profile: currentUser,
+        source: location.id,
+        locationName: location.name,
+        locationIcon: location.icon,
+        matchedAt: Date.now(),
+      });
+    }
     const next = currentIndex + 1;
     if (next >= users.length) {
       setDone(true);

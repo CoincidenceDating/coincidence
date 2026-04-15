@@ -4,11 +4,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import SwipePage from "@/pages/swipe";
 import CoincidencePage from "@/pages/coincidence";
-import { Heart, Zap } from "lucide-react";
+import MatchesPage from "@/pages/matches";
+import ProfilePage from "@/pages/profile";
+import { Heart, Zap, Sparkles, User } from "lucide-react";
+import type { Match } from "@/lib/data";
 
 const queryClient = new QueryClient();
 
-type Tab = "swipe" | "coincidence";
+type Tab = "swipe" | "coincidence" | "matches" | "profile";
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [fading, setFading] = useState(false);
@@ -52,45 +55,84 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 function AppShell() {
   const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("swipe");
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [newMatchCount, setNewMatchCount] = useState(0);
+
+  const unseenMatches = newMatchCount;
+
+  function handleMatch(match: Match) {
+    setMatches((prev) => [...prev, match]);
+    if (activeTab !== "matches") {
+      setNewMatchCount((c) => c + 1);
+    }
+  }
+
+  function handleTabChange(tab: Tab) {
+    if (tab === "matches") setNewMatchCount(0);
+    setActiveTab(tab);
+  }
 
   if (showSplash) {
     return <SplashScreen onDone={() => setShowSplash(false)} />;
   }
 
+  const tabs: { id: Tab; label: string; icon: (active: boolean) => React.ReactNode }[] = [
+    {
+      id: "swipe",
+      label: "Swipe",
+      icon: (active) => <Heart className={`w-5 h-5 ${active ? "fill-primary" : ""}`} />,
+    },
+    {
+      id: "coincidence",
+      label: "Coincidence",
+      icon: (active) => <Zap className={`w-5 h-5 ${active ? "fill-primary" : ""}`} />,
+    },
+    {
+      id: "matches",
+      label: "Matches",
+      icon: (active) => (
+        <div className="relative">
+          <Sparkles className={`w-5 h-5 ${active ? "fill-primary" : ""}`} />
+          {unseenMatches > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center leading-none">
+              {unseenMatches > 9 ? "9+" : unseenMatches}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "profile",
+      label: "Profile",
+      icon: (active) => <User className={`w-5 h-5 ${active ? "fill-primary" : ""}`} />,
+    },
+  ];
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
-        {activeTab === "swipe" ? <SwipePage /> : <CoincidencePage />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} />}
+        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} />}
+        {activeTab === "matches" && <MatchesPage matches={matches} />}
+        {activeTab === "profile" && <ProfilePage matches={matches} />}
       </main>
 
       <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="flex max-w-md mx-auto">
-          <button
-            onClick={() => setActiveTab("swipe")}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-              activeTab === "swipe"
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Heart
-              className={`w-5 h-5 ${activeTab === "swipe" ? "fill-primary" : ""}`}
-            />
-            Swipe
-          </button>
-          <button
-            onClick={() => setActiveTab("coincidence")}
-            className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
-              activeTab === "coincidence"
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <Zap
-              className={`w-5 h-5 ${activeTab === "coincidence" ? "fill-primary" : ""}`}
-            />
-            Coincidence
-          </button>
+        <div className="flex max-w-lg mx-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex-1 flex flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
+                activeTab === tab.id
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tab.icon(activeTab === tab.id)}
+              {tab.label}
+            </button>
+          ))}
         </div>
       </nav>
     </div>

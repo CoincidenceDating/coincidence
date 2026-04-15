@@ -13,6 +13,22 @@ export interface LocationData {
   users: Profile[];
 }
 
+export interface Match {
+  profile: Profile;
+  source: "swipe" | string;
+  locationName?: string;
+  locationIcon?: string;
+  matchedAt: number;
+}
+
+export const myProfile = {
+  name: "Jamie Parker",
+  age: 27,
+  bio: "Living in the moment, one coincidence at a time",
+  avatar: "JP",
+  interests: ["Music", "Coffee", "Travel", "Books", "Hiking"],
+};
+
 export const swipeProfiles: Profile[] = [
   { id: "p1", name: "Alex Rivera", age: 28, bio: "Coffee enthusiast and weekend hiker", avatar: "AR" },
   { id: "p2", name: "Jordan Lee", age: 25, bio: "Bookworm who loves live music", avatar: "JL" },
