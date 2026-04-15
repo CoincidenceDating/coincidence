@@ -27,31 +27,64 @@ function getOpeningText(match: Match): string {
 }
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
-  const [fading, setFading] = useState(false);
+  const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
+
   useEffect(() => {
-    const t1 = setTimeout(() => setFading(true), 1800);
-    const t2 = setTimeout(() => onDone(), 2300);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    const t1 = setTimeout(() => setPhase("hold"), 50);
+    const t2 = setTimeout(() => setPhase("out"), 2200);
+    const t3 = setTimeout(() => onDone(), 2750);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDone]);
+
+  const visible = phase !== "out";
+
   return (
     <div
-      onClick={() => { setFading(true); setTimeout(onDone, 400); }}
+      onClick={() => { setPhase("out"); setTimeout(onDone, 550); }}
       style={{
         position: "fixed", inset: 0, height: "100vh",
         display: "flex", flexDirection: "column",
         justifyContent: "center", alignItems: "center",
         backgroundColor: "#0a0a0a", color: "white",
         textAlign: "center", cursor: "pointer",
-        zIndex: 9999, transition: "opacity 0.5s ease",
-        opacity: fading ? 0 : 1,
+        zIndex: 9999,
+        transition: "opacity 0.55s ease",
+        opacity: visible ? 1 : 0,
+        gap: "0",
       }}
     >
-      <h1 style={{ fontSize: "3rem", marginBottom: "1rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
-        Coincidence
-      </h1>
-      <p style={{ fontSize: "1.1rem", opacity: 0.5, fontStyle: "italic" }}>
-        making the invisible string – visible
-      </p>
+      {/* Logo */}
+      <div style={{
+        transform: visible && phase !== "in" ? "scale(1) translateY(0)" : "scale(0.82) translateY(12px)",
+        opacity: visible && phase !== "in" ? 1 : 0,
+        transition: "transform 0.65s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
+        marginBottom: "28px",
+      }}>
+        <img
+          src="/logo.jpeg"
+          alt="Coincidence"
+          style={{
+            width: "108px",
+            height: "108px",
+            borderRadius: "24px",
+            boxShadow: "0 8px 40px rgba(255,255,255,0.08), 0 2px 12px rgba(0,0,0,0.6)",
+          }}
+        />
+      </div>
+
+      {/* Wordmark */}
+      <div style={{
+        transform: visible && phase !== "in" ? "translateY(0)" : "translateY(10px)",
+        opacity: visible && phase !== "in" ? 1 : 0,
+        transition: "transform 0.6s cubic-bezier(0.34,1.2,0.64,1) 0.12s, opacity 0.5s ease 0.12s",
+      }}>
+        <h1 style={{ fontSize: "2.6rem", fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>
+          Coincidence
+        </h1>
+        <p style={{ fontSize: "1rem", opacity: 0.45, fontStyle: "italic", marginTop: "10px" }}>
+          making the invisible string – visible
+        </p>
+      </div>
     </div>
   );
 }

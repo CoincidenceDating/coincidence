@@ -323,11 +323,12 @@ export default function ProfilePage({
       </div>
 
       {/* Tagline */}
-      <div className="mt-auto pt-8 flex flex-col items-center gap-1">
-        <svg width="40" height="32" viewBox="0 0 40 32" className="opacity-15">
-          <path d="M 20 0 Q 6 16 20 32" stroke="#8B5E1A" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M 20 0 Q 34 16 20 32" stroke="#8B5E1A" strokeWidth="3" fill="none" strokeLinecap="round" />
-        </svg>
+      <div className="mt-auto pt-8 flex flex-col items-center gap-3">
+        <img
+          src="/logo.jpeg"
+          alt="Coincidence"
+          className="w-10 h-10 rounded-xl opacity-60"
+        />
         <p className="text-xs text-muted-foreground italic">
           making the invisible string – visible
         </p>
