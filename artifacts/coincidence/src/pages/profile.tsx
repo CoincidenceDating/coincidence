@@ -124,6 +124,8 @@ export default function ProfilePage({
   const [hobbyInput, setHobbyInput] = useState("");
   const hobbyRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<"reason" | "confirm">("reason");
+  const [deleteReason, setDeleteReason] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [notificationsOn, setNotificationsOn] = useState(true);
 
@@ -387,7 +389,7 @@ export default function ProfilePage({
         <p className="text-xs text-muted-foreground italic">making the invisible string – visible</p>
       </div>
 
-      {/* ── Delete account confirmation overlay ── */}
+      {/* ── Delete account overlay (2-step) ── */}
       <AnimatePresence>
         {showDeleteConfirm && (
           <motion.div
@@ -396,52 +398,116 @@ export default function ProfilePage({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
-            onClick={e => { if (e.target === e.currentTarget) setShowDeleteConfirm(false); }}
+            onClick={e => { if (e.target === e.currentTarget) { setShowDeleteConfirm(false); setDeleteStep("reason"); setDeleteReason(null); } }}
           >
             <motion.div
+              key={deleteStep}
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 380, damping: 36 }}
-              className="w-full max-w-lg bg-card rounded-t-3xl px-6 pt-6 pb-10 space-y-5"
+              className="w-full max-w-lg bg-card rounded-t-3xl px-6 pt-6 pb-10"
             >
               {/* Handle */}
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-2" />
+              <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-5" />
 
-              {/* Icon */}
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
-                    <path d="M10 11v6M14 11v6" />
-                    <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-                  </svg>
-                </div>
-                <h2 className="text-lg font-bold">Delete your account?</h2>
-                <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-                  This will permanently erase your profile, matches, messages, and check-in history. You'll be taken back to the setup screen to start fresh.
-                </p>
-              </div>
+              {deleteStep === "reason" ? (
+                <>
+                  {/* Step 1 — Reason */}
+                  <div className="flex flex-col items-center gap-2 text-center mb-6">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Before you go</p>
+                    <h2 className="text-xl font-bold">Why are you leaving?</h2>
+                    <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
+                      Your feedback helps us build something better for everyone.
+                    </p>
+                  </div>
 
-              {/* Actions */}
-              <div className="space-y-2.5 pt-1">
-                <button
-                  onClick={() => {
-                    setShowDeleteConfirm(false);
-                    onDeleteAccount();
-                  }}
-                  className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 active:scale-[0.98] transition-all"
-                >
-                  Yes, delete everything
-                </button>
-                <button
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="w-full py-3.5 rounded-2xl border-2 border-border text-foreground font-semibold text-sm hover:bg-muted active:scale-[0.98] transition-all"
-                >
-                  Cancel
-                </button>
-              </div>
+                  <div className="grid grid-cols-2 gap-2.5 mb-6">
+                    {[
+                      { label: "Met by coincidence", emoji: "🪢" },
+                      { label: "Found what I was looking for", emoji: "✨" },
+                      { label: "Not enough people nearby", emoji: "📍" },
+                      { label: "Taking a break", emoji: "🌿" },
+                      { label: "Privacy concerns", emoji: "🔒" },
+                      { label: "App didn't work for me", emoji: "🤷" },
+                      { label: "Too many notifications", emoji: "🔔" },
+                      { label: "Other", emoji: "💬" },
+                    ].map(({ label, emoji }) => (
+                      <button
+                        key={label}
+                        onClick={() => setDeleteReason(label)}
+                        className={`flex items-start gap-2 px-3.5 py-3 rounded-2xl border-2 text-left text-sm font-medium transition-all active:scale-[0.97] ${
+                          deleteReason === label
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border bg-muted/30 text-foreground hover:border-foreground/30"
+                        }`}
+                      >
+                        <span className="text-base leading-tight shrink-0">{emoji}</span>
+                        <span className="leading-tight">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <button
+                      disabled={!deleteReason}
+                      onClick={() => setDeleteStep("confirm")}
+                      className="w-full py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm disabled:opacity-30 active:scale-[0.98] transition-all"
+                    >
+                      Continue
+                    </button>
+                    <button
+                      onClick={() => { setShowDeleteConfirm(false); setDeleteReason(null); }}
+                      className="w-full py-3.5 rounded-2xl border-2 border-border text-foreground font-semibold text-sm hover:bg-muted active:scale-[0.98] transition-all"
+                    >
+                      Never mind
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Step 2 — Final confirm */}
+                  <div className="flex flex-col items-center gap-3 text-center mb-6">
+                    <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">
+                      <svg viewBox="0 0 24 24" className="w-7 h-7 text-red-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                      </svg>
+                    </div>
+                    <h2 className="text-lg font-bold">Delete your account?</h2>
+                    {deleteReason && (
+                      <div className="px-4 py-2 rounded-xl bg-muted text-sm text-muted-foreground italic">
+                        "{deleteReason}"
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+                      This will permanently erase your profile, matches, messages, and check-in history.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <button
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteStep("reason");
+                        setDeleteReason(null);
+                        onDeleteAccount();
+                      }}
+                      className="w-full py-3.5 rounded-2xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 active:scale-[0.98] transition-all"
+                    >
+                      Yes, delete everything
+                    </button>
+                    <button
+                      onClick={() => setDeleteStep("reason")}
+                      className="w-full py-3.5 rounded-2xl border-2 border-border text-foreground font-semibold text-sm hover:bg-muted active:scale-[0.98] transition-all"
+                    >
+                      Go back
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -556,7 +622,7 @@ export default function ProfilePage({
                 {/* ── Danger zone ── */}
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1 pt-3">Danger zone</p>
 
-                <button onClick={() => { setShowSettings(false); setTimeout(() => setShowDeleteConfirm(true), 200); }}
+                <button onClick={() => { setShowSettings(false); setDeleteStep("reason"); setDeleteReason(null); setTimeout(() => setShowDeleteConfirm(true), 200); }}
                   className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-red-50 transition-colors text-left">
                   <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center shrink-0">
                     <Trash2 className="w-4 h-4 text-red-500" />
