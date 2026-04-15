@@ -272,19 +272,15 @@ function AppShell() {
 
   function handleLogout() {
     try {
-      localStorage.removeItem(MATCHES_KEY);
       localStorage.removeItem(UNDECIDED_KEY);
-      localStorage.removeItem(THREADS_KEY);
       localStorage.removeItem(CHECKINS_KEY);
       localStorage.removeItem(BOOST_KEY);
       localStorage.removeItem(BLOCKED_KEY);
     } catch {}
-    setMatches([]);
     setUndecided([]);
     setNewMatchCount(0);
     setNewUndecidedCount(0);
     setActiveChat(null);
-    setThreads({});
     setCheckIns([]);
     setBoostCredits(3);
     setBoostActiveUntil(null);
