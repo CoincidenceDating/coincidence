@@ -268,8 +268,8 @@ export default function ProfilePage({
           </button>
         </div>
 
-        <div className="flex items-center gap-1.5 mb-3">
-          {Array.from({ length: MAX_CREDITS }).map((_, i) => (
+        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+          {Array.from({ length: Math.min(Math.max(MAX_CREDITS, boostCredits), 8) }).map((_, i) => (
             <motion.div key={i}
               animate={isBoostActive && i === 0 ? { scale: [1, 1.25, 1] } : {}}
               transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
@@ -277,8 +277,11 @@ export default function ProfilePage({
               <StringIcon className={`w-5 h-5 transition-colors ${i < boostCredits ? "text-foreground" : "text-muted-foreground/25"}`} />
             </motion.div>
           ))}
+          {boostCredits > 8 && (
+            <span className="text-xs font-semibold text-foreground">+{boostCredits - 8}</span>
+          )}
           <span className="ml-1 text-sm text-muted-foreground">
-            {boostCredits} / {MAX_CREDITS} string{boostCredits !== 1 ? "s" : ""}
+            {boostCredits} string{boostCredits !== 1 ? "s" : ""}
           </span>
         </div>
 
@@ -324,8 +327,9 @@ export default function ProfilePage({
 
         <p className="text-xs text-muted-foreground text-center mt-2">
           {isBoostActive ? "You're appearing to 3× more people nearby"
-            : boostCredits < MAX_CREDITS ? "Earn strings by checking into new places"
-            : "Strings full — start swiping!"}
+            : boostCredits === 0 ? "Check into new places to earn strings"
+            : boostCredits < MAX_CREDITS ? "Earn more strings by checking into new places"
+            : "You're well stocked — start swiping!"}
         </p>
 
         {isBoostActive && (
