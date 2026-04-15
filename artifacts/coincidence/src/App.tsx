@@ -155,8 +155,18 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
-const SETUP_FLAG = "coincidence_setup_complete";
-const PROFILE_KEY = "coincidence_profile";
+const SETUP_FLAG    = "coincidence_setup_complete";
+const PROFILE_KEY   = "coincidence_profile";
+const MATCHES_KEY   = "coincidence_matches";
+const UNDECIDED_KEY = "coincidence_undecided";
+const THREADS_KEY   = "coincidence_threads";
+const CHECKINS_KEY  = "coincidence_checkins";
+const BOOST_KEY     = "coincidence_boost";
+
+function ls<T>(key: string, fallback: T): T {
+  try { const raw = localStorage.getItem(key); if (raw !== null) return JSON.parse(raw) as T; } catch {}
+  return fallback;
+}
 
 function AppShell() {
   const [showSplash, setShowSplash]   = useState(true);
@@ -172,23 +182,35 @@ function AppShell() {
     return "Everyone";
   }
   const [lookingFor, setLookingFor] = useState<string>(readLookingFor);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [undecided, setUndecided] = useState<Match[]>([]);
+  const [matches, setMatches] = useState<Match[]>(() => ls(MATCHES_KEY, []));
+  const [undecided, setUndecided] = useState<Match[]>(() => ls(UNDECIDED_KEY, []));
   const [newMatchCount, setNewMatchCount] = useState(0);
   const [newUndecidedCount, setNewUndecidedCount] = useState(0);
   const [activeChat, setActiveChat] = useState<Match | null>(null);
-  const [threads, setThreads] = useState<Record<string, Message[]>>({});
-  const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
-  const [boostCredits, setBoostCredits] = useState(3);
-  const [boostActiveUntil, setBoostActiveUntil] = useState<number | null>(null);
+  const [threads, setThreads] = useState<Record<string, Message[]>>(() => ls(THREADS_KEY, {}));
+  const [checkIns, setCheckIns] = useState<CheckIn[]>(() => ls(CHECKINS_KEY, []));
+  const [boostCredits, setBoostCredits] = useState<number>(() => ls<{ credits: number }>(BOOST_KEY, { credits: 3 }).credits);
+  const [boostActiveUntil, setBoostActiveUntil] = useState<number | null>(() => {
+    const saved = ls<{ until: number | null }>(BOOST_KEY, { until: null }).until;
+    return saved && saved > Date.now() ? saved : null;
+  });
   const [boostTimeLeft, setBoostTimeLeft] = useState(0);
-  const [boostRadius, setBoostRadius] = useState(5);
+  const [boostRadius, setBoostRadius] = useState<number>(() => ls<{ radius: number }>(BOOST_KEY, { radius: 5 }).radius);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
   const isBoostActive = boostActiveUntil !== null && boostTimeLeft > 0;
 
   const checkedInLocations = new Set(checkIns.map((c) => c.locationId));
+
+  // Persist state to localStorage
+  useEffect(() => { try { localStorage.setItem(MATCHES_KEY,   JSON.stringify(matches));   } catch {} }, [matches]);
+  useEffect(() => { try { localStorage.setItem(UNDECIDED_KEY, JSON.stringify(undecided)); } catch {} }, [undecided]);
+  useEffect(() => { try { localStorage.setItem(THREADS_KEY,   JSON.stringify(threads));   } catch {} }, [threads]);
+  useEffect(() => { try { localStorage.setItem(CHECKINS_KEY,  JSON.stringify(checkIns));  } catch {} }, [checkIns]);
+  useEffect(() => {
+    try { localStorage.setItem(BOOST_KEY, JSON.stringify({ credits: boostCredits, until: boostActiveUntil, radius: boostRadius })); } catch {}
+  }, [boostCredits, boostActiveUntil, boostRadius]);
 
   // Countdown tick
   useEffect(() => {
@@ -243,6 +265,13 @@ function AppShell() {
   }
 
   function handleLogout() {
+    try {
+      localStorage.removeItem(MATCHES_KEY);
+      localStorage.removeItem(UNDECIDED_KEY);
+      localStorage.removeItem(THREADS_KEY);
+      localStorage.removeItem(CHECKINS_KEY);
+      localStorage.removeItem(BOOST_KEY);
+    } catch {}
     setMatches([]);
     setUndecided([]);
     setNewMatchCount(0);
