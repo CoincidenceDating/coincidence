@@ -169,7 +169,7 @@ export default function ProfilePage({
   }
 
   return (
-    <div className="flex flex-col px-4 pt-4 pb-8 max-w-md mx-auto w-full">
+    <div className="flex flex-col px-4 pt-4 pb-28 max-w-md mx-auto w-full">
 
       {/* ── Top bar ── */}
       <div className="flex items-center justify-between mb-4">
