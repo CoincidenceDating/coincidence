@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/select";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart } from "lucide-react";
+import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, TrendingUp } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
   wine: <Wine className="w-4 h-4" />,
@@ -40,6 +40,11 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
   function handleActivate() {
     if (!selectedLocation) return;
+    setCurrentIndex(0); setDone(false); setIsActive(true); setJustCheckedIn(false);
+  }
+
+  function handleHotSpotTap(locId: string) {
+    setSelectedLocation(locId);
     setCurrentIndex(0); setDone(false); setIsActive(true); setJustCheckedIn(false);
   }
 
@@ -262,10 +267,52 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               <h1 className="text-2xl font-bold">Coincidence Mode</h1>
               <p className="text-muted-foreground text-sm mt-1">Pick a spot and see who is around</p>
             </div>
+
+            {/* ── Hot Spots ── */}
+            {(() => {
+              const sorted = [...locations].sort((a, b) => b.users.length - a.users.length);
+              return (
+                <div className="mb-6">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Flame className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hot Spots</span>
+                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">tap to jump in</span>
+                  </div>
+                  <div className="space-y-2">
+                    {sorted.map((loc) => {
+                      const count = loc.users.length;
+                      const heat = count >= 4 ? { label: "Buzzing", dot: "bg-red-400", bar: "w-full" }
+                        : count === 3 ? { label: "Active", dot: "bg-orange-400", bar: "w-3/4" }
+                        : { label: "Lively", dot: "bg-yellow-400", bar: "w-1/2" };
+                      return (
+                        <button
+                          key={loc.id}
+                          onClick={() => handleHotSpotTap(loc.id)}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-card hover:bg-accent/40 active:scale-[0.98] transition-all text-left"
+                        >
+                          <span className="text-muted-foreground shrink-0">{iconMap[loc.icon]}</span>
+                          <span className="font-medium text-sm flex-1 truncate">{loc.name}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1">
+                              <div className="w-16 h-1 rounded-full bg-foreground/8 overflow-hidden">
+                                <div className={`h-full rounded-full ${heat.bar} bg-foreground/25`} />
+                              </div>
+                            </div>
+                            <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
+                            <span className="text-[10px] text-muted-foreground w-12 text-right">{count} {count === 1 ? "person" : "people"}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             <div className="space-y-4">
               <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Choose a location" />
+                  <SelectValue placeholder="Or choose manually…" />
                 </SelectTrigger>
                 <SelectContent>
                   {locations.map((loc) => (

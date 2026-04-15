@@ -1,4 +1,4 @@
-import { type Match } from "@/lib/data";
+import { type Match, type CheckIn } from "@/lib/data";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Sparkles, Heart, Wine, Beer, Coffee, Zap, MessageCircle } from "lucide-react";
 
@@ -10,13 +10,21 @@ const iconMap: Record<string, React.ReactNode> = {
   swipe: <Heart className="w-3.5 h-3.5" />,
 };
 
+function starsAlignedOverlap(match: Match, checkIns: CheckIn[]): number {
+  const visited = match.profile.visitedLocations ?? [];
+  if (visited.length === 0) return 0;
+  const myIds = checkIns.map((c) => c.locationId);
+  return visited.filter((id) => myIds.includes(id)).length;
+}
+
 interface MatchesPageProps {
   matches: Match[];
   messageCounts: Record<string, number>;
+  checkIns: CheckIn[];
   onOpenChat: (match: Match) => void;
 }
 
-export default function MatchesPage({ matches, messageCounts, onOpenChat }: MatchesPageProps) {
+export default function MatchesPage({ matches, messageCounts, checkIns, onOpenChat }: MatchesPageProps) {
   if (matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
@@ -56,13 +64,60 @@ export default function MatchesPage({ matches, messageCounts, onOpenChat }: Matc
     return true;
   });
 
-  // Group by source
+  // Stars Aligned: 2+ shared locations
+  const starsAligned = deduped.filter((m) => starsAlignedOverlap(m, checkIns) >= 2);
+
+  // Group by source (excluding stars aligned — they appear at top)
   const groups = deduped.reduce<Record<string, Match[]>>((acc, match) => {
     const key = match.source;
     if (!acc[key]) acc[key] = [];
     acc[key].push(match);
     return acc;
   }, {});
+
+  function MatchRow({ match }: { match: Match }) {
+    const msgCount = messageCounts[match.profile.id] ?? 0;
+    const hasMessages = msgCount > 0;
+    const overlap = starsAlignedOverlap(match, checkIns);
+    const isAligned = overlap >= 2;
+    return (
+      <button
+        key={`${match.profile.id}-${match.matchedAt}`}
+        onClick={() => onOpenChat(match)}
+        className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-accent/40 active:scale-[0.98] transition-all text-left"
+      >
+        <div className="relative shrink-0">
+          <ProfileAvatar profile={match.profile} size={44} />
+          {hasMessages && (
+            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-background" />
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="font-medium text-sm">
+              {match.profile.name},{" "}
+              <span className="text-muted-foreground font-normal">{match.profile.age}</span>
+            </p>
+            {isAligned && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-foreground/8 border border-foreground/12 text-[9px] font-semibold tracking-wide text-foreground/70 shrink-0">
+                ✦ Stars Aligned
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground truncate">
+            {hasMessages
+              ? `${msgCount} message${msgCount > 1 ? "s" : ""}`
+              : isAligned
+              ? `${overlap} places in common · ${match.profile.bio}`
+              : match.profile.bio}
+          </p>
+        </div>
+        <MessageCircle
+          className={`w-4 h-4 shrink-0 transition-colors ${hasMessages ? "text-primary" : "text-muted-foreground/40"}`}
+        />
+      </button>
+    );
+  }
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-80px)] px-4 py-6 max-w-md mx-auto w-full">
@@ -75,6 +130,26 @@ export default function MatchesPage({ matches, messageCounts, onOpenChat }: Matc
       </div>
 
       <div className="space-y-6">
+
+        {/* ── Stars Aligned section ── */}
+        {starsAligned.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-3">
+              <span className="text-[13px]">✦</span>
+              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                Stars Aligned
+              </h2>
+              <span className="ml-1 text-[9px] text-muted-foreground/60 font-normal normal-case tracking-normal">
+                2+ places in common
+              </span>
+              <span className="ml-auto text-xs text-muted-foreground">{starsAligned.length}</span>
+            </div>
+            <div className="space-y-2">
+              {starsAligned.map((match) => <MatchRow key={match.profile.id} match={match} />)}
+            </div>
+          </div>
+        )}
+
         {Object.entries(groups).map(([source, groupMatches]) => {
           const first = groupMatches[0];
           const label =
@@ -96,38 +171,7 @@ export default function MatchesPage({ matches, messageCounts, onOpenChat }: Matc
               </div>
 
               <div className="space-y-2">
-                {groupMatches.map((match) => {
-                  const msgCount = messageCounts[match.profile.id] ?? 0;
-                  const hasMessages = msgCount > 0;
-                  return (
-                    <button
-                      key={`${match.profile.id}-${match.matchedAt}`}
-                      onClick={() => onOpenChat(match)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card hover:bg-accent/40 active:scale-[0.98] transition-all text-left"
-                    >
-                      <div className="relative shrink-0">
-                        <ProfileAvatar profile={match.profile} size={44} />
-                        {hasMessages && (
-                          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-background" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-sm">
-                          {match.profile.name},{" "}
-                          <span className="text-muted-foreground font-normal">
-                            {match.profile.age}
-                          </span>
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {hasMessages ? `${msgCount} message${msgCount > 1 ? "s" : ""}` : match.profile.bio}
-                        </p>
-                      </div>
-                      <MessageCircle
-                        className={`w-4 h-4 shrink-0 transition-colors ${hasMessages ? "text-primary" : "text-muted-foreground/40"}`}
-                      />
-                    </button>
-                  );
-                })}
+                {groupMatches.map((match) => <MatchRow key={match.profile.id} match={match} />)}
               </div>
             </div>
           );

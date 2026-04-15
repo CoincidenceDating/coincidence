@@ -457,7 +457,7 @@ function AppShell() {
         {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} lookingFor={lookingFor} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} />}
         {activeTab === "matches" && (
-          <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
+          <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
         )}
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
