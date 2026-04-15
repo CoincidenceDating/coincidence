@@ -9,7 +9,7 @@ import MatchesPage from "@/pages/matches";
 import UndecidedPage from "@/pages/undecided";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
-import { Heart, Zap, Sparkles, Star, User } from "lucide-react";
+import { Heart, Zap, Sparkles, HelpCircle, User } from "lucide-react";
 import type { Match, CheckIn } from "@/lib/data";
 
 const queryClient = new QueryClient();
@@ -164,7 +164,7 @@ function AppShell() {
       label: "Maybe",
       icon: (a) => (
         <div className="relative">
-          <Star className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
+          <HelpCircle className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
           {newUndecidedCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold flex items-center justify-center leading-none">
               {newUndecidedCount > 9 ? "9+" : newUndecidedCount}

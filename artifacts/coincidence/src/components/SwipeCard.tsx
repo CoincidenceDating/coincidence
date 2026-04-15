@@ -6,7 +6,7 @@ import {
   motion,
   AnimatePresence,
 } from "framer-motion";
-import { Heart, X, Star, MapPin } from "lucide-react";
+import { Heart, X, HelpCircle, MapPin } from "lucide-react";
 import type { Profile } from "@/lib/data";
 
 type Action = "none" | "yes" | "no" | "maybe";
@@ -302,7 +302,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             disabled={action !== "none"}
             className="w-12 h-12 rounded-full border-2 border-amber-400/60 text-amber-500 hover:bg-amber-50 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
           >
-            <Star className="w-5 h-5" />
+            <HelpCircle className="w-5 h-5" />
           </button>
 
           {/* Yes */}

@@ -1,5 +1,5 @@
 import { type Match } from "@/lib/data";
-import { Star, Check, X, MapPin } from "lucide-react";
+import { HelpCircle, Check, X, MapPin } from "lucide-react";
 
 interface UndecidedPageProps {
   undecided: Match[];
@@ -11,11 +11,11 @@ export default function UndecidedPage({ undecided, onDecide }: UndecidedPageProp
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-          <Star className="w-8 h-8 text-muted-foreground" />
+          <HelpCircle className="w-8 h-8 text-muted-foreground" />
         </div>
         <h2 className="text-xl font-semibold">No maybes yet</h2>
         <p className="text-muted-foreground text-sm mt-1 max-w-xs">
-          Press the star button when you're not sure — you can decide later here.
+          Press the ? button when you're not sure — you can decide later here.
         </p>
       </div>
     );
