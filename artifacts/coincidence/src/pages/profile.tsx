@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, MapPin, Zap, Wine, Beer, Coffee, Sparkles,
   ShoppingBag, X, Pencil, Plus, Home, Ruler, ChevronUp, ChevronDown,
+  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StringIcon } from "@/components/StringIcon";
@@ -123,6 +124,8 @@ export default function ProfilePage({
   const [hobbyInput, setHobbyInput] = useState("");
   const hobbyRef = useRef<HTMLInputElement>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [notificationsOn, setNotificationsOn] = useState(true);
 
   const initials = editable.name
     .split(" ")
@@ -164,7 +167,18 @@ export default function ProfilePage({
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-80px)] px-4 py-8 max-w-md mx-auto w-full">
+    <div className="flex flex-col min-h-[calc(100vh-80px)] px-4 pt-4 pb-8 max-w-md mx-auto w-full">
+
+      {/* ── Top bar ── */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Profile</span>
+        <button
+          onClick={() => setShowSettings(true)}
+          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+        >
+          <Settings className="w-5 h-5 text-muted-foreground" />
+        </button>
+      </div>
 
       {/* ── Avatar + name ── */}
       <div className="flex flex-col items-center text-center mb-6">
@@ -367,25 +381,10 @@ export default function ProfilePage({
         )}
       </div>
 
-      {/* ── Tagline + account actions ── */}
-      <div className="mt-auto pt-8 flex flex-col items-center gap-3 pb-2">
+      {/* ── Tagline ── */}
+      <div className="mt-auto pt-8 flex flex-col items-center gap-2 pb-2">
         <img src="/logo.jpeg" alt="Coincidence" className="w-10 h-10 rounded-xl opacity-60" />
         <p className="text-xs text-muted-foreground italic">making the invisible string – visible</p>
-        <div className="flex items-center gap-4 mt-1">
-          <button
-            onClick={onResetSetup}
-            className="text-xs text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2 transition-colors"
-          >
-            Redo setup
-          </button>
-          <span className="text-muted-foreground/30 text-xs">·</span>
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="text-xs text-red-400/60 hover:text-red-500 underline underline-offset-2 transition-colors"
-          >
-            Delete account
-          </button>
-        </div>
       </div>
 
       {/* ── Delete account confirmation overlay ── */}
@@ -442,6 +441,134 @@ export default function ProfilePage({
                 >
                   Cancel
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════
+          SETTINGS SHEET
+      ══════════════════════════════════════ */}
+      <AnimatePresence>
+        {showSettings && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setShowSettings(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 380, damping: 36 }}
+              className="w-full max-w-lg bg-card rounded-t-3xl pb-10 overflow-hidden"
+            >
+              {/* Handle + header */}
+              <div className="px-6 pt-5 pb-4 border-b border-border">
+                <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-4" />
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold">Settings</h2>
+                  <button onClick={() => setShowSettings(false)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-4 pt-3 space-y-1">
+
+                {/* ── Account section ── */}
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1 pt-2">Account</p>
+
+                {/* Edit profile */}
+                <button onClick={() => { setShowSettings(false); openEdit(); }}
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <Pencil className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Edit profile</p>
+                    <p className="text-xs text-muted-foreground">Update your name, bio, hobbies</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+
+                {/* Notifications */}
+                <div className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <Bell className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Notifications</p>
+                    <p className="text-xs text-muted-foreground">New matches and messages</p>
+                  </div>
+                  <button
+                    onClick={() => setNotificationsOn(n => !n)}
+                    className={`relative w-11 h-6 rounded-full transition-colors ${notificationsOn ? "bg-foreground" : "bg-muted-foreground/30"}`}
+                  >
+                    <motion.div
+                      animate={{ x: notificationsOn ? 22 : 2 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      className="absolute top-1 w-4 h-4 rounded-full bg-background shadow-sm"
+                    />
+                  </button>
+                </div>
+
+                {/* Log out */}
+                <button onClick={() => { setShowSettings(false); onResetSetup(); }}
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <LogOut className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Log out</p>
+                    <p className="text-xs text-muted-foreground">Sign out and return to setup</p>
+                  </div>
+                </button>
+
+                {/* ── Legal section ── */}
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1 pt-3">About</p>
+
+                <button className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <Shield className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Privacy Policy</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+
+                <button className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <FileText className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">Terms of Service</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+
+                {/* ── Danger zone ── */}
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1 pt-3">Danger zone</p>
+
+                <button onClick={() => { setShowSettings(false); setTimeout(() => setShowDeleteConfirm(true), 200); }}
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-red-50 transition-colors text-left">
+                  <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-red-500">Delete account</p>
+                    <p className="text-xs text-red-400/70">Permanently erase all your data</p>
+                  </div>
+                </button>
+
+                {/* Version */}
+                <p className="text-center text-[10px] text-muted-foreground/40 pt-4">Coincidence v1.0.0</p>
               </div>
             </motion.div>
           </motion.div>
