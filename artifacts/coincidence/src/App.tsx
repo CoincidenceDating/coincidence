@@ -302,6 +302,7 @@ function AppShell() {
     setBoostCredits(3);
     setBoostActiveUntil(null);
     setBoostTimeLeft(0);
+    setBlockedIds([]);
     setLookingFor("Everyone");
     setShowSplash(true);
     setShowSetup(true);
