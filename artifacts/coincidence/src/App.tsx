@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,6 +9,7 @@ import MatchesPage from "@/pages/matches";
 import UndecidedPage from "@/pages/undecided";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
+import SetupPage, { type SetupData } from "@/pages/setup";
 import { Heart, Zap, Sparkles, HelpCircle, User } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Match, CheckIn } from "@/lib/data";
@@ -111,9 +112,13 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
+const SETUP_FLAG = "coincidence_setup_complete";
+const PROFILE_KEY = "coincidence_profile";
+
 function AppShell() {
-  const [showSplash, setShowSplash] = useState(true);
-  const [activeTab, setActiveTab] = useState<Tab>("swipe");
+  const [showSplash, setShowSplash]   = useState(true);
+  const [showSetup, setShowSetup]     = useState(() => !localStorage.getItem(SETUP_FLAG));
+  const [activeTab, setActiveTab]     = useState<Tab>("swipe");
   const [matches, setMatches] = useState<Match[]>([]);
   const [undecided, setUndecided] = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount] = useState(0);
@@ -155,6 +160,24 @@ function AppShell() {
     const until = Date.now() + BOOST_DURATION_MS;
     setBoostActiveUntil(until);
     setBoostTimeLeft(BOOST_DURATION_MS);
+  }
+
+  function handleSetupComplete(data: SetupData) {
+    try {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({
+        name: data.name,
+        age: data.age,
+        bio: data.bio,
+        hometown: data.hometown,
+        height: data.height,
+        hobbies: data.hobbies,
+        lookingFor: data.lookingFor,
+        ageMin: data.ageMin,
+        ageMax: data.ageMax,
+      }));
+      localStorage.setItem(SETUP_FLAG, "1");
+    } catch {}
+    setShowSetup(false);
   }
 
   function handleCheckIn(checkIn: CheckIn) {
@@ -224,6 +247,13 @@ function AppShell() {
   }
 
   if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
+  if (showSetup) return (
+    <AnimatePresence>
+      <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+        <SetupPage onComplete={handleSetupComplete} />
+      </motion.div>
+    </AnimatePresence>
+  );
 
   const tabs: { id: Tab; label: string; icon: (active: boolean) => React.ReactNode }[] = [
     {
