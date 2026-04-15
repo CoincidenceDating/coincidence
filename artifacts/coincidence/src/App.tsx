@@ -510,6 +510,15 @@ function AppShell() {
             messages={threads[activeChat.profile.id] ?? []}
             onSend={handleSend}
             onBack={() => setActiveChat(null)}
+            onUnmatch={() => {
+              const id = activeChat.profile.id;
+              setActiveChat(null);
+              setMatches((prev) => prev.filter((m) => m.profile.id !== id));
+            }}
+            onReport={() => {
+              setActiveChat(null);
+              setMatches((prev) => prev.filter((m) => m.profile.id !== activeChat.profile.id));
+            }}
           />
         )}
       </AnimatePresence>

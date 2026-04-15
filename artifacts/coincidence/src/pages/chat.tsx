@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { ArrowLeft, Send } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Send, MoreVertical, UserX, Flag, X } from "lucide-react";
 import type { Match } from "@/lib/data";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 
@@ -35,18 +35,36 @@ function getOpeningMessage(match: Match): string {
   return `What are the odds of running into you at ${loc}? Glad we did 😄`;
 }
 
+const REPORT_REASONS = [
+  "Inappropriate messages",
+  "Feels fake or spam",
+  "Offensive behaviour",
+  "Made me uncomfortable",
+  "Other",
+];
+
 interface ChatPageProps {
   match: Match;
   messages: Message[];
   onSend: (profileId: string, text: string) => void;
   onBack: () => void;
+  onUnmatch: () => void;
+  onReport: (reason: string) => void;
 }
 
-export default function ChatPage({ match, messages, onSend, onBack }: ChatPageProps) {
+export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, onReport }: ChatPageProps) {
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const [showMenu, setShowMenu] = useState(false);
+  const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState<string | null>(null);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
+
+  const firstName = match.profile.name.split(" ")[0];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -96,12 +114,18 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
           <ArrowLeft className="w-5 h-5" />
         </button>
         <ProfileAvatar profile={match.profile} size={40} />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm leading-tight truncate">
             {match.profile.name}
           </p>
           <p className="text-xs text-muted-foreground truncate">{locationTag}</p>
         </div>
+        <button
+          onClick={() => setShowMenu(true)}
+          className="p-1.5 rounded-full hover:bg-muted transition-colors shrink-0"
+        >
+          <MoreVertical className="w-5 h-5 text-muted-foreground" />
+        </button>
       </div>
 
       {/* Messages */}
@@ -267,6 +291,168 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
           <Send className="w-4 h-4 text-primary-foreground" />
         </button>
       </div>
+
+      {/* ── Action menu sheet ── */}
+      <AnimatePresence>
+        {showMenu && (
+          <>
+            <motion.div
+              className="absolute inset-0 bg-black/40 z-10"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowMenu(false)}
+            />
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl z-20 p-5 space-y-3"
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 280 }}
+            >
+              <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-4" />
+              <button
+                onClick={() => { setShowMenu(false); setShowUnmatchConfirm(true); }}
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-muted transition-colors text-left"
+              >
+                <UserX className="w-5 h-5 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Unmatch {firstName}</p>
+                  <p className="text-xs text-muted-foreground">Remove this connection permanently</p>
+                </div>
+              </button>
+              <button
+                onClick={() => { setShowMenu(false); setShowReport(true); }}
+                className="w-full flex items-center gap-3 p-3.5 rounded-xl hover:bg-muted transition-colors text-left"
+              >
+                <Flag className="w-5 h-5 text-muted-foreground shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Report {firstName}</p>
+                  <p className="text-xs text-muted-foreground">Let us know if something felt off</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setShowMenu(false)}
+                className="w-full py-3.5 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Unmatch confirmation ── */}
+      <AnimatePresence>
+        {showUnmatchConfirm && (
+          <>
+            <motion.div
+              className="absolute inset-0 bg-black/50 z-10"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowUnmatchConfirm(false)}
+            />
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl z-20 p-6"
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 280 }}
+            >
+              <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-5" />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  <UserX className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Unmatch {firstName}?</p>
+                  <p className="text-xs text-muted-foreground">Your connection and messages will be removed. This can't be undone.</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setShowUnmatchConfirm(false); onUnmatch(); }}
+                className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold mb-2 active:scale-[0.98] transition-transform"
+              >
+                Unmatch
+              </button>
+              <button
+                onClick={() => setShowUnmatchConfirm(false)}
+                className="w-full py-3.5 rounded-xl text-sm text-muted-foreground hover:bg-muted transition-colors font-medium"
+              >
+                Cancel
+              </button>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Report flow ── */}
+      <AnimatePresence>
+        {showReport && (
+          <>
+            <motion.div
+              className="absolute inset-0 bg-black/50 z-10"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { if (!reportSubmitted) setShowReport(false); }}
+            />
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl z-20 p-6"
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 280 }}
+            >
+              <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-5" />
+              <AnimatePresence mode="wait">
+                {reportSubmitted ? (
+                  <motion.div
+                    key="done"
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center py-4 gap-3"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                      <Flag className="w-5 h-5 text-foreground" />
+                    </div>
+                    <p className="font-semibold text-sm">Report submitted</p>
+                    <p className="text-xs text-muted-foreground text-center">Thanks for letting us know. We'll look into it and take action if needed.</p>
+                    <button
+                      onClick={() => { setShowReport(false); setReportSubmitted(false); setReportReason(null); onReport(reportReason!); }}
+                      className="mt-2 w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold active:scale-[0.98] transition-transform"
+                    >
+                      Done
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="font-semibold text-sm">Report {firstName}</p>
+                        <p className="text-xs text-muted-foreground">What's the reason?</p>
+                      </div>
+                      <button onClick={() => setShowReport(false)} className="p-1.5 rounded-full hover:bg-muted transition-colors">
+                        <X className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </div>
+                    <div className="space-y-2 mb-4">
+                      {REPORT_REASONS.map((reason) => (
+                        <button
+                          key={reason}
+                          onClick={() => setReportReason(reason)}
+                          className={`w-full text-left px-4 py-3 rounded-xl text-sm border transition-all ${
+                            reportReason === reason
+                              ? "bg-foreground text-background border-foreground"
+                              : "bg-transparent text-foreground border-border hover:border-foreground/40"
+                          }`}
+                        >
+                          {reason}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      disabled={!reportReason}
+                      onClick={() => setReportSubmitted(true)}
+                      className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-30 active:scale-[0.98] transition-all"
+                    >
+                      Submit report
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
