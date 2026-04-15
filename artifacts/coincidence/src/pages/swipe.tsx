@@ -16,9 +16,10 @@ interface SwipePageProps {
   onMaybe: (match: Match) => void;
   isBoostActive: boolean;
   boostTimeLeft: number;
+  boostRadius: number;
 }
 
-export default function SwipePage({ onMatch, onMaybe, isBoostActive, boostTimeLeft }: SwipePageProps) {
+export default function SwipePage({ onMatch, onMaybe, isBoostActive, boostTimeLeft, boostRadius }: SwipePageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   function handleSwipe(dir: "left" | "right" | "maybe") {
@@ -55,7 +56,7 @@ export default function SwipePage({ onMatch, onMaybe, isBoostActive, boostTimeLe
               >
                 <Zap className="w-3.5 h-3.5 fill-background" />
               </motion.div>
-              Boosted · {formatBoostTime(boostTimeLeft)} left
+              Boosted · {boostRadius} mi radius · {formatBoostTime(boostTimeLeft)} left
             </motion.div>
           )}
         </AnimatePresence>

@@ -31,12 +31,16 @@ function formatBoostTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+const RADIUS_OPTIONS = [1, 5, 10, 25];
+
 interface ProfilePageProps {
   matches: Match[];
   checkIns: CheckIn[];
   boostCredits: number;
   isBoostActive: boolean;
   boostTimeLeft: number;
+  boostRadius: number;
+  onBoostRadiusChange: (r: number) => void;
   onActivateBoost: () => void;
 }
 
@@ -46,6 +50,8 @@ export default function ProfilePage({
   boostCredits,
   isBoostActive,
   boostTimeLeft,
+  boostRadius,
+  onBoostRadiusChange,
   onActivateBoost,
 }: ProfilePageProps) {
   const totalMatches = matches.length;
@@ -147,6 +153,31 @@ export default function ProfilePage({
           </span>
         </div>
 
+        {/* Radius selector */}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            {isBoostActive
+              ? `Visible to everyone within ${boostRadius} mi`
+              : `Visible radius · select before boosting`}
+          </p>
+          <div className="flex gap-2">
+            {RADIUS_OPTIONS.map((r) => (
+              <button
+                key={r}
+                onClick={() => !isBoostActive && onBoostRadiusChange(r)}
+                disabled={isBoostActive}
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all border ${
+                  boostRadius === r
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-transparent text-muted-foreground border-border hover:border-foreground/40"
+                } disabled:cursor-default`}
+              >
+                {r} mi
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Active state or activate button */}
         <AnimatePresence mode="wait">
           {isBoostActive ? (
@@ -164,7 +195,9 @@ export default function ProfilePage({
                 >
                   <Zap className="w-4 h-4 fill-background" />
                 </motion.div>
-                <span className="text-sm font-semibold">Boost active</span>
+                <span className="text-sm font-semibold">
+                  Reaching {boostRadius} mi radius
+                </span>
               </div>
               <span className="text-sm font-mono tabular-nums">
                 {formatBoostTime(boostTimeLeft)}
@@ -181,10 +214,10 @@ export default function ProfilePage({
               className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-35 hover:bg-foreground/85 active:scale-[0.98] transition-all"
             >
               <Zap className="w-4 h-4 fill-background" />
-              Activate Boost
+              Boost my visibility
               {boostCredits > 0 && (
                 <span className="ml-1 text-background/60 text-xs font-normal">
-                  · uses 1 of {boostCredits}
+                  · {boostRadius} mi · uses 1 of {boostCredits}
                 </span>
               )}
             </motion.button>
@@ -192,7 +225,9 @@ export default function ProfilePage({
         </AnimatePresence>
 
         <p className="text-xs text-muted-foreground text-center mt-2">
-          {boostCredits < MAX_CREDITS
+          {isBoostActive
+            ? "You're appearing to 3× more people nearby"
+            : boostCredits < MAX_CREDITS
             ? "Earn boosts by checking into new places"
             : "Boost credits full — start swiping!"}
         </p>
