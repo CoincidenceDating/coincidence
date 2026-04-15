@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,8 +10,52 @@ const queryClient = new QueryClient();
 
 type Tab = "swipe" | "coincidence";
 
+function SplashScreen({ onDone }: { onDone: () => void }) {
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setFading(true), 1800);
+    const done = setTimeout(() => onDone(), 2300);
+    return () => { clearTimeout(timer); clearTimeout(done); };
+  }, [onDone]);
+
+  return (
+    <div
+      onClick={() => { setFading(true); setTimeout(onDone, 400); }}
+      style={{
+        position: "fixed",
+        inset: 0,
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "#0f0f0f",
+        color: "white",
+        textAlign: "center",
+        cursor: "pointer",
+        zIndex: 9999,
+        transition: "opacity 0.5s ease",
+        opacity: fading ? 0 : 1,
+      }}
+    >
+      <h1 style={{ fontSize: "3rem", marginBottom: "1rem", fontWeight: 700, letterSpacing: "-0.02em" }}>
+        Coincidence
+      </h1>
+      <p style={{ fontSize: "1.2rem", opacity: 0.6, fontStyle: "italic" }}>
+        making the invisible string – visible
+      </p>
+    </div>
+  );
+}
+
 function AppShell() {
+  const [showSplash, setShowSplash] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>("swipe");
+
+  if (showSplash) {
+    return <SplashScreen onDone={() => setShowSplash(false)} />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
