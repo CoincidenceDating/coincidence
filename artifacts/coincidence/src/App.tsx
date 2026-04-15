@@ -349,7 +349,7 @@ function AppShell() {
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       <main className="flex-1 min-h-0 overflow-y-auto">
         {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} lookingFor={lookingFor} />}
-        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} checkedInLocations={checkedInLocations} lookingFor={lookingFor} />}
+        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
         )}

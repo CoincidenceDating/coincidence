@@ -19,17 +19,18 @@ interface CoincidencePageProps {
   onMatch: (match: Match) => void;
   onMaybe: (match: Match) => void;
   onCheckIn: (checkIn: CheckIn) => void;
+  onSendMessage: (match: Match) => void;
   checkedInLocations: Set<string>;
   lookingFor: string;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedInLocations, lookingFor }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMessage, checkedInLocations, lookingFor }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [done, setDone] = useState(false);
   const [justCheckedIn, setJustCheckedIn] = useState(false);
-  const [coincidenceMatch, setCoincidenceMatch] = useState<{ profile: Profile; locationName: string } | null>(null);
+  const [coincidenceMatch, setCoincidenceMatch] = useState<Match | null>(null);
 
   const location = locations.find((l) => l.id === selectedLocation);
   const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor);
@@ -64,7 +65,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
       };
       if (dir === "right") {
         onMatch(matchData);
-        setCoincidenceMatch({ profile: currentUser, locationName: location.name });
+        setCoincidenceMatch(matchData);
       } else if (dir === "maybe") {
         onMaybe(matchData);
       }
@@ -76,8 +77,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
 
   const showCheckedIn = alreadyCheckedIn || justCheckedIn;
 
-  const matchInitials = coincidenceMatch?.profile.name
-    .split(" ").filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join("") ?? "";
+  const matchInitials = coincidenceMatch?.profile?.name
+    .split(" ").filter(Boolean).slice(0, 2).map((w: string) => w[0].toUpperCase()).join("") ?? "";
 
   return (
     <div className="flex flex-col items-center min-h-[calc(100vh-80px)] px-4 py-8">
@@ -154,6 +155,16 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
               </div>
             </motion.div>
 
+            {/* Tagline — top */}
+            <motion.p
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="text-background/50 text-xs font-semibold uppercase tracking-[0.2em] mb-6 italic"
+            >
+              the invisible string is now visible
+            </motion.p>
+
             {/* Text */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
@@ -194,16 +205,19 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
               className="flex flex-col gap-3 w-full max-w-xs"
             >
               <button
-                onClick={() => setCoincidenceMatch(null)}
+                onClick={() => {
+                  onSendMessage(coincidenceMatch);
+                  setCoincidenceMatch(null);
+                }}
                 className="w-full py-3.5 rounded-2xl bg-background text-foreground font-semibold text-sm hover:bg-background/90 active:scale-[0.98] transition-all"
               >
-                Keep swiping
+                Send a message
               </button>
               <button
                 onClick={() => setCoincidenceMatch(null)}
                 className="w-full py-3 rounded-2xl border border-background/30 text-background/70 text-sm hover:text-background hover:border-background/60 transition-all"
               >
-                Send a message
+                Keep swiping
               </button>
             </motion.div>
           </motion.div>
