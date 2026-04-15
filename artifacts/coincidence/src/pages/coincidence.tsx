@@ -25,9 +25,10 @@ interface CoincidencePageProps {
   lookingFor: string;
   boostCredits: number;
   onDoubleStringCredit: () => void;
+  blockedIds: string[];
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -36,7 +37,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [coincidenceMatch, setCoincidenceMatch] = useState<Match | null>(null);
 
   const location = locations.find((l) => l.id === selectedLocation);
-  const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor);
+  const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor)
+    .filter((p) => !blockedIds.includes(p.id));
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 

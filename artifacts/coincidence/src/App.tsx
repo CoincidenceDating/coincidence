@@ -162,6 +162,7 @@ const UNDECIDED_KEY = "coincidence_undecided";
 const THREADS_KEY   = "coincidence_threads";
 const CHECKINS_KEY  = "coincidence_checkins";
 const BOOST_KEY     = "coincidence_boost";
+const BLOCKED_KEY   = "coincidence_blocked";
 
 function ls<T>(key: string, fallback: T): T {
   try { const raw = localStorage.getItem(key); if (raw !== null) return JSON.parse(raw) as T; } catch {}
@@ -196,6 +197,7 @@ function AppShell() {
   });
   const [boostTimeLeft, setBoostTimeLeft] = useState(0);
   const [boostRadius, setBoostRadius] = useState<number>(() => ls<{ radius: number }>(BOOST_KEY, { radius: 5 }).radius);
+  const [blockedIds, setBlockedIds] = useState<string[]>(() => ls(BLOCKED_KEY, []));
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -211,6 +213,7 @@ function AppShell() {
   useEffect(() => {
     try { localStorage.setItem(BOOST_KEY, JSON.stringify({ credits: boostCredits, until: boostActiveUntil, radius: boostRadius })); } catch {}
   }, [boostCredits, boostActiveUntil, boostRadius]);
+  useEffect(() => { try { localStorage.setItem(BLOCKED_KEY, JSON.stringify(blockedIds)); } catch {} }, [blockedIds]);
 
   // Countdown tick
   useEffect(() => {
@@ -271,6 +274,7 @@ function AppShell() {
       localStorage.removeItem(THREADS_KEY);
       localStorage.removeItem(CHECKINS_KEY);
       localStorage.removeItem(BOOST_KEY);
+      localStorage.removeItem(BLOCKED_KEY);
     } catch {}
     setMatches([]);
     setUndecided([]);
@@ -282,6 +286,7 @@ function AppShell() {
     setBoostCredits(3);
     setBoostActiveUntil(null);
     setBoostTimeLeft(0);
+    setBlockedIds([]);
     setActiveTab("swipe");
     setIsLoggedOut(true);
   }
@@ -487,8 +492,8 @@ function AppShell() {
       </svg>
 
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} />}
-        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} />}
+        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
         )}
@@ -543,10 +548,13 @@ function AppShell() {
               const id = activeChat.profile.id;
               setActiveChat(null);
               setMatches((prev) => prev.filter((m) => m.profile.id !== id));
+              setBlockedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
             }}
             onReport={() => {
+              const id = activeChat.profile.id;
               setActiveChat(null);
-              setMatches((prev) => prev.filter((m) => m.profile.id !== activeChat.profile.id));
+              setMatches((prev) => prev.filter((m) => m.profile.id !== id));
+              setBlockedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
             }}
           />
         )}

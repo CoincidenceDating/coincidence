@@ -21,6 +21,7 @@ interface SwipePageProps {
   onActivateBoost: () => void;
   onDoubleStringCredit: () => void;
   lookingFor: string;
+  blockedIds: string[];
 }
 
 export default function SwipePage({
@@ -33,11 +34,13 @@ export default function SwipePage({
   onActivateBoost,
   onDoubleStringCredit,
   lookingFor,
+  blockedIds,
 }: SwipePageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [pulse, setPulse] = useState(false);
 
-  const filteredProfiles = filterByLookingFor(swipeProfiles, lookingFor);
+  const filteredProfiles = filterByLookingFor(swipeProfiles, lookingFor)
+    .filter((p) => !blockedIds.includes(p.id));
 
   function handleSwipe(dir: "left" | "right" | "maybe") {
     const profile = filteredProfiles[currentIndex];
