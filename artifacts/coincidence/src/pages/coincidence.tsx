@@ -250,6 +250,46 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                 <Zap className="w-4 h-4 mr-2" />Activate Coincidence Mode
               </Button>
             </div>
+
+            {/* ── String Theory explanation ── */}
+            <div className="mt-10 pt-8 border-t border-foreground/8">
+              {/* Decorative rope */}
+              <div className="flex items-center justify-center mb-6">
+                <svg viewBox="0 0 160 32" className="w-36 text-foreground/20" fill="none">
+                  <path d="M4 16 C 22 4, 32 28, 56 16 C 80 4, 90 28, 114 16 C 138 4, 148 28, 156 16"
+                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M4 16 C 22 4, 32 28, 56 16 C 80 4, 90 28, 114 16 C 138 4, 148 28, 156 16"
+                    stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeDasharray="4 6" opacity="0.6" />
+                  {[56, 114].map((cx) => (
+                    <circle key={cx} cx={cx} cy={16} r={3.5} fill="currentColor" opacity="0.5" />
+                  ))}
+                </svg>
+              </div>
+
+              {/* Heading */}
+              <h3
+                className="text-center font-semibold text-foreground/80 mb-3 leading-snug"
+                style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "clamp(1.15rem, 4.5vw, 1.4rem)", letterSpacing: "0.01em" }}
+              >
+                The Invisible String Theory
+              </h3>
+
+              {/* Body */}
+              <p className="text-center text-sm text-muted-foreground leading-relaxed mb-6 px-2">
+                Ancient wisdom holds that each of us is bound to the people we are meant to meet
+                by an invisible string — pulled tighter across every near-miss, every shared space,
+                every moment of almost. Coincidence mode plants you in the right place
+                so the string can do the rest.
+              </p>
+
+              {/* Slogan */}
+              <p
+                className="text-center font-semibold text-foreground tracking-wide"
+                style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: "clamp(1.05rem, 4vw, 1.25rem)", fontStyle: "italic" }}
+              >
+                Take Control Of Your Own Coincidence.
+              </p>
+            </div>
           </>
         ) : (
           <>
