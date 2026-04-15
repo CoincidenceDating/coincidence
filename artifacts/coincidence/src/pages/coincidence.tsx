@@ -45,7 +45,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
   function handleHotSpotTap(locId: string) {
     setSelectedLocation(locId);
-    setCurrentIndex(0); setDone(false); setIsActive(true); setJustCheckedIn(false);
   }
 
   function handleDeactivate() {
@@ -276,11 +275,12 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                   <div className="flex items-center gap-1.5 mb-3">
                     <Flame className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hot Spots</span>
-                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">tap to jump in</span>
+                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">tap to select</span>
                   </div>
                   <div className="space-y-2">
                     {sorted.map((loc) => {
                       const count = loc.users.length;
+                      const isSelected = selectedLocation === loc.id;
                       const heat = count >= 4 ? { label: "Buzzing", dot: "bg-red-400", bar: "w-full" }
                         : count === 3 ? { label: "Active", dot: "bg-orange-400", bar: "w-3/4" }
                         : { label: "Lively", dot: "bg-yellow-400", bar: "w-1/2" };
@@ -288,18 +288,16 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                         <button
                           key={loc.id}
                           onClick={() => handleHotSpotTap(loc.id)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border bg-card hover:bg-accent/40 active:scale-[0.98] transition-all text-left"
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border active:scale-[0.98] transition-all text-left ${isSelected ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent/40 border-border"}`}
                         >
-                          <span className="text-muted-foreground shrink-0">{iconMap[loc.icon]}</span>
+                          <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>{iconMap[loc.icon]}</span>
                           <span className="font-medium text-sm flex-1 truncate">{loc.name}</span>
                           <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex items-center gap-1">
-                              <div className="w-16 h-1 rounded-full bg-foreground/8 overflow-hidden">
-                                <div className={`h-full rounded-full ${heat.bar} bg-foreground/25`} />
-                              </div>
+                            <div className="w-16 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)" }}>
+                              <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.22)" }} />
                             </div>
                             <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
-                            <span className="text-[10px] text-muted-foreground w-12 text-right">{count} {count === 1 ? "person" : "people"}</span>
+                            <span className={`text-[10px] w-12 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>{count} {count === 1 ? "person" : "people"}</span>
                           </div>
                         </button>
                       );
