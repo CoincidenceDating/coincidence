@@ -117,6 +117,13 @@ export default function ProfilePage({
   const [hobbyInput, setHobbyInput] = useState("");
   const hobbyRef = useRef<HTMLInputElement>(null);
 
+  const initials = editable.name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join("");
+
   const totalMatches       = matches.length;
   const coincidenceMatches = matches.filter(m => m.source !== "swipe").length;
   const matchesByLocation  = matches.reduce<Record<string, number>>((acc, m) => {
@@ -169,7 +176,7 @@ export default function ProfilePage({
             )}
           </AnimatePresence>
           <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-foreground text-background text-3xl font-bold z-10">
-            {myProfile.avatar}
+            {initials}
             {isBoostActive && (
               <motion.div
                 animate={{ rotate: 360 }}
