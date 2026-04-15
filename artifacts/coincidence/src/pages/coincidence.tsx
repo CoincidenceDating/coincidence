@@ -432,6 +432,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                 locationIcon={iconMap[location?.icon ?? "sparkles"]}
                 locationName={location?.name}
                 progress={`${currentIndex + 1} of ${users.length} people here`}
+                blurName
               />
             ) : null}
           </>

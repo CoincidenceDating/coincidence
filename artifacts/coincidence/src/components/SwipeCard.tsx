@@ -339,9 +339,10 @@ interface SwipeCardProps {
   locationName?: string;
   progress?: string;
   peekProfiles?: Profile[];
+  blurName?: boolean;
 }
 
-export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [] }: SwipeCardProps) {
+export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -503,7 +504,26 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                   </div>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-5 pt-16 pb-5 text-white">
-                  <h2 className="text-2xl font-bold leading-tight">{profile.name}, {profile.age}</h2>
+                  <h2 className="text-2xl font-bold leading-tight">
+                    {blurName ? (
+                      <>
+                        <span
+                          style={{ filter: "blur(9px)", userSelect: "none" }}
+                          aria-hidden="true"
+                        >
+                          {profile.name}
+                        </span>
+                        <span className="sr-only">Name hidden</span>
+                        {", "}
+                        {profile.age}
+                      </>
+                    ) : (
+                      <>{profile.name}, {profile.age}</>
+                    )}
+                  </h2>
+                  {blurName && (
+                    <p className="text-[10px] text-white/40 mt-0.5 italic">name revealed on match</p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1">
                     <MapPin className="w-3.5 h-3.5 text-white/60 shrink-0" />
                     <span className="text-sm text-white/70">{profile.distance}</span>
