@@ -659,7 +659,7 @@ export default function ProfilePage({
               exit={{ y: "100%" }}
               transition={{ type: "spring", stiffness: 340, damping: 34 }}
               className="w-full max-w-md bg-background rounded-t-3xl overflow-hidden flex flex-col"
-              style={{ maxHeight: "90vh" }}
+              style={{ maxHeight: "calc(90vh - 80px)", marginBottom: 80 }}
             >
               {/* Header */}
               <div className="px-6 pt-5 pb-4 flex items-center justify-between shrink-0">
@@ -672,7 +672,7 @@ export default function ProfilePage({
               </div>
 
               {/* Scrollable body */}
-              <div className="overflow-y-auto px-6 pb-10 space-y-6">
+              <div className="overflow-y-auto px-6 pb-8 space-y-6">
 
                 {/* Name */}
                 <div>
