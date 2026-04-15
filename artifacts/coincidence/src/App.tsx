@@ -65,12 +65,46 @@ function AppShell() {
   const [activeChat, setActiveChat] = useState<Match | null>(null);
   const [threads, setThreads] = useState<Record<string, Message[]>>({});
   const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+  const [boostCredits, setBoostCredits] = useState(3);
+  const [boostActiveUntil, setBoostActiveUntil] = useState<number | null>(null);
+  const [boostTimeLeft, setBoostTimeLeft] = useState(0);
+
+  const BOOST_DURATION_MS = 30 * 60 * 1000;
+  const MAX_BOOST_CREDITS = 5;
+  const isBoostActive = boostActiveUntil !== null && boostTimeLeft > 0;
 
   const checkedInLocations = new Set(checkIns.map((c) => c.locationId));
+
+  // Countdown tick
+  useEffect(() => {
+    if (!boostActiveUntil) return;
+    const tick = () => {
+      const left = boostActiveUntil - Date.now();
+      if (left <= 0) {
+        setBoostTimeLeft(0);
+        setBoostActiveUntil(null);
+      } else {
+        setBoostTimeLeft(left);
+      }
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [boostActiveUntil]);
+
+  function handleActivateBoost() {
+    if (boostCredits <= 0 || isBoostActive) return;
+    setBoostCredits((c) => c - 1);
+    const until = Date.now() + BOOST_DURATION_MS;
+    setBoostActiveUntil(until);
+    setBoostTimeLeft(BOOST_DURATION_MS);
+  }
 
   function handleCheckIn(checkIn: CheckIn) {
     setCheckIns((prev) => {
       if (prev.some((c) => c.locationId === checkIn.locationId)) return prev;
+      // Earn 1 boost credit for a new location
+      setBoostCredits((c) => Math.min(c + 1, MAX_BOOST_CREDITS));
       return [...prev, checkIn];
     });
   }
@@ -138,7 +172,16 @@ function AppShell() {
     {
       id: "swipe",
       label: "Swipe",
-      icon: (a) => <Heart className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />,
+      icon: (a) => (
+        <div className="relative">
+          <Heart className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
+          {isBoostActive && (
+            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background flex items-center justify-center">
+              <Zap className="w-2 h-2 fill-background text-background" />
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       id: "coincidence",
@@ -183,7 +226,7 @@ function AppShell() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} checkedInLocations={checkedInLocations} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
@@ -191,7 +234,7 @@ function AppShell() {
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
-        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} />}
+        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} onActivateBoost={handleActivateBoost} />}
       </main>
 
       <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
