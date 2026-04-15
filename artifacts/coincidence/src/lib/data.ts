@@ -95,9 +95,9 @@ export const locations: LocationData[] = [
     name: "The Rusty Nail Bar",
     icon: "wine",
     users: [
-      { id: "u1", name: "Morgan Blake", age: 27, avatar: "MB", distance: "Here now", bio: "Mixology nerd", gender: "woman", gradient: "linear-gradient(160deg,#1a1a2e 0%,#2d1b69 100%)" },
-      { id: "u2", name: "Avery Quinn", age: 30, avatar: "AQ", distance: "Here now", bio: "Karaoke regular", gender: "non-binary", gradient: "linear-gradient(160deg,#0d0d0d 0%,#434343 100%)" },
-      { id: "u3", name: "Jamie Frost", age: 24, avatar: "JF", distance: "Here now", bio: "Just vibing", gender: "man", gradient: "linear-gradient(160deg,#141e30 0%,#243b55 100%)" },
+      { id: "u1", name: "Morgan Blake", age: 27, avatar: "MB", distance: "Here now", bio: "Mixology nerd", gender: "woman", gradient: "linear-gradient(160deg,#1a1a2e 0%,#2d1b69 100%)", photo: "profiles/u1.png" },
+      { id: "u2", name: "Avery Quinn", age: 30, avatar: "AQ", distance: "Here now", bio: "Karaoke regular", gender: "non-binary", gradient: "linear-gradient(160deg,#0d0d0d 0%,#434343 100%)", photo: "profiles/u2.png" },
+      { id: "u3", name: "Jamie Frost", age: 24, avatar: "JF", distance: "Here now", bio: "Just vibing", gender: "man", gradient: "linear-gradient(160deg,#141e30 0%,#243b55 100%)", photo: "profiles/u3.png" },
     ],
   },
   {
@@ -105,8 +105,8 @@ export const locations: LocationData[] = [
     name: "The Golden Pint Pub",
     icon: "beer",
     users: [
-      { id: "u4", name: "Charlie Dunn", age: 32, avatar: "CD", distance: "Here now", bio: "Craft beer connoisseur", gender: "man", gradient: "linear-gradient(160deg,#232526 0%,#414345 100%)" },
-      { id: "u5", name: "Taylor West", age: 26, avatar: "TW", distance: "Here now", bio: "Trivia night champion", gender: "woman", gradient: "linear-gradient(160deg,#2c3e50 0%,#3d3d3d 100%)" },
+      { id: "u4", name: "Charlie Dunn", age: 32, avatar: "CD", distance: "Here now", bio: "Craft beer connoisseur", gender: "man", gradient: "linear-gradient(160deg,#232526 0%,#414345 100%)", photo: "profiles/u4.png" },
+      { id: "u5", name: "Taylor West", age: 26, avatar: "TW", distance: "Here now", bio: "Trivia night champion", gender: "woman", gradient: "linear-gradient(160deg,#2c3e50 0%,#3d3d3d 100%)", photo: "profiles/u5.png" },
     ],
   },
   {
@@ -114,10 +114,10 @@ export const locations: LocationData[] = [
     name: "Bloom Cafe",
     icon: "coffee",
     users: [
-      { id: "u6", name: "Sage Ito", age: 23, avatar: "SI", distance: "Here now", bio: "Oat latte loyalist", gender: "non-binary", gradient: "linear-gradient(160deg,#1c1c2e 0%,#3a3a5c 100%)" },
-      { id: "u7", name: "Drew Patel", age: 29, avatar: "DP", distance: "Here now", bio: "Laptop warrior", gender: "man", gradient: "linear-gradient(160deg,#0f2027 0%,#2c5364 100%)" },
-      { id: "u8", name: "Quinn Abara", age: 25, avatar: "QA", distance: "Here now", bio: "Sketch artist", gender: "woman", gradient: "linear-gradient(160deg,#1a1a1a 0%,#3d3d3d 100%)" },
-      { id: "u9", name: "Ellis Grant", age: 28, avatar: "EG", distance: "Here now", bio: "People-watching pro", gender: "man", gradient: "linear-gradient(160deg,#141e30 0%,#4ca1af 100%)" },
+      { id: "u6", name: "Sage Ito", age: 23, avatar: "SI", distance: "Here now", bio: "Oat latte loyalist", gender: "non-binary", gradient: "linear-gradient(160deg,#1c1c2e 0%,#3a3a5c 100%)", photo: "profiles/u6.png" },
+      { id: "u7", name: "Drew Patel", age: 29, avatar: "DP", distance: "Here now", bio: "Laptop warrior", gender: "man", gradient: "linear-gradient(160deg,#0f2027 0%,#2c5364 100%)", photo: "profiles/u7.png" },
+      { id: "u8", name: "Quinn Abara", age: 25, avatar: "QA", distance: "Here now", bio: "Sketch artist", gender: "woman", gradient: "linear-gradient(160deg,#1a1a1a 0%,#3d3d3d 100%)", photo: "profiles/u8.png" },
+      { id: "u9", name: "Ellis Grant", age: 28, avatar: "EG", distance: "Here now", bio: "People-watching pro", gender: "man", gradient: "linear-gradient(160deg,#141e30 0%,#4ca1af 100%)", photo: "profiles/u9.png" },
     ],
   },
   {
@@ -125,8 +125,8 @@ export const locations: LocationData[] = [
     name: "Velvet Lounge",
     icon: "sparkles",
     users: [
-      { id: "u10", name: "Nico Vasquez", age: 30, avatar: "NV", distance: "Here now", bio: "Jazz fan", gender: "man", gradient: "linear-gradient(160deg,#0d0d0d 0%,#2d1b69 100%)" },
-      { id: "u11", name: "Reese Kim", age: 27, avatar: "RK", distance: "Here now", bio: "Night owl", gender: "woman", gradient: "linear-gradient(160deg,#232526 0%,#243b55 100%)" },
+      { id: "u10", name: "Nico Vasquez", age: 30, avatar: "NV", distance: "Here now", bio: "Jazz fan", gender: "man", gradient: "linear-gradient(160deg,#0d0d0d 0%,#2d1b69 100%)", photo: "profiles/u10.png" },
+      { id: "u11", name: "Reese Kim", age: 27, avatar: "RK", distance: "Here now", bio: "Night owl", gender: "woman", gradient: "linear-gradient(160deg,#232526 0%,#243b55 100%)", photo: "profiles/u11.png" },
     ],
   },
 ];
