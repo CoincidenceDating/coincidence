@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { locations, type Profile, type Match, type CheckIn } from "@/lib/data";
+import { locations, filterByLookingFor, type Profile, type Match, type CheckIn } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -20,9 +20,10 @@ interface CoincidencePageProps {
   onMaybe: (match: Match) => void;
   onCheckIn: (checkIn: CheckIn) => void;
   checkedInLocations: Set<string>;
+  lookingFor: string;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedInLocations }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedInLocations, lookingFor }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,7 +32,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, checkedIn
   const [coincidenceMatch, setCoincidenceMatch] = useState<{ profile: Profile; locationName: string } | null>(null);
 
   const location = locations.find((l) => l.id === selectedLocation);
-  const users: Profile[] = location?.users ?? [];
+  const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor);
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 

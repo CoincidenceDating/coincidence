@@ -119,6 +119,15 @@ function AppShell() {
   const [showSplash, setShowSplash]   = useState(true);
   const [showSetup, setShowSetup]     = useState(() => !localStorage.getItem(SETUP_FLAG));
   const [activeTab, setActiveTab]     = useState<Tab>("swipe");
+
+  function readLookingFor(): string {
+    try {
+      const raw = localStorage.getItem(PROFILE_KEY);
+      if (raw) return JSON.parse(raw).lookingFor ?? "Everyone";
+    } catch {}
+    return "Everyone";
+  }
+  const [lookingFor, setLookingFor] = useState<string>(readLookingFor);
   const [matches, setMatches] = useState<Match[]>([]);
   const [undecided, setUndecided] = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount] = useState(0);
@@ -219,6 +228,7 @@ function AppShell() {
   function handleTabChange(tab: Tab) {
     if (tab === "matches") setNewMatchCount(0);
     if (tab === "undecided") setNewUndecidedCount(0);
+    if (tab === "swipe" || tab === "coincidence") setLookingFor(readLookingFor());
     setActiveTab(tab);
   }
 
@@ -313,8 +323,8 @@ function AppShell() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="flex-1">
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} />}
-        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} checkedInLocations={checkedInLocations} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} lookingFor={lookingFor} />}
+        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} checkedInLocations={checkedInLocations} lookingFor={lookingFor} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} onOpenChat={handleOpenChat} />
         )}

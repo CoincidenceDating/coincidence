@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { swipeProfiles, type Match } from "@/lib/data";
+import { swipeProfiles, filterByLookingFor, type Match } from "@/lib/data";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
 
@@ -19,6 +19,7 @@ interface SwipePageProps {
   boostRadius: number;
   boostCredits: number;
   onActivateBoost: () => void;
+  lookingFor: string;
 }
 
 export default function SwipePage({
@@ -29,12 +30,15 @@ export default function SwipePage({
   boostRadius,
   boostCredits,
   onActivateBoost,
+  lookingFor,
 }: SwipePageProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [pulse, setPulse] = useState(false);
 
+  const filteredProfiles = filterByLookingFor(swipeProfiles, lookingFor);
+
   function handleSwipe(dir: "left" | "right" | "maybe") {
-    const profile = swipeProfiles[currentIndex];
+    const profile = filteredProfiles[currentIndex];
     if (profile) {
       if (dir === "right") {
         onMatch({ profile, source: "swipe", matchedAt: Date.now() });
@@ -42,7 +46,7 @@ export default function SwipePage({
         onMaybe({ profile, source: "swipe", matchedAt: Date.now() });
       }
     }
-    setCurrentIndex((prev) => (prev + 1) % swipeProfiles.length);
+    setCurrentIndex((prev) => (prev + 1) % Math.max(filteredProfiles.length, 1));
   }
 
   function handleActivate() {
@@ -52,8 +56,7 @@ export default function SwipePage({
     setTimeout(() => setPulse(false), 700);
   }
 
-  const profile = swipeProfiles[currentIndex];
-  if (!profile) return null;
+  const profile = filteredProfiles[currentIndex];
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 py-4">
@@ -107,12 +110,24 @@ export default function SwipePage({
       {/* Spacer so card doesn't sit under button */}
       <div className="h-10" />
 
-      <SwipeCard
-        key={profile.id}
-        profile={profile}
-        onSwipe={handleSwipe}
-        progress={`${currentIndex + 1} / ${swipeProfiles.length}`}
-      />
+      {profile ? (
+        <SwipeCard
+          key={profile.id}
+          profile={profile}
+          onSwipe={handleSwipe}
+          progress={`${currentIndex + 1} / ${filteredProfiles.length}`}
+        />
+      ) : (
+        <div className="flex flex-col items-center gap-4 text-center px-6">
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+            <svg viewBox="0 0 24 24" className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <p className="font-semibold text-foreground">No profiles nearby</p>
+          <p className="text-sm text-muted-foreground">Try adjusting your preferences in your profile to see more people.</p>
+        </div>
+      )}
     </div>
   );
 }

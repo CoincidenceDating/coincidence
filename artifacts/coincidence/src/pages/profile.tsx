@@ -60,6 +60,8 @@ function formatStringTime(ms: number): string {
 }
 
 /* ─── types ─────────────────────────────────── */
+const LOOKING_FOR_OPTIONS = ["Everyone", "Women", "Men", "Non-binary"];
+
 interface EditableProfile {
   name: string;
   age: number;
@@ -67,6 +69,7 @@ interface EditableProfile {
   hometown: string;
   height: string;
   hobbies: string[];
+  lookingFor?: string;
 }
 
 interface ProfilePageProps {
@@ -507,6 +510,26 @@ export default function ProfilePage({
                       <button key={s} onClick={() => addHobby(s)}
                         className="px-3 py-1.5 rounded-full border text-sm text-muted-foreground hover:border-foreground/60 hover:text-foreground transition-all">
                         {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Looking for */}
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">Looking for</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {LOOKING_FOR_OPTIONS.map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => setDraft(d => ({ ...d, lookingFor: opt }))}
+                        className={`py-3 rounded-2xl text-sm font-semibold transition-all border-2 ${
+                          (draft.lookingFor ?? "Everyone") === opt
+                            ? "bg-foreground text-background border-foreground"
+                            : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                        }`}
+                      >
+                        {opt}
                       </button>
                     ))}
                   </div>
