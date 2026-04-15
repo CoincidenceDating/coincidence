@@ -30,13 +30,14 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("hold"), 50);
-    const t2 = setTimeout(() => setPhase("out"), 2200);
-    const t3 = setTimeout(() => onDone(), 2750);
+    const t1 = setTimeout(() => setPhase("hold"), 60);
+    const t2 = setTimeout(() => setPhase("out"), 2600);
+    const t3 = setTimeout(() => onDone(), 3150);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDone]);
 
-  const visible = phase !== "out";
+  const ready = phase === "hold";
+  const gone  = phase === "out";
 
   return (
     <div
@@ -44,44 +45,65 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       style={{
         position: "fixed", inset: 0, height: "100vh",
         display: "flex", flexDirection: "column",
-        justifyContent: "center", alignItems: "center",
-        backgroundColor: "#0a0a0a", color: "white",
+        alignItems: "center",
+        backgroundColor: "#ffffff",
         textAlign: "center", cursor: "pointer",
         zIndex: 9999,
-        transition: "opacity 0.55s ease",
-        opacity: visible ? 1 : 0,
-        gap: "0",
+        transition: "opacity 0.6s ease",
+        opacity: gone ? 0 : 1,
+        paddingTop: "6vh",
+        paddingBottom: "8vh",
       }}
     >
-      {/* Logo */}
+      {/* Logo — fills most of screen */}
       <div style={{
-        transform: visible && phase !== "in" ? "scale(1) translateY(0)" : "scale(0.82) translateY(12px)",
-        opacity: visible && phase !== "in" ? 1 : 0,
-        transition: "transform 0.65s cubic-bezier(0.34,1.56,0.64,1), opacity 0.5s ease",
-        marginBottom: "28px",
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        width: "100%",
+        transform: ready ? "scale(1)" : "scale(0.88)",
+        opacity: ready ? 1 : 0,
+        transition: "transform 0.85s cubic-bezier(0.34,1.4,0.64,1), opacity 0.6s ease",
       }}>
         <img
           src="/logo.jpeg"
           alt="Coincidence"
           style={{
-            width: "108px",
-            height: "108px",
-            borderRadius: "24px",
-            boxShadow: "0 8px 40px rgba(255,255,255,0.08), 0 2px 12px rgba(0,0,0,0.6)",
+            width: "min(78vw, 340px)",
+            height: "min(78vw, 340px)",
+            objectFit: "contain",
           }}
         />
       </div>
 
       {/* Wordmark */}
       <div style={{
-        transform: visible && phase !== "in" ? "translateY(0)" : "translateY(10px)",
-        opacity: visible && phase !== "in" ? 1 : 0,
-        transition: "transform 0.6s cubic-bezier(0.34,1.2,0.64,1) 0.12s, opacity 0.5s ease 0.12s",
+        transform: ready ? "translateY(0)" : "translateY(14px)",
+        opacity: ready ? 1 : 0,
+        transition: "transform 0.7s cubic-bezier(0.34,1.2,0.64,1) 0.15s, opacity 0.6s ease 0.15s",
+        paddingBottom: "4px",
       }}>
-        <h1 style={{ fontSize: "2.6rem", fontWeight: 700, letterSpacing: "-0.03em", margin: 0 }}>
+        <h1 style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontSize: "clamp(2.4rem, 8vw, 3.2rem)",
+          fontWeight: 600,
+          letterSpacing: "0.04em",
+          color: "#0a0a0a",
+          margin: 0,
+          lineHeight: 1,
+        }}>
           Coincidence
         </h1>
-        <p style={{ fontSize: "1rem", opacity: 0.45, fontStyle: "italic", marginTop: "10px" }}>
+        <p style={{
+          fontFamily: "'Cormorant Garamond', Georgia, serif",
+          fontSize: "clamp(0.95rem, 3.5vw, 1.1rem)",
+          fontWeight: 400,
+          fontStyle: "italic",
+          color: "#888",
+          marginTop: "12px",
+          letterSpacing: "0.01em",
+        }}>
           making the invisible string – visible
         </p>
       </div>
