@@ -405,11 +405,55 @@ function AppShell() {
     },
   ];
 
+  const TAB_BG: Record<string, string> = {
+    swipe:       "linear-gradient(155deg, #fafbfc 0%, #f2f5f7 55%, #f8fafb 100%)",
+    coincidence: "linear-gradient(155deg, #faf9f6 0%, #f3f0e8 55%, #faf8f4 100%)",
+    matches:     "linear-gradient(155deg, #f9f9fb 0%, #eeeef4 55%, #f7f7fb 100%)",
+    undecided:   "linear-gradient(155deg, #fafaf8 0%, #f0f0e8 55%, #f8f8f5 100%)",
+    profile:     "linear-gradient(155deg, #f7f7f7 0%, #ebebeb 55%, #f5f5f5 100%)",
+  };
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden relative"
-      style={{ background: "linear-gradient(160deg, #fafafa 0%, #f5f5f5 48%, #f9f9f9 100%)" }}
+    <div
+      className="h-screen flex flex-col overflow-hidden relative"
+      style={{ background: TAB_BG[activeTab] ?? TAB_BG.swipe, transition: "background 0.5s ease" }}
     >
-      <main className="flex-1 min-h-0 overflow-y-auto">
+      {/* ① Linen / noise texture overlay */}
+      <svg
+        aria-hidden
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0, opacity: 0.55 }}
+      >
+        <filter id="linen-noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+          <feBlend in="SourceGraphic" mode="multiply" />
+        </filter>
+        <rect width="100%" height="100%" filter="url(#linen-noise)" opacity="0.06" />
+      </svg>
+
+      {/* ② Corner rope accents — top-left */}
+      <svg
+        aria-hidden viewBox="0 0 72 72"
+        style={{ position: "absolute", top: 0, left: 0, width: 72, height: 72, pointerEvents: "none", zIndex: 0 }}
+      >
+        <path d="M -4 28 C 8 22, 14 8, 6 0" stroke="rgba(0,0,0,0.13)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d="M 6 0 C 22 -2, 30 12, 22 24 C 14 36, 2 34, 4 22 C 6 12, 18 12, 20 22" stroke="rgba(0,0,0,0.10)" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <circle cx="20" cy="22" r="3.5" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
+        <circle cx="20" cy="22" r="1.5" fill="rgba(0,0,0,0.10)" />
+      </svg>
+
+      {/* ② Corner rope accents — top-right */}
+      <svg
+        aria-hidden viewBox="0 0 72 72"
+        style={{ position: "absolute", top: 0, right: 0, width: 72, height: 72, pointerEvents: "none", zIndex: 0, transform: "scaleX(-1)" }}
+      >
+        <path d="M -4 28 C 8 22, 14 8, 6 0" stroke="rgba(0,0,0,0.13)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d="M 6 0 C 22 -2, 30 12, 22 24 C 14 36, 2 34, 4 22 C 6 12, 18 12, 20 22" stroke="rgba(0,0,0,0.10)" strokeWidth="2" fill="none" strokeLinecap="round" />
+        <circle cx="20" cy="22" r="3.5" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
+        <circle cx="20" cy="22" r="1.5" fill="rgba(0,0,0,0.10)" />
+      </svg>
+
+      <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
         {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} lookingFor={lookingFor} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} />}
         {activeTab === "matches" && (
@@ -421,22 +465,38 @@ function AppShell() {
         {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} />}
       </main>
 
-      <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="flex max-w-lg mx-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors ${
-                activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {tab.icon(activeTab === tab.id)}
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </nav>
+      {/* ③ Nav rope divider + nav */}
+      <div className="sticky bottom-0" style={{ zIndex: 1 }}>
+        <svg
+          aria-hidden viewBox="0 0 390 10" preserveAspectRatio="none"
+          style={{ display: "block", width: "100%", height: 10, overflow: "visible" }}
+        >
+          <path
+            d="M 0 5 C 32 1, 65 9, 97 5 C 130 1, 163 9, 195 5 C 228 1, 261 9, 293 5 C 326 1, 359 9, 390 5"
+            stroke="rgba(0,0,0,0.14)" strokeWidth="1.5" fill="none" strokeLinecap="round"
+          />
+          <path
+            d="M 0 5 C 32 1, 65 9, 97 5 C 130 1, 163 9, 195 5 C 228 1, 261 9, 293 5 C 326 1, 359 9, 390 5"
+            stroke="rgba(0,0,0,0.06)" strokeWidth="3.5" fill="none" strokeLinecap="round"
+          />
+        </svg>
+        <nav className="bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+          <div className="flex max-w-lg mx-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors ${
+                  activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {tab.icon(activeTab === tab.id)}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </nav>
+      </div>
 
       <AnimatePresence>
         {activeChat && (

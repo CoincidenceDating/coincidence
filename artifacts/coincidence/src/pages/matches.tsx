@@ -19,9 +19,26 @@ export default function MatchesPage({ matches, messageCounts, onOpenChat }: Matc
   if (matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-          <Heart className="w-8 h-8 text-primary" />
-        </div>
+        {/* Empty-state rope visual */}
+        <svg viewBox="0 0 160 120" style={{ width: 140, height: 105, marginBottom: 8 }} aria-hidden>
+          {/* Left person rope */}
+          <path d="M 20 10 C 25 35, 45 45, 80 60" stroke="rgba(0,0,0,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 20 10 C 25 35, 45 45, 80 60" stroke="rgba(0,0,0,0.08)" strokeWidth="5" fill="none" strokeLinecap="round" />
+          {/* Right person rope */}
+          <path d="M 140 10 C 135 35, 115 45, 80 60" stroke="rgba(0,0,0,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 140 10 C 135 35, 115 45, 80 60" stroke="rgba(0,0,0,0.08)" strokeWidth="5" fill="none" strokeLinecap="round" />
+          {/* Knot at meeting point */}
+          <circle cx="80" cy="60" r="10" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="2" />
+          <circle cx="80" cy="60" r="5.5" fill="rgba(0,0,0,0.10)" />
+          <circle cx="80" cy="60" r="2.5" fill="rgba(0,0,0,0.20)" />
+          {/* Dangling rope below knot — not yet connected to anyone */}
+          <path d="M 80 70 C 78 85, 82 95, 80 110" stroke="rgba(0,0,0,0.12)" strokeWidth="2" strokeDasharray="4 5" fill="none" strokeLinecap="round" />
+          {/* Left anchor dot (person) */}
+          <circle cx="20" cy="10" r="6" fill="rgba(0,0,0,0.12)" />
+          <circle cx="20" cy="10" r="3" fill="rgba(0,0,0,0.22)" />
+          {/* Right anchor dot (potential match — empty/faint) */}
+          <circle cx="140" cy="10" r="6" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" strokeDasharray="3 3" />
+        </svg>
         <h2 className="text-xl font-semibold">No matches yet</h2>
         <p className="text-muted-foreground text-sm mt-1 max-w-xs">
           Start swiping or activate Coincidence Mode to connect with people nearby.
