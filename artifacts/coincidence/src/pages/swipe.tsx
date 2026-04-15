@@ -116,6 +116,7 @@ export default function SwipePage({
           profile={profile}
           onSwipe={handleSwipe}
           progress={`${currentIndex + 1} / ${filteredProfiles.length}`}
+          peekProfiles={filteredProfiles.slice(currentIndex + 1, currentIndex + 3)}
         />
       ) : (
         <div className="flex flex-col items-center gap-4 text-center px-6">

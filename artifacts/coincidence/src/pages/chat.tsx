@@ -107,6 +107,95 @@ export default function ChatPage({ match, messages, onSend, onBack }: ChatPagePr
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
+
+        {/* ── String connection header ── */}
+        <div className="flex flex-col items-center pt-3 pb-5">
+          <div className="flex items-center">
+            {/* Match avatar */}
+            <div
+              style={{ width: 38, height: 38, borderRadius: "50%", background: match.profile.gradient, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: "bold", color: "rgba(255,255,255,0.55)", flexShrink: 0 }}
+            >
+              {match.profile.avatar}
+            </div>
+
+            {/* Rope SVG — sags when no messages, ties when messages exist */}
+            <svg viewBox="0 0 130 36" style={{ width: 130, height: 36, overflow: "visible" }} aria-hidden>
+              <motion.path
+                d={messages.length > 0
+                  ? "M 5 18 C 42 14, 88 22, 125 18"
+                  : "M 5 18 C 35 32, 95 32, 125 18"
+                }
+                stroke="rgba(0,0,0,0.28)"
+                strokeWidth="2"
+                fill="none"
+                strokeLinecap="round"
+                animate={{
+                  d: messages.length > 0
+                    ? "M 5 18 C 42 14, 88 22, 125 18"
+                    : "M 5 18 C 35 32, 95 32, 125 18",
+                }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
+              />
+              {/* Texture strand */}
+              <motion.path
+                d={messages.length > 0
+                  ? "M 5 18 C 42 14, 88 22, 125 18"
+                  : "M 5 18 C 35 32, 95 32, 125 18"
+                }
+                stroke="rgba(0,0,0,0.10)"
+                strokeWidth="1"
+                strokeDasharray="5 7"
+                fill="none"
+                strokeLinecap="round"
+                animate={{
+                  d: messages.length > 0
+                    ? "M 5 18 C 42 14, 88 22, 125 18"
+                    : "M 5 18 C 35 32, 95 32, 125 18",
+                }}
+                transition={{ duration: 0.7, ease: "easeOut" }}
+              />
+              {/* Knot — appears when tied */}
+              <motion.circle
+                cx={65} cy={18}
+                r={4.5}
+                fill="rgba(0,0,0,0.30)"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={messages.length > 0
+                  ? { scale: 1, opacity: 1, cy: 18 }
+                  : { scale: 0, opacity: 0, cy: 25 }
+                }
+                transition={{ duration: 0.5, delay: messages.length > 0 ? 0.4 : 0, ease: "easeOut" }}
+              />
+              <motion.circle
+                cx={65} cy={18}
+                r={2}
+                fill="rgba(0,0,0,0.55)"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={messages.length > 0
+                  ? { scale: 1, opacity: 1 }
+                  : { scale: 0, opacity: 0 }
+                }
+                transition={{ duration: 0.4, delay: messages.length > 0 ? 0.5 : 0 }}
+              />
+            </svg>
+
+            {/* You avatar */}
+            <div
+              style={{ width: 38, height: 38, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.45)", flexShrink: 0 }}
+            >
+              You
+            </div>
+          </div>
+          <motion.p
+            className="text-[11px] text-muted-foreground mt-2 italic"
+            animate={{ opacity: 1 }}
+            initial={{ opacity: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            {messages.length > 0 ? "the string is tied" : "the invisible string"}
+          </motion.p>
+        </div>
+
         {messages.map((msg) => {
           const isMe = msg.from === "me";
           return (

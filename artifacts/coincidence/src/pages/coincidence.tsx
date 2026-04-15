@@ -90,27 +90,60 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.35 }}
+            transition={{ duration: 0.4 }}
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-foreground/95 backdrop-blur-sm px-6 text-center"
           >
-            {/* Floating hearts */}
+            {/* ── Stage 1: Full-screen rope draws itself across the screen first ── */}
+            <svg
+              aria-hidden
+              viewBox="0 0 390 60"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ position: "absolute", left: 0, width: "100%", height: 60, top: "44%", pointerEvents: "none" }}
+            >
+              <motion.path
+                d="M -5 30 C 55 8, 110 52, 195 30 C 280 8, 335 52, 395 30"
+                stroke="rgba(255,255,255,0.55)"
+                strokeWidth="2.5"
+                fill="none"
+                strokeLinecap="round"
+                initial={{ pathLength: 0, opacity: 1 }}
+                animate={{ pathLength: 1, opacity: [1, 1, 1, 0] }}
+                transition={{
+                  pathLength: { duration: 0.8, delay: 0.2, ease: "easeInOut" },
+                  opacity: { duration: 0.35, delay: 1.1, ease: "easeOut" },
+                }}
+              />
+              {/* Knot pops at center as rope finishes drawing */}
+              <motion.circle
+                cx={195} cy={30} r={6}
+                fill="rgba(255,255,255,0.8)"
+                initial={{ scale: 0, opacity: 1 }}
+                animate={{ scale: [0, 1.5, 1], opacity: [1, 1, 0] }}
+                transition={{
+                  scale: { duration: 0.35, delay: 0.95, ease: "easeOut" },
+                  opacity: { duration: 0.35, delay: 1.1 },
+                }}
+              />
+            </svg>
+
+            {/* Floating hearts — staggered after content appears */}
             {[...Array(6)].map((_, i) => (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 0, x: 0, scale: 0.5 }}
                 animate={{ opacity: [0, 1, 0], y: -120 - i * 20, x: (i % 2 === 0 ? 1 : -1) * (20 + i * 14), scale: [0.5, 1.2, 0.8] }}
-                transition={{ duration: 1.8, delay: i * 0.18, ease: "easeOut" }}
+                transition={{ duration: 1.8, delay: 1.2 + i * 0.18, ease: "easeOut" }}
                 className="absolute bottom-1/3 text-background"
               >
                 <Heart className="w-5 h-5 fill-background" />
               </motion.div>
             ))}
 
-            {/* Avatars */}
+            {/* ── Stage 2: Avatars reveal after rope completes ── */}
             <motion.div
               initial={{ scale: 0.6, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 320, damping: 22, delay: 0.1 }}
+              transition={{ type: "spring", stiffness: 320, damping: 22, delay: 1.1 }}
               className="flex items-center gap-3 mb-8"
             >
               <div className="w-20 h-20 rounded-full bg-background text-foreground flex items-center justify-center text-2xl font-bold shadow-lg">
@@ -159,7 +192,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
             <motion.p
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
+              transition={{ delay: 1.15 }}
               className="text-background/50 text-xs font-semibold uppercase tracking-[0.2em] mb-6 italic"
             >
               the invisible string is now visible
@@ -169,7 +202,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.25 }}
+              transition={{ delay: 1.25 }}
               className="space-y-2 mb-2"
             >
               <p className="text-background/60 text-sm font-medium uppercase tracking-widest">
@@ -188,7 +221,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.35 }}
-              transition={{ delay: 0.5 }}
+              transition={{ delay: 1.4 }}
               className="my-6"
             >
               <svg viewBox="0 0 120 24" className="w-32 text-background">
@@ -201,7 +234,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
+              transition={{ delay: 1.35 }}
               className="flex flex-col gap-3 w-full max-w-xs"
             >
               <button

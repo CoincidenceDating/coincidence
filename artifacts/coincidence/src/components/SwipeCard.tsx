@@ -338,9 +338,10 @@ interface SwipeCardProps {
   locationIcon?: React.ReactNode;
   locationName?: string;
   progress?: string;
+  peekProfiles?: Profile[];
 }
 
-export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress }: SwipeCardProps) {
+export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [] }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -420,13 +421,40 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             <HStringVisual side="left" action={action} dragX={dragX} dragY={dragY} />
           </div>
 
+          {/* Card stack wrapper — ghost cards peek from behind */}
+          <div className="relative flex-1" style={{ minWidth: 0, overflow: "visible" }}>
+            {peekProfiles.slice(0, 2).reverse().map((p, i) => {
+              const depth = peekProfiles.length > 1 ? (i === 0 ? 2 : 1) : 1;
+              return (
+                <div
+                  key={p.id}
+                  className="absolute pointer-events-none"
+                  style={{
+                    top: depth * 8,
+                    left: `${depth * 3.5}%`,
+                    right: `${depth * 3.5}%`,
+                    height: 430,
+                    borderRadius: 24,
+                    overflow: "hidden",
+                    background: p.gradient,
+                    zIndex: 10 - depth * 3,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+                  }}
+                >
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-9xl font-black text-white/10 select-none">{p.avatar}</span>
+                  </div>
+                </div>
+              );
+            })}
+
           <motion.div
             drag
             dragConstraints={{ left: -500, right: 500, top: 0, bottom: 500 }}
             dragElastic={{ left: 0.05, right: 0.05, top: 0.02, bottom: 0.05 }}
-            style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity }}
+            style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity, position: "relative", zIndex: 10 }}
             onDragEnd={handleDragEnd as never}
-            className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
+            className="w-full touch-none cursor-grab active:cursor-grabbing"
           >
             <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 430 }}>
               <motion.div
@@ -474,6 +502,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
               </div>
             </div>
           </motion.div>
+          </div>{/* end card stack wrapper */}
 
           <div className="pointer-events-none shrink-0" style={{ marginLeft: -8 }}>
             <HStringVisual side="right" action={action} dragX={dragX} dragY={dragY} />
