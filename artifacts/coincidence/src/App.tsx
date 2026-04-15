@@ -406,8 +406,54 @@ function AppShell() {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-background overflow-hidden">
-      <main className="flex-1 min-h-0 overflow-y-auto">
+    <div className="h-screen flex flex-col overflow-hidden relative"
+      style={{ background: "linear-gradient(160deg, #fafafa 0%, #f5f5f5 48%, #f9f9f9 100%)" }}
+    >
+      {/* ── Decorative background strings ── */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden style={{ zIndex: 0 }}>
+        <svg
+          viewBox="0 0 390 760"
+          preserveAspectRatio="xMidYMid slice"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        >
+          {/* Rope 1 — sweeps from top-right to bottom-left */}
+          <path
+            d="M 315 -10 C 400 140, 30 230, 148 382 C 266 534, 28 648, 162 778"
+            stroke="rgba(0,0,0,0.085)" strokeWidth={3.5} fill="none" strokeLinecap="round"
+          />
+          <path
+            d="M 315 -10 C 400 140, 30 230, 148 382 C 266 534, 28 648, 162 778"
+            stroke="rgba(0,0,0,0.045)" strokeWidth={1.5} strokeDasharray="7 10" fill="none" strokeLinecap="round"
+          />
+          {/* Knots on rope 1 */}
+          <circle cx={176} cy={285} r={6} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth={2} />
+          <circle cx={176} cy={285} r={3} fill="rgba(0,0,0,0.09)" />
+          <circle cx={144} cy={540} r={6} fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth={2} />
+          <circle cx={144} cy={540} r={3} fill="rgba(0,0,0,0.09)" />
+
+          {/* Rope 2 — mirrored, sweeps from top-left to bottom-right (slightly fainter) */}
+          <path
+            d="M 75 -10 C -10 140, 360 230, 242 382 C 124 534, 362 648, 228 778"
+            stroke="rgba(0,0,0,0.045)" strokeWidth={3} fill="none" strokeLinecap="round"
+          />
+          <path
+            d="M 75 -10 C -10 140, 360 230, 242 382 C 124 534, 362 648, 228 778"
+            stroke="rgba(0,0,0,0.025)" strokeWidth={1.2} strokeDasharray="7 10" fill="none" strokeLinecap="round"
+          />
+          {/* Knots on rope 2 */}
+          <circle cx={214} cy={285} r={5} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={1.5} />
+          <circle cx={214} cy={285} r={2.5} fill="rgba(0,0,0,0.05)" />
+          <circle cx={246} cy={540} r={5} fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth={1.5} />
+          <circle cx={246} cy={540} r={2.5} fill="rgba(0,0,0,0.05)" />
+
+          {/* Meeting-point knot — where the two strings converge at ~vertical centre */}
+          <circle cx={195} cy={382} r={9} fill="none" stroke="rgba(0,0,0,0.08)" strokeWidth={2} />
+          <circle cx={195} cy={382} r={5} fill="rgba(0,0,0,0.06)" />
+          <circle cx={195} cy={382} r={2.5} fill="rgba(0,0,0,0.09)" />
+        </svg>
+      </div>
+
+      <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
         {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} lookingFor={lookingFor} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} />}
         {activeTab === "matches" && (
@@ -419,7 +465,7 @@ function AppShell() {
         {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={setBoostRadius} onActivateBoost={handleActivateBoost} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} />}
       </main>
 
-      <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <nav className="sticky bottom-0 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 relative" style={{ zIndex: 1 }}>
         <div className="flex max-w-lg mx-auto">
           {tabs.map((tab) => (
             <button
