@@ -333,6 +333,11 @@ function HStringVisual({
   );
 }
 
+function resolvePhoto(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  return /^(https?:|blob:|data:)/.test(url) ? url : `${import.meta.env.BASE_URL}${url}`;
+}
+
 interface SwipeCardProps {
   profile: Profile;
   onSwipe: (direction: "left" | "right" | "maybe") => void;
@@ -348,6 +353,26 @@ interface SwipeCardProps {
 export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false, onDoubleString, boostCredits = 0 }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const isDragging = useRef(false);
+
+  const allPhotos = profile.photos?.length
+    ? profile.photos
+    : profile.photo ? [profile.photo] : [];
+  const currentPhoto = resolvePhoto(allPhotos[photoIndex]);
+
+  useEffect(() => { setPhotoIndex(0); }, [profile.id]);
+
+  function handlePhotoTap(e: React.MouseEvent<HTMLDivElement>) {
+    if (isDragging.current || allPhotos.length <= 1) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x > rect.width * 0.5) {
+      setPhotoIndex(i => Math.min(allPhotos.length - 1, i + 1));
+    } else {
+      setPhotoIndex(i => Math.max(0, i - 1));
+    }
+  }
 
   const dragX = useMotionValue(0);
   const dragY = useMotionValue(0);
@@ -439,9 +464,9 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
                   }}
                 >
-                  {p.photo ? (
+                  {(p.photos?.[0] ?? p.photo) ? (
                     <img
-                      src={`${import.meta.env.BASE_URL}${p.photo}`}
+                      src={resolvePhoto(p.photos?.[0] ?? p.photo)}
                       alt=""
                       className="absolute inset-0 w-full h-full object-cover object-top opacity-70"
                     />
@@ -459,7 +484,8 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             dragConstraints={{ left: -500, right: 500, top: 0, bottom: 500 }}
             dragElastic={{ left: 0.05, right: 0.05, top: 0.02, bottom: 0.05 }}
             style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity, position: "relative", zIndex: 10 }}
-            onDragEnd={handleDragEnd as never}
+            onDragStart={() => { isDragging.current = true; }}
+            onDragEnd={(e, info) => { setTimeout(() => { isDragging.current = false; }, 80); handleDragEnd(e as never, info); }}
             className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
           >
             <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 520 }}>
@@ -485,10 +511,14 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                 MAYBE
               </motion.div>
 
-              <div className="absolute inset-0" style={{ background: profile.gradient }}>
-                {profile.photo ? (
+              <div
+                className="absolute inset-0"
+                style={{ background: profile.gradient }}
+                onClick={handlePhotoTap}
+              >
+                {currentPhoto ? (
                   <img
-                    src={`${import.meta.env.BASE_URL}${profile.photo}`}
+                    src={currentPhoto}
                     alt={profile.name}
                     className="absolute inset-0 w-full h-full object-cover object-top"
                     draggable={false}
@@ -498,6 +528,19 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     <span className="text-9xl font-black text-white/10 select-none tracking-tight">
                       {profile.avatar}
                     </span>
+                  </div>
+                )}
+
+                {/* Photo progress dots */}
+                {allPhotos.length > 1 && (
+                  <div className="absolute top-3 left-3 right-3 z-10 flex gap-1 pointer-events-none">
+                    {allPhotos.map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 h-0.5 rounded-full transition-all duration-200"
+                        style={{ background: i === photoIndex ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)" }}
+                      />
+                    ))}
                   </div>
                 )}
                 {locationIcon && locationName && (

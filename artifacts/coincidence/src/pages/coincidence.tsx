@@ -131,6 +131,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
           gradient,
           gender: "non-binary",
           photo: ownProfile.photos?.[0],
+          photos: ownProfile.photos ?? [],
         };
         await db.upsertPresence(location.id, location.name, snapshot);
       }

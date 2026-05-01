@@ -14,7 +14,7 @@ export function ProfileAvatar({ profile, size = 40, className = "" }: ProfileAva
     >
       {profile.photo ? (
         <img
-          src={`${import.meta.env.BASE_URL}${profile.photo}`}
+          src={/^(https?:|blob:|data:)/.test(profile.photo) ? profile.photo : `${import.meta.env.BASE_URL}${profile.photo}`}
           alt={profile.name}
           className="absolute inset-0 w-full h-full object-cover object-top"
           draggable={false}

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, MapPin, Zap, Wine, Beer, Coffee, Sparkles,
   ShoppingBag, X, Pencil, Plus, Home, Ruler, ChevronUp, ChevronDown,
-  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus,
+  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus, Star,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StringIcon } from "@/components/StringIcon";
@@ -172,6 +172,12 @@ export default function ProfilePage({
     setPhotos(next);
     setDeletingPhoto(null);
   }, [photos]);
+
+  const handleSetProfilePhoto = useCallback(async (url: string) => {
+    const next = [url, ...photos.filter(p => p !== url)];
+    setPhotos(next);
+    await db.savePhotos(next);
+  }, [photos]);
   const [showEdit, setShowEdit] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [purchasedPack, setPurchasedPack] = useState<string | null>(null);
@@ -311,13 +317,32 @@ export default function ProfilePage({
           onChange={handleAddPhoto}
         />
         <div className="grid grid-cols-3 gap-2">
-          {photos.map((url) => (
+          {photos.map((url, idx) => (
             <motion.div
               key={url}
               layout
               className="relative aspect-square rounded-xl overflow-hidden bg-muted"
             >
               <img src={url} alt="Profile photo" className="w-full h-full object-cover" />
+
+              {/* Profile photo badge on first */}
+              {idx === 0 && (
+                <div className="absolute bottom-1.5 left-1.5 bg-black/65 text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full leading-tight">
+                  Profile photo
+                </div>
+              )}
+
+              {/* Set as profile photo on others */}
+              {idx > 0 && (
+                <button
+                  onClick={() => handleSetProfilePhoto(url)}
+                  className="absolute bottom-1.5 left-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80 transition-colors"
+                  title="Set as profile photo"
+                >
+                  <Star className="w-3 h-3 text-yellow-300" />
+                </button>
+              )}
+
               <button
                 onClick={() => handleDeletePhoto(url)}
                 disabled={deletingPhoto === url}

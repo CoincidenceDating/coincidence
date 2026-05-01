@@ -10,6 +10,7 @@ export interface Profile {
   gradient: string;
   gender: Gender;
   photo?: string;
+  photos?: string[];
   visitedLocations?: string[];
 }
 
