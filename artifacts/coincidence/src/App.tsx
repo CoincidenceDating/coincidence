@@ -383,7 +383,7 @@ function AppShell() {
     {
       id: "coincidence",
       label: "Coincidence",
-      icon: (a) => <Zap className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />,
+      icon: (a) => <StringIcon className={`w-5 h-5 ${a ? "text-primary" : ""}`} />,
     },
     {
       id: "matches",
