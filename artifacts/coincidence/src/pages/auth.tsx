@@ -598,7 +598,7 @@ function PhoneField({ country, onCountryChange, localNumber, onLocalNumberChange
   return (
     <div>
       <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">Phone number</label>
-      <div className={`flex items-center rounded-2xl border-2 overflow-hidden transition-colors ${
+      <div className={`flex items-center rounded-2xl border-2 transition-colors ${
         error ? "border-red-400 bg-red-50/50" : "border-border focus-within:border-foreground bg-card"
       }`}>
         {/* Country picker trigger */}
@@ -606,7 +606,7 @@ function PhoneField({ country, onCountryChange, localNumber, onLocalNumberChange
           <button
             type="button"
             onClick={() => { setOpen((v) => !v); setSearch(""); }}
-            className="flex items-center gap-1.5 pl-3.5 pr-2 py-3 text-sm font-medium hover:bg-muted/50 transition-colors border-r border-border shrink-0"
+            className="flex items-center gap-1.5 pl-3.5 pr-2 py-3 text-sm font-medium hover:bg-muted/50 rounded-l-2xl transition-colors border-r border-border shrink-0"
           >
             <span className="text-base leading-none">{country.flag}</span>
             <span className="text-foreground/70 tabular-nums text-xs">{country.dialCode}</span>
@@ -620,7 +620,7 @@ function PhoneField({ country, onCountryChange, localNumber, onLocalNumberChange
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -6, scale: 0.97 }}
                 transition={{ duration: 0.15 }}
-                className="absolute left-0 top-full mt-1.5 w-72 bg-card border border-border rounded-2xl shadow-xl z-50 overflow-hidden"
+                className="absolute left-0 top-full mt-1.5 w-72 bg-card border border-border rounded-2xl shadow-xl z-[999] overflow-hidden"
               >
                 {/* Search */}
                 <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border">
