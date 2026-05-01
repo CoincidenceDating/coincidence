@@ -53,7 +53,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const t1 = setTimeout(() => setPhase("hold"), 80);
     const t2 = setTimeout(() => setPhase("out"), 3400);
-    const t3 = setTimeout(() => onDone(), 4100);
+    const t3 = setTimeout(() => onDone(), 4200);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
   }, [onDone]);
 
@@ -62,95 +62,29 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <div
-      onClick={() => { setPhase("out"); setTimeout(onDone, 700); }}
+      onClick={() => { setPhase("out"); setTimeout(onDone, 800); }}
       style={{
         position: "fixed", inset: 0,
-        background: "#0a0a0a",
+        background: "#080808",
         cursor: "pointer",
         zIndex: 9999,
-        transition: "opacity 0.8s ease",
+        transition: "opacity 0.9s ease",
         opacity: gone ? 0 : 1,
         overflow: "hidden",
       }}
     >
-      {/* Full-bleed logo — fades in as the entire backdrop */}
       <img
-        src="/logo.jpeg"
-        alt=""
-        aria-hidden
+        src="/splash.png"
+        alt="Coincidence"
         style={{
           position: "absolute", inset: 0,
           width: "100%", height: "100%",
           objectFit: "cover",
           objectPosition: "center",
           opacity: ready ? 1 : 0,
-          transition: "opacity 1.4s ease",
+          transition: "opacity 1.6s ease",
         }}
       />
-
-      {/* Gradient vignette — keeps edges dark so text pops */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: [
-          "linear-gradient(to bottom,",
-          "  rgba(10,10,10,0.55) 0%,",
-          "  rgba(10,10,10,0.08) 30%,",
-          "  rgba(10,10,10,0.05) 55%,",
-          "  rgba(10,10,10,0.60) 82%,",
-          "  rgba(10,10,10,0.92) 100%",
-          ")",
-        ].join(" "),
-      }} />
-
-      {/* "oincidence" — flows out of the C in the logo at screen centre */}
-      <div style={{
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: `translateY(-50%) translateX(${ready ? "0px" : "22px"})`,
-        opacity: ready ? 1 : 0,
-        transition: "opacity 1s ease 0.55s, transform 0.9s cubic-bezier(0.16,1,0.3,1) 0.55s",
-        pointerEvents: "none",
-      }}>
-        <span style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontSize: "clamp(2.4rem, 9.5vw, 4.2rem)",
-          fontWeight: 600,
-          color: "#ffffff",
-          letterSpacing: "0.06em",
-          lineHeight: 1,
-          display: "block",
-          whiteSpace: "nowrap",
-          textShadow: "0 2px 32px rgba(0,0,0,0.7), 0 0 80px rgba(0,0,0,0.4)",
-        }}>
-          oincidence
-        </span>
-      </div>
-
-      {/* Slogan — bottom */}
-      <div style={{
-        position: "absolute",
-        bottom: "11vh",
-        left: 0, right: 0,
-        textAlign: "center",
-        opacity: ready ? 1 : 0,
-        transform: `translateY(${ready ? "0px" : "10px"})`,
-        transition: "opacity 0.9s ease 0.95s, transform 0.8s ease 0.95s",
-        pointerEvents: "none",
-      }}>
-        <p style={{
-          fontFamily: "'Cormorant Garamond', Georgia, serif",
-          fontSize: "clamp(0.75rem, 3vw, 0.95rem)",
-          fontWeight: 400,
-          fontStyle: "italic",
-          color: "rgba(255,255,255,0.5)",
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          margin: 0,
-        }}>
-          Making The Invisible String Visible.
-        </p>
-      </div>
     </div>
   );
 }
