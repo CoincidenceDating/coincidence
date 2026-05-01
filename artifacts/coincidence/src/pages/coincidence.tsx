@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { locations, filterByLookingFor, type Profile, type Match, type CheckIn, type LocationData } from "@/lib/data";
 import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMiles, formatDistance, fetchNearbyVenues } from "@/lib/geo";
@@ -41,6 +41,15 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [nearbyLocations, setNearbyLocations] = useState<LocationData[] | null>(null);
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isActivating, setIsActivating] = useState(false);
+  const watchIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
 
   const allMockUsers = locations.flatMap((l) => l.users);
 
@@ -61,16 +70,21 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
       return;
     }
     setGeoStatus("requesting");
-    navigator.geolocation.getCurrentPosition(
+    let firstFix = true;
+    const id = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setUserCoords(coords);
-        setGeoStatus("granted");
-        loadVenues(coords.lat, coords.lng);
+        if (firstFix) {
+          firstFix = false;
+          setGeoStatus("granted");
+          loadVenues(coords.lat, coords.lng);
+        }
       },
       () => setGeoStatus("denied"),
-      { enableHighAccuracy: true, timeout: 8000 },
+      { enableHighAccuracy: true, timeout: 10000 },
     );
+    watchIdRef.current = id;
   }, [loadVenues]);
 
   const activeLocations = nearbyLocations ?? [];
@@ -141,6 +155,10 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   }
 
   function handleStopLocation() {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
     db.clearPresence();
     setRealUsers([]);
     setGeoStatus("idle");
