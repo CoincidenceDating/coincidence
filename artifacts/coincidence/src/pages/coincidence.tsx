@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { locations, filterByLookingFor, type Profile, type Match, type CheckIn } from "@/lib/data";
+import { type GeoStatus, type GeoCoords, haversineDistanceMiles, formatDistance, getMockLocationCoords } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, TrendingUp } from "lucide-react";
+import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
   wine: <Wine className="w-4 h-4" />,
@@ -35,6 +36,25 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [done, setDone] = useState(false);
   const [justCheckedIn, setJustCheckedIn] = useState(false);
   const [coincidenceMatch, setCoincidenceMatch] = useState<Match | null>(null);
+
+  const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
+  const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
+
+  const requestLocation = useCallback(() => {
+    if (!("geolocation" in navigator)) {
+      setGeoStatus("unavailable");
+      return;
+    }
+    setGeoStatus("requesting");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoStatus("granted");
+      },
+      () => setGeoStatus("denied"),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  }, []);
 
   const location = locations.find((l) => l.id === selectedLocation);
   const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor)
@@ -288,35 +308,91 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
             {/* ── Hot Spots ── */}
             {(() => {
-              const sorted = [...locations].sort((a, b) => b.users.length - a.users.length);
+              const withDistances = locations.map((loc) => {
+                const distMi = userCoords
+                  ? haversineDistanceMiles(
+                      userCoords.lat, userCoords.lng,
+                      getMockLocationCoords(loc.id, userCoords.lat, userCoords.lng).lat,
+                      getMockLocationCoords(loc.id, userCoords.lat, userCoords.lng).lng,
+                    )
+                  : null;
+                return { ...loc, distMi };
+              });
+
+              const sorted = [...withDistances].sort((a, b) =>
+                geoStatus === "granted" && a.distMi !== null && b.distMi !== null
+                  ? a.distMi - b.distMi
+                  : b.users.length - a.users.length
+              );
+
               return (
                 <div className="mb-6">
                   <div className="flex items-center gap-1.5 mb-3">
                     <Flame className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hot Spots</span>
-                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">tap to select</span>
+                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">
+                      {geoStatus === "granted" ? "nearest first" : "tap to select"}
+                    </span>
+
+                    {/* GPS enable / status button */}
+                    {geoStatus === "idle" || geoStatus === "denied" || geoStatus === "unavailable" ? (
+                      <button
+                        onClick={requestLocation}
+                        disabled={geoStatus === "unavailable"}
+                        className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        {geoStatus === "denied" ? "Location denied" : geoStatus === "unavailable" ? "No GPS" : "Enable location"}
+                      </button>
+                    ) : geoStatus === "requesting" ? (
+                      <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
+                          <Navigation className="w-3 h-3" />
+                        </motion.div>
+                        Locating…
+                      </span>
+                    ) : (
+                      <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <LocateFixed className="w-3 h-3" />
+                        Live
+                      </span>
+                    )}
                   </div>
+
                   <div className="space-y-2">
                     {sorted.map((loc) => {
                       const count = loc.users.length;
                       const isSelected = selectedLocation === loc.id;
-                      const heat = count >= 4 ? { label: "Buzzing", dot: "bg-red-400", bar: "w-full" }
-                        : count === 3 ? { label: "Active", dot: "bg-orange-400", bar: "w-3/4" }
-                        : { label: "Lively", dot: "bg-yellow-400", bar: "w-1/2" };
+                      const heat = count >= 4
+                        ? { dot: "bg-red-400", bar: "w-full" }
+                        : count === 3
+                        ? { dot: "bg-orange-400", bar: "w-3/4" }
+                        : { dot: "bg-yellow-400", bar: "w-1/2" };
                       return (
                         <button
                           key={loc.id}
                           onClick={() => handleHotSpotTap(loc.id)}
                           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border active:scale-[0.98] transition-all text-left ${isSelected ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent/40 border-border"}`}
                         >
-                          <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>{iconMap[loc.icon]}</span>
-                          <span className="font-medium text-sm flex-1 truncate">{loc.name}</span>
+                          <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
+                            {iconMap[loc.icon]}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm block truncate">{loc.name}</span>
+                            {geoStatus === "granted" && loc.distMi !== null && (
+                              <span className={`text-[10px] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                                {formatDistance(loc.distMi)}
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2 shrink-0">
-                            <div className="w-16 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)" }}>
+                            <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)" }}>
                               <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.22)" }} />
                             </div>
                             <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
-                            <span className={`text-[10px] w-12 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>{count} {count === 1 ? "person" : "people"}</span>
+                            <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                              {count} {count === 1 ? "person" : "people"}
+                            </span>
                           </div>
                         </button>
                       );
