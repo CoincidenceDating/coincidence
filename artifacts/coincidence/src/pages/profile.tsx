@@ -417,7 +417,9 @@ export default function ProfilePage({
 
       {/* ── Tagline ── */}
       <div className="pt-8 flex flex-col items-center gap-2 pb-2">
-        <img src="/logo.png" alt="Coincidence" className="w-10 h-10 rounded-xl opacity-60" />
+        <div className="w-10 h-10 rounded-xl overflow-hidden opacity-60">
+          <img src="/logo.png" alt="Coincidence" className="w-full h-full object-cover scale-[1.35]" />
+        </div>
         <p className="text-xs text-muted-foreground italic">making the invisible string – visible</p>
       </div>
 

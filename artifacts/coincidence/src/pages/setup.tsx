@@ -348,7 +348,9 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
 
                 {/* Tagline tease */}
                 <div className="flex flex-col items-center gap-2 pt-2 opacity-50">
-                  <img src="/logo.png" alt="Coincidence" className="w-8 h-8 rounded-lg" />
+                  <div className="w-8 h-8 rounded-lg overflow-hidden">
+                    <img src="/logo.png" alt="Coincidence" className="w-full h-full object-cover scale-[1.35]" />
+                  </div>
                   <p className="text-xs italic text-muted-foreground">making the invisible string – visible</p>
                 </div>
               </div>

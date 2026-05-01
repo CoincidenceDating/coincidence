@@ -377,7 +377,9 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   return (
     <div className="min-h-screen flex flex-col bg-background px-6 py-10">
       <div className="flex flex-col items-center mb-10 pt-4">
-        <img src="/logo.png" alt="Coincidence" className="w-14 h-14 rounded-2xl object-cover shadow mb-4" />
+        <div className="w-14 h-14 rounded-2xl overflow-hidden shadow mb-4">
+          <img src="/logo.png" alt="Coincidence" className="w-full h-full object-cover scale-[1.35]" />
+        </div>
         <p className="text-xs text-muted-foreground italic tracking-wide" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
           making the invisible string – visible.
         </p>
