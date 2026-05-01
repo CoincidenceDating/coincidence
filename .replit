@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "postgresql-16"]
 
 [deployment]
 router = "application"
@@ -46,3 +46,6 @@ SUPABASE_URL = "https://gbxwmvarpxvhrtjhrdkn.supabase.co/rest/v1/"
 SUPABASE_KEY = "sb_publishable_DP0kvYIka0rZDMuZCpW0IA_dBwbu5wG"
 VITE_SUPABASE_URL = "https://gbxwmvarpxvhrtjhrdkn.supabase.co"
 VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdieHdtdmFycHh2aHJ0amhyZGtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0MzIyMTUsImV4cCI6MjA5MjAwODIxNX0.Rti7_Qv56bWt_2soqUHrfXe7j_o_I9JRMyJ_prsSULU"
+
+[nix]
+channel = "stable-25_05"

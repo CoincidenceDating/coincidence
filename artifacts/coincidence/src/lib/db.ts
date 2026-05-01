@@ -213,6 +213,43 @@ export async function addSwiped(profileId: string) {
   );
 }
 
+/* ── presence ─────────────────────────────────────────── */
+
+export async function upsertPresence(venueId: string, venueName: string, profileData: object) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_presence").upsert(
+    {
+      user_id: user.id,
+      venue_id: venueId,
+      venue_name: venueName,
+      profile_data: profileData,
+      activated_at: Date.now(),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+}
+
+export async function clearPresence() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_presence").delete().eq("user_id", user.id);
+}
+
+export async function getActiveUsersAtVenue(venueId: string): Promise<import("./data").Profile[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+  const { data } = await supabase
+    .from("user_presence")
+    .select("profile_data")
+    .eq("venue_id", venueId)
+    .neq("user_id", user.id)
+    .gt("activated_at", cutoff);
+  return (data ?? []).map((r) => r.profile_data as import("./data").Profile);
+}
+
 /* ── nuke all user data ───────────────────────────────── */
 
 export async function deleteAllUserData() {
@@ -232,6 +269,7 @@ export async function deleteAllUserData() {
     supabase.from("user_blocked").delete().eq("user_id", uid),
     supabase.from("user_swiped").delete().eq("user_id", uid),
     supabase.from("usernames").delete().eq("user_id", uid),
+    supabase.from("user_presence").delete().eq("user_id", uid),
   ]);
   await supabase.rpc("delete_user");
 }

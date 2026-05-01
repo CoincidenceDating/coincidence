@@ -5,7 +5,8 @@ import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMile
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed } from "lucide-react";
+import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2 } from "lucide-react";
+import * as db from "@/lib/db";
 
 const iconMap: Record<string, React.ReactNode> = {
   wine: <Wine className="w-4 h-4" />,
@@ -38,6 +39,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
   const [venueStatus, setVenueStatus] = useState<VenueStatus>("idle");
   const [nearbyLocations, setNearbyLocations] = useState<LocationData[] | null>(null);
+  const [realUsers, setRealUsers] = useState<Profile[]>([]);
+  const [isActivating, setIsActivating] = useState(false);
 
   const allMockUsers = locations.flatMap((l) => l.users);
 
@@ -72,14 +75,52 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
   const activeLocations = nearbyLocations ?? [];
   const location = activeLocations.find((l) => l.id === selectedLocation);
-  const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor)
+  const filteredMockUsers = filterByLookingFor(location?.users ?? [], lookingFor)
     .filter((p) => !blockedIds.includes(p.id));
+  const filteredRealUsers = realUsers.filter((p) => !blockedIds.includes(p.id));
+  const users: Profile[] = [
+    ...filteredRealUsers,
+    ...filteredMockUsers.filter((p) => !filteredRealUsers.some((r) => r.id === p.id)),
+  ];
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
-  function handleActivate() {
-    if (!selectedLocation) return;
-    setCurrentIndex(0); setDone(false); setIsActive(true); setJustCheckedIn(false);
+  async function handleActivate() {
+    if (!selectedLocation || !location) return;
+    setIsActivating(true);
+    try {
+      const ownProfile = await db.getProfile();
+      if (ownProfile) {
+        const initials = ownProfile.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2);
+        const gradients = [
+          "linear-gradient(160deg,#1a1a2e 0%,#2d1b69 100%)",
+          "linear-gradient(160deg,#141e30 0%,#243b55 100%)",
+          "linear-gradient(160deg,#0f2027 0%,#2c5364 100%)",
+          "linear-gradient(160deg,#232526 0%,#414345 100%)",
+        ];
+        const gradient = gradients[ownProfile.user_id.charCodeAt(0) % gradients.length];
+        const snapshot: Profile = {
+          id: ownProfile.user_id,
+          name: ownProfile.name,
+          age: ownProfile.age,
+          bio: ownProfile.bio,
+          avatar: initials,
+          distance: "Here now",
+          gradient,
+          gender: "non-binary",
+          photo: ownProfile.photos?.[0],
+        };
+        await db.upsertPresence(location.id, location.name, snapshot);
+      }
+      const real = await db.getActiveUsersAtVenue(location.id);
+      setRealUsers(real);
+    } finally {
+      setIsActivating(false);
+      setCurrentIndex(0);
+      setDone(false);
+      setIsActive(true);
+      setJustCheckedIn(false);
+    }
   }
 
   function handleHotSpotTap(locId: string) {
@@ -87,10 +128,14 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   }
 
   function handleDeactivate() {
+    db.clearPresence();
+    setRealUsers([]);
     setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false); setJustCheckedIn(false);
   }
 
   function handleStopLocation() {
+    db.clearPresence();
+    setRealUsers([]);
     setGeoStatus("idle");
     setUserCoords(null);
     setVenueStatus("idle");
@@ -459,8 +504,11 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               )}
             </div>
 
-            <Button className="w-full" size="lg" disabled={!selectedLocation} onClick={handleActivate}>
-              <Zap className="w-4 h-4 mr-2" />Activate Coincidence Mode
+            <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating} onClick={handleActivate}>
+              {isActivating
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>
+                : <><Zap className="w-4 h-4 mr-2" />Activate Coincidence Mode</>
+              }
             </Button>
 
             {/* ── String Theory explanation ── */}
