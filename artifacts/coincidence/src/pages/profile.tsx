@@ -3,7 +3,7 @@ import * as db from "@/lib/db";
 import { myProfile, type Match, type CheckIn } from "@/lib/data";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Heart, MapPin, Zap, Wine, Beer, Coffee, Sparkles,
+  Heart, MapPin, Wine, Beer, Coffee, Sparkles,
   ShoppingBag, X, Pencil, Plus, Home, Ruler, ChevronUp, ChevronDown,
   Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus, Star,
 } from "lucide-react";
@@ -398,7 +398,7 @@ export default function ProfilePage({
           <p className="text-xs text-muted-foreground">Matches</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <Zap className="w-5 h-5 mx-auto mb-1 fill-foreground" />
+          <StringIcon className="w-5 h-5 mx-auto mb-1 text-foreground" />
           <p className="text-2xl font-bold">{coincidenceMatches}</p>
           <p className="text-xs text-muted-foreground">Coincidences</p>
         </CardContent></Card>

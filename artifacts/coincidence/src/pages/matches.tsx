@@ -1,6 +1,6 @@
 import { type Match, type CheckIn } from "@/lib/data";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { Sparkles, Heart, Wine, Beer, Coffee, Zap, MessageCircle, MapPin } from "lucide-react";
+import { Sparkles, Heart, Wine, Beer, Coffee, MessageCircle, MapPin } from "lucide-react";
 
 const locationIconMap: Record<string, React.ReactNode> = {
   wine:     <Wine     className="w-3 h-3" />,

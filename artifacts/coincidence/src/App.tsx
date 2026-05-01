@@ -14,7 +14,7 @@ import ChatPage, { type Message } from "@/pages/chat";
 import SetupPage, { type SetupData } from "@/pages/setup";
 import AuthPage, { type AccountData } from "@/pages/auth";
 import ReloginPage from "@/pages/relogin";
-import { Heart, Zap, Sparkles, HelpCircle, User, Loader2 } from "lucide-react";
+import { Heart, Sparkles, HelpCircle, User, Loader2 } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Match, CheckIn } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
