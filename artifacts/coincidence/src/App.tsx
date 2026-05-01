@@ -75,7 +75,6 @@ function AppShell() {
         const u = session.user;
         const acct: AccountData = {
           id: u.id,
-          username: (u.user_metadata?.username as string) ?? "",
           email: u.email ?? "",
           phone: (u.user_metadata?.phone as string) ?? "",
         };
@@ -96,7 +95,6 @@ function AppShell() {
         const u = session.user;
         setAccount({
           id: u.id,
-          username: (u.user_metadata?.username as string) ?? "",
           email: u.email ?? "",
           phone: (u.user_metadata?.phone as string) ?? "",
         });

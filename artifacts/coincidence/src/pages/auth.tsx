@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowRight, ChevronLeft, Check, Mail, AtSign, Lock, ChevronDown, Search, Loader2 } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ChevronLeft, Check, Mail, Lock, ChevronDown, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 export interface AccountData {
   id: string;
-  username: string;
   email: string;
   phone: string;
 }
@@ -250,7 +249,6 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   const [email, setEmail] = useState("");
   const [phoneCountry, setPhoneCountry] = useState<Country>(DEFAULT_COUNTRY);
   const [phoneLocal, setPhoneLocal] = useState("");
-  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -264,14 +262,14 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   const [loginError, setLoginError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const totalSteps = 3;
+  const totalSteps = 2;
 
   function goNext() { setDir(1); setErrors({}); setStep((s) => s + 1); }
   function goBack() { setDir(-1); setErrors({}); setStep((s) => s - 1); }
 
   function switchMode(m: "create" | "login") {
     setErrors({}); setLoginError(""); setStep(0); setDir(1);
-    setEmail(""); setPhoneLocal(""); setUsername(""); setPassword(""); setConfirmPassword("");
+    setEmail(""); setPhoneLocal(""); setPassword(""); setConfirmPassword("");
     setLoginIdentifier(""); setLoginPassword("");
     setMode(m);
   }
@@ -285,12 +283,6 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   }
   function validateStep1() {
     const e: Record<string, string> = {};
-    if (!validateUsername(username)) e.username = "3–20 characters, letters, numbers, _ or .";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  }
-  function validateStep2() {
-    const e: Record<string, string> = {};
     if (!validatePassword(password)) e.password = "At least 8 characters";
     if (password !== confirmPassword) e.confirm = "Passwords don't match";
     setErrors(e);
@@ -299,17 +291,15 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
 
   async function handleNextStep() {
     if (step === 0 && validateStep0()) { goNext(); return; }
-    if (step === 1 && validateStep1()) { goNext(); return; }
-    if (step === 2 && validateStep2()) {
+    if (step === 1 && validateStep1()) {
       setIsLoading(true);
       const trimEmail = email.trim().toLowerCase();
-      const trimUser  = username.trim();
       const phone     = phoneCountry.dialCode + phoneLocal.replace(/[\s\-().]/g, "");
 
       const { data, error } = await supabase.auth.signUp({
         email: trimEmail,
         password,
-        options: { data: { username: trimUser, phone } },
+        options: { data: { phone } },
       });
 
       if (error) {
@@ -319,11 +309,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
       }
 
       if (data.user) {
-        await supabase.from("usernames").upsert(
-          { username: trimUser, email: trimEmail, user_id: data.user.id },
-          { onConflict: "username" }
-        );
-        onCreateAccount({ id: data.user.id, username: trimUser, email: trimEmail, phone });
+        onCreateAccount({ id: data.user.id, email: trimEmail, phone });
       } else {
         setErrors({ confirm: "Please check your email to confirm your account, then log in." });
       }
@@ -334,21 +320,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   async function handleLogin() {
     setLoginError("");
     setIsLoading(true);
-    let loginEmail = loginIdentifier.trim().toLowerCase();
-
-    if (!loginEmail.includes("@")) {
-      const { data } = await supabase
-        .from("usernames")
-        .select("email")
-        .eq("username", loginEmail)
-        .maybeSingle();
-      if (!data?.email) {
-        setLoginError("Username not found");
-        setIsLoading(false);
-        return;
-      }
-      loginEmail = data.email as string;
-    }
+    const loginEmail = loginIdentifier.trim().toLowerCase();
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email: loginEmail,
@@ -367,10 +339,9 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     setIsLoading(false);
   }
 
-  const stepTitles = ["Your contact info", "Pick a username", "Create a password"];
+  const stepTitles = ["Your contact info", "Create a password"];
   const stepSubtitles = [
     "How we'll keep your account secure",
-    "This is how others will find you",
     "Keep it strong and secret",
   ];
 
@@ -458,22 +429,6 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
 
                 {step === 1 && (
                   <div className="space-y-4">
-                    <Field
-                      label="Username"
-                      icon={<AtSign className="w-4 h-4" />}
-                      type="text"
-                      value={username}
-                      onChange={setUsername}
-                      placeholder="your_username"
-                      error={errors.username}
-                      hint="Letters, numbers, _ and . only. 3–20 characters."
-                      autoComplete="username"
-                    />
-                  </div>
-                )}
-
-                {step === 2 && (
-                  <div className="space-y-4">
                     <PasswordField label="Password" value={password} onChange={setPassword}
                       show={showPw} onToggle={() => setShowPw((v) => !v)}
                       error={errors.password} hint="Minimum 8 characters" autoComplete="new-password" />
@@ -507,9 +462,9 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
               <p className="text-sm text-muted-foreground mt-1">Sign in to continue your coincidences</p>
             </div>
             <div className="space-y-4">
-              <Field label="Email or username" icon={<AtSign className="w-4 h-4" />} type="text"
+              <Field label="Email" icon={<Mail className="w-4 h-4" />} type="email"
                 value={loginIdentifier} onChange={setLoginIdentifier}
-                placeholder="you@example.com or username" autoComplete="username" />
+                placeholder="you@example.com" autoComplete="email" />
               <PasswordField label="Password" value={loginPassword} onChange={setLoginPassword}
                 show={showLoginPw} onToggle={() => setShowLoginPw((v) => !v)} autoComplete="current-password" />
             </div>
