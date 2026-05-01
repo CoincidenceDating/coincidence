@@ -10,6 +10,7 @@ import UndecidedPage from "@/pages/undecided";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
 import SetupPage, { type SetupData } from "@/pages/setup";
+import AuthPage, { type AccountData } from "@/pages/auth";
 import { Heart, Zap, Sparkles, HelpCircle, User } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Match, CheckIn } from "@/lib/data";
@@ -27,25 +28,6 @@ function getOpeningText(match: Match): string {
   return `What are the odds of running into you at ${loc}? Glad we did 😄`;
 }
 
-function LoggedOutScreen({ onLogin }: { onLogin: () => void }) {
-  return (
-    <div className="h-screen flex flex-col items-center justify-center bg-background px-6 gap-8">
-      <img src="/logo.jpeg" alt="Coincidence" className="w-20 h-20 rounded-2xl object-cover shadow-md" />
-      <div className="text-center space-y-2">
-        <h1 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
-          You're logged out
-        </h1>
-        <p className="text-sm text-muted-foreground italic">making the invisible string – visible.</p>
-      </div>
-      <button
-        onClick={onLogin}
-        className="w-full max-w-xs py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all"
-      >
-        Log back in
-      </button>
-    </div>
-  );
-}
 
 function SplashScreen({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
@@ -89,6 +71,7 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
   );
 }
 
+const ACCOUNT_KEY   = "coincidence_account";
 const SETUP_FLAG    = "coincidence_setup_complete";
 const PROFILE_KEY   = "coincidence_profile";
 const MATCHES_KEY   = "coincidence_matches";
@@ -107,6 +90,7 @@ function ls<T>(key: string, fallback: T): T {
 function AppShell() {
   const [showSplash, setShowSplash]   = useState(true);
   const [showSetup, setShowSetup]     = useState(() => !localStorage.getItem(SETUP_FLAG));
+  const [account, setAccount]         = useState<AccountData | null>(() => ls<AccountData | null>(ACCOUNT_KEY, null));
   const [isLoggedOut, setIsLoggedOut] = useState(false);
   const [activeTab, setActiveTab]     = useState<Tab>("swipe");
 
@@ -177,6 +161,16 @@ function AppShell() {
     setBoostTimeLeft(BOOST_DURATION_MS);
   }
 
+  function handleCreateAccount(data: AccountData) {
+    try { localStorage.setItem(ACCOUNT_KEY, JSON.stringify(data)); } catch {}
+    setAccount(data);
+    setIsLoggedOut(false);
+  }
+
+  function handleLogin() {
+    setIsLoggedOut(false);
+  }
+
   function handleSetupComplete(data: SetupData) {
     try {
       localStorage.setItem(PROFILE_KEY, JSON.stringify({
@@ -226,6 +220,7 @@ function AppShell() {
 
   function handleDeleteAccount() {
     try { localStorage.clear(); } catch {}
+    setAccount(null);
     setMatches([]);
     setUndecided([]);
     setNewMatchCount(0);
@@ -240,6 +235,7 @@ function AppShell() {
     setLookingFor("Everyone");
     setShowSplash(true);
     setShowSetup(true);
+    setIsLoggedOut(false);
   }
 
   function handleCheckIn(checkIn: CheckIn) {
@@ -313,8 +309,19 @@ function AppShell() {
     setThreads((prev) => ({ ...prev, [realId]: [...(prev[realId] ?? []), msg] }));
   }
 
-  if (isLoggedOut) return <LoggedOutScreen onLogin={() => setIsLoggedOut(false)} />;
   if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
+  if (!account || isLoggedOut) return (
+    <AnimatePresence>
+      <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+        <AuthPage
+          defaultMode={isLoggedOut && account ? "login" : "create"}
+          existingAccount={account}
+          onCreateAccount={handleCreateAccount}
+          onLogin={handleLogin}
+        />
+      </motion.div>
+    </AnimatePresence>
+  );
   if (showSetup) return (
     <AnimatePresence>
       <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
