@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, ArrowRight, Loader2, Lock, AtSign } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, Loader2, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface ReloginPageProps {
@@ -8,31 +8,18 @@ interface ReloginPageProps {
 }
 
 export default function ReloginPage({ onLogin }: ReloginPageProps) {
-  const [identifier, setIdentifier] = useState("");
-  const [password, setPassword]     = useState("");
-  const [showPw, setShowPw]         = useState(false);
-  const [error, setError]           = useState<string | null>(null);
-  const [loading, setLoading]       = useState(false);
+  const [email, setEmail]   = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw]     = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading]   = useState(false);
 
   async function handleSignIn() {
-    if (!identifier.trim() || !password) { setError("Please fill in all fields."); return; }
+    if (!email.trim() || !password) { setError("Please fill in all fields."); return; }
     setError(null);
     setLoading(true);
     try {
-      const isEmail = identifier.includes("@");
-      let emailToUse = identifier.trim();
-
-      if (!isEmail) {
-        const { data } = await supabase
-          .from("usernames")
-          .select("email")
-          .eq("username", identifier.trim().toLowerCase())
-          .maybeSingle();
-        if (!data?.email) { setError("Username not found."); setLoading(false); return; }
-        emailToUse = data.email as string;
-      }
-
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email: emailToUse, password });
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (signInError) { setError(signInError.message); setLoading(false); return; }
       onLogin();
     } catch {
@@ -77,20 +64,20 @@ export default function ReloginPage({ onLogin }: ReloginPageProps) {
         <p className="text-sm text-muted-foreground mb-6">Sign in to continue your coincidences</p>
 
         <div className="space-y-4">
-          {/* Identifier */}
+          {/* Email */}
           <div>
             <label className="block text-xs font-semibold text-foreground/70 mb-1.5 uppercase tracking-wide">
-              Email or username
+              Email
             </label>
             <div className="flex items-center gap-2.5 px-3.5 py-3 rounded-2xl border-2 border-border focus-within:border-foreground bg-card transition-colors">
-              <AtSign className="w-4 h-4 text-muted-foreground shrink-0" />
+              <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
               <input
-                type="text"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
-                placeholder="you@example.com or username"
-                autoComplete="username"
+                placeholder="you@example.com"
+                autoComplete="email"
                 className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
               />
             </div>
