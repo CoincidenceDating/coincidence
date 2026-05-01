@@ -390,9 +390,10 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
           <button
             key={m}
             onClick={() => switchMode(m)}
-            className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
-              mode === m ? "bg-foreground text-background" : "bg-transparent text-muted-foreground hover:text-foreground"
+            className={`flex-1 py-2.5 text-sm font-semibold transition-all ${
+              mode === m ? "text-white" : "bg-transparent text-muted-foreground hover:text-foreground"
             }`}
+            style={mode === m ? { background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" } : undefined}
           >
             {m === "create" ? "Create account" : "Log in"}
           </button>
@@ -487,7 +488,8 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
             <button
               onClick={handleNextStep}
               disabled={isLoading}
-              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
             >
               {isLoading && step === totalSteps - 1
                 ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account…</>
@@ -519,7 +521,8 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
             <button
               onClick={handleLogin}
               disabled={isLoading}
-              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
             >
               {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : <>Log in <ArrowRight className="w-4 h-4" /></>}
             </button>

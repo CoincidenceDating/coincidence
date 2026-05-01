@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { swipeProfiles, filterByLookingFor, type Match } from "@/lib/data";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
-import { MapPin } from "lucide-react";
+import { MapPin, User, Sparkles } from "lucide-react";
 
 function formatBoostTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -73,10 +73,24 @@ export default function SwipePage({
   }
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 py-4">
+    <div className="relative flex flex-col items-center min-h-[calc(100vh-80px)] px-4 pt-0 pb-4">
 
-      {/* String button — top right */}
-      <div className="absolute top-4 right-4 z-10">
+      {/* ── Header ── */}
+      <div className="w-full max-w-sm flex items-center justify-between py-4 mb-1">
+        {/* Profile icon */}
+        <button className="w-9 h-9 rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+          <User className="w-4.5 h-4.5" />
+        </button>
+
+        {/* Gradient "coincidence" wordmark */}
+        <h1
+          className="gradient-text font-bold tracking-tight select-none"
+          style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}
+        >
+          coincidence
+        </h1>
+
+        {/* String / boost button */}
         <AnimatePresence mode="wait">
           {isBoostActive ? (
             <motion.div
@@ -85,15 +99,16 @@ export default function SwipePage({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.85 }}
               transition={{ type: "spring", stiffness: 380, damping: 28 }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-semibold"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold text-white"
+              style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
             >
               <motion.div
-                animate={{ opacity: [1, 0.35, 1] }}
+                animate={{ opacity: [1, 0.4, 1] }}
                 transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
               >
-                <StringIcon className="w-3.5 h-3.5" />
+                <StringIcon className="w-3 h-3" />
               </motion.div>
-              {boostRadius} mi · {formatBoostTime(boostTimeLeft)}
+              {boostRadius}mi
             </motion.div>
           ) : (
             <motion.button
@@ -104,22 +119,29 @@ export default function SwipePage({
               transition={{ type: "spring", stiffness: 380, damping: 28 }}
               onClick={handleActivate}
               disabled={boostCredits === 0}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-full border transition-all
+              className={`relative w-9 h-9 rounded-full flex items-center justify-center border transition-all
                 ${boostCredits > 0
-                  ? "bg-background border-border hover:border-foreground/60 hover:bg-muted active:scale-95"
-                  : "bg-background border-border opacity-35 cursor-not-allowed"
+                  ? "bg-card border-white/10 hover:border-primary/60 active:scale-95 text-muted-foreground hover:text-primary"
+                  : "bg-card border-white/10 opacity-35 cursor-not-allowed text-muted-foreground"
                 }`}
             >
-              <StringIcon className="w-4 h-4 text-foreground" />
-              <span className="text-xs font-semibold text-foreground tabular-nums">
-                {boostCredits}
-              </span>
+              <Sparkles className="w-4 h-4" />
+              {boostCredits > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                  style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+                >
+                  {boostCredits}
+                </span>
+              )}
             </motion.button>
           )}
         </AnimatePresence>
       </div>
 
-      <div className="h-10" />
+      {/* Tagline */}
+      <div className="w-full max-w-sm mb-3 text-center">
+        <p className="text-muted-foreground text-xs tracking-wide">Paths cross for a reason.</p>
+      </div>
 
       <AnimatePresence mode="wait">
         {profile ? (

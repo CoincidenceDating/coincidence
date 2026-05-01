@@ -144,7 +144,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                   ? "M 5 18 C 42 14, 88 22, 125 18"
                   : "M 5 18 C 35 32, 95 32, 125 18"
                 }
-                stroke="rgba(0,0,0,0.28)"
+                stroke="rgba(255,255,255,0.30)"
                 strokeWidth="2"
                 fill="none"
                 strokeLinecap="round"
@@ -161,7 +161,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                   ? "M 5 18 C 42 14, 88 22, 125 18"
                   : "M 5 18 C 35 32, 95 32, 125 18"
                 }
-                stroke="rgba(0,0,0,0.10)"
+                stroke="rgba(255,255,255,0.12)"
                 strokeWidth="1"
                 strokeDasharray="5 7"
                 fill="none"
@@ -177,7 +177,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
               <motion.circle
                 cx={65} cy={18}
                 r={4.5}
-                fill="rgba(0,0,0,0.30)"
+                fill="rgba(232,56,125,0.70)"
                 initial={{ scale: 0, opacity: 0 }}
                 animate={messages.length > 0
                   ? { scale: 1, opacity: 1, cy: 18 }
@@ -188,7 +188,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
               <motion.circle
                 cx={65} cy={18}
                 r={2}
-                fill="rgba(0,0,0,0.55)"
+                fill="rgba(255,255,255,0.90)"
                 initial={{ scale: 0, opacity: 0 }}
                 animate={messages.length > 0
                   ? { scale: 1, opacity: 1 }

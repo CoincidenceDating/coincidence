@@ -28,17 +28,17 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
         <svg viewBox="0 0 160 120" style={{ width: 140, height: 105, marginBottom: 8 }} aria-hidden>
-          <path d="M 20 10 C 25 35, 45 45, 80 60" stroke="rgba(0,0,0,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-          <path d="M 20 10 C 25 35, 45 45, 80 60" stroke="rgba(0,0,0,0.08)" strokeWidth="5" fill="none" strokeLinecap="round" />
-          <path d="M 140 10 C 135 35, 115 45, 80 60" stroke="rgba(0,0,0,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-          <path d="M 140 10 C 135 35, 115 45, 80 60" stroke="rgba(0,0,0,0.08)" strokeWidth="5" fill="none" strokeLinecap="round" />
-          <circle cx="80" cy="60" r="10" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="2" />
-          <circle cx="80" cy="60" r="5.5" fill="rgba(0,0,0,0.10)" />
-          <circle cx="80" cy="60" r="2.5" fill="rgba(0,0,0,0.20)" />
-          <path d="M 80 70 C 78 85, 82 95, 80 110" stroke="rgba(0,0,0,0.12)" strokeWidth="2" strokeDasharray="4 5" fill="none" strokeLinecap="round" />
-          <circle cx="20" cy="10" r="6" fill="rgba(0,0,0,0.12)" />
-          <circle cx="20" cy="10" r="3" fill="rgba(0,0,0,0.22)" />
-          <circle cx="140" cy="10" r="6" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" strokeDasharray="3 3" />
+          <path d="M 20 10 C 25 35, 45 45, 80 60" stroke="rgba(255,255,255,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 20 10 C 25 35, 45 45, 80 60" stroke="rgba(255,255,255,0.08)" strokeWidth="5" fill="none" strokeLinecap="round" />
+          <path d="M 140 10 C 135 35, 115 45, 80 60" stroke="rgba(255,255,255,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 140 10 C 135 35, 115 45, 80 60" stroke="rgba(255,255,255,0.08)" strokeWidth="5" fill="none" strokeLinecap="round" />
+          <circle cx="80" cy="60" r="10" fill="none" stroke="rgba(255,255,255,0.20)" strokeWidth="2" />
+          <circle cx="80" cy="60" r="5.5" fill="rgba(255,255,255,0.12)" />
+          <circle cx="80" cy="60" r="2.5" fill="rgba(255,255,255,0.28)" />
+          <path d="M 80 70 C 78 85, 82 95, 80 110" stroke="rgba(255,255,255,0.14)" strokeWidth="2" strokeDasharray="4 5" fill="none" strokeLinecap="round" />
+          <circle cx="20" cy="10" r="6" fill="rgba(255,255,255,0.14)" />
+          <circle cx="20" cy="10" r="3" fill="rgba(255,255,255,0.26)" />
+          <circle cx="140" cy="10" r="6" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeDasharray="3 3" />
         </svg>
         <h2 className="text-xl font-semibold">No matches yet</h2>
         <p className="text-muted-foreground text-sm mt-1 max-w-xs">
@@ -89,7 +89,7 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
               <span className="text-muted-foreground font-normal">{match.profile.age}</span>
             </p>
             {match.superLike && (
-              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-foreground text-background text-[9px] font-semibold tracking-wide shrink-0">
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[9px] font-semibold tracking-wide shrink-0" style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}>
                 ✦✦ Double String
               </span>
             )}

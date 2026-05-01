@@ -543,27 +543,33 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
           </div>
         </div>
 
-        <div className="flex justify-center items-center gap-5 mt-5">
+        <div className="flex justify-center items-center gap-6 mt-5">
+          {/* X — reject */}
           <button
             onClick={() => handleAction("left")}
             disabled={action !== "none"}
-            className="w-14 h-14 rounded-full border-2 border-destructive/40 text-destructive hover:bg-destructive/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
+            className="w-14 h-14 rounded-full bg-card border border-white/10 text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-lg"
           >
             <X className="w-6 h-6" />
           </button>
-          <button
-            onClick={() => handleAction("maybe")}
-            disabled={action !== "none"}
-            className="w-12 h-12 rounded-full border-2 border-amber-400/60 text-amber-500 hover:bg-amber-50 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
+
+          {/* Heart — like (large, pink-purple gradient) */}
           <button
             onClick={() => handleAction("right")}
             disabled={action !== "none"}
-            className="w-14 h-14 rounded-full bg-foreground text-background hover:bg-foreground/80 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-sm"
+            className="w-16 h-16 rounded-full active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-xl shadow-primary/30"
+            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
           >
-            <Heart className="w-6 h-6" />
+            <Heart className="w-7 h-7 text-white fill-white" />
+          </button>
+
+          {/* Star — maybe/save */}
+          <button
+            onClick={() => handleAction("maybe")}
+            disabled={action !== "none"}
+            className="w-14 h-14 rounded-full bg-card border border-white/10 text-violet-400 hover:bg-violet-500/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-lg"
+          >
+            <HelpCircle className="w-6 h-6" />
           </button>
         </div>
 
@@ -575,7 +581,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
               disabled={action !== "none" || boostCredits < 2}
               className={`flex items-center gap-2 px-5 py-2 rounded-full border transition-all active:scale-95
                 ${boostCredits >= 2
-                  ? "border-foreground/30 hover:border-foreground hover:bg-foreground hover:text-background text-foreground"
+                  ? "border-primary/40 hover:border-primary/70 text-primary hover:bg-primary/10"
                   : "border-border text-muted-foreground opacity-40 cursor-not-allowed"
                 }`}
             >

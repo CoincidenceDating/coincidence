@@ -374,7 +374,8 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
           whileTap={{ scale: 0.97 }}
           onClick={step < TOTAL_STEPS - 1 ? goNext : finish}
           disabled={!canNext}
-          className="flex-1 h-12 rounded-full bg-foreground text-background font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-30 hover:bg-foreground/85 transition-all"
+          className="flex-1 h-12 rounded-full font-semibold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-30 transition-all"
+            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
         >
           {step < TOTAL_STEPS - 1 ? (
             <>Continue <ChevronRight className="w-4 h-4" /></>

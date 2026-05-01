@@ -12,20 +12,15 @@ export default function UndecidedPage({ undecided, onDecide }: UndecidedPageProp
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
         {/* Empty-state rope visual — a rope with a loose unknotted end */}
         <svg viewBox="0 0 140 110" style={{ width: 128, height: 100, marginBottom: 8 }} aria-hidden>
-          {/* Single rope coming from top-left, looping loosely in the middle */}
-          <path d="M 20 8 C 30 30, 55 28, 60 50 C 65 70, 45 80, 70 90" stroke="rgba(0,0,0,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-          <path d="M 20 8 C 30 30, 55 28, 60 50 C 65 70, 45 80, 70 90" stroke="rgba(0,0,0,0.08)" strokeWidth="5.5" fill="none" strokeLinecap="round" />
-          {/* Second rope from top-right, also dangling — not yet tied */}
-          <path d="M 120 8 C 110 32, 88 30, 82 52 C 76 72, 95 80, 70 90" stroke="rgba(0,0,0,0.10)" strokeWidth="2" strokeDasharray="5 5" fill="none" strokeLinecap="round" />
-          {/* Loose end — fraying */}
-          <path d="M 70 90 C 68 98, 65 105, 62 108" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
-          <path d="M 70 90 C 72 98, 75 104, 74 108" stroke="rgba(0,0,0,0.10)" strokeWidth="1.2" fill="none" strokeLinecap="round" />
-          {/* Anchor dots */}
-          <circle cx="20" cy="8" r="5" fill="rgba(0,0,0,0.14)" />
-          <circle cx="20" cy="8" r="2.5" fill="rgba(0,0,0,0.24)" />
-          <circle cx="120" cy="8" r="5" fill="none" stroke="rgba(0,0,0,0.13)" strokeWidth="1.5" strokeDasharray="3 2" />
-          {/* Question mark suggestion */}
-          <text x="116" y="90" fontSize="22" fill="rgba(0,0,0,0.09)" fontFamily="Georgia, serif" fontStyle="italic">?</text>
+          <path d="M 20 8 C 30 30, 55 28, 60 50 C 65 70, 45 80, 70 90" stroke="rgba(255,255,255,0.18)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          <path d="M 20 8 C 30 30, 55 28, 60 50 C 65 70, 45 80, 70 90" stroke="rgba(255,255,255,0.08)" strokeWidth="5.5" fill="none" strokeLinecap="round" />
+          <path d="M 120 8 C 110 32, 88 30, 82 52 C 76 72, 95 80, 70 90" stroke="rgba(255,255,255,0.12)" strokeWidth="2" strokeDasharray="5 5" fill="none" strokeLinecap="round" />
+          <path d="M 70 90 C 68 98, 65 105, 62 108" stroke="rgba(255,255,255,0.14)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          <path d="M 70 90 C 72 98, 75 104, 74 108" stroke="rgba(255,255,255,0.10)" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+          <circle cx="20" cy="8" r="5" fill="rgba(255,255,255,0.16)" />
+          <circle cx="20" cy="8" r="2.5" fill="rgba(255,255,255,0.28)" />
+          <circle cx="120" cy="8" r="5" fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth="1.5" strokeDasharray="3 2" />
+          <text x="116" y="90" fontSize="22" fill="rgba(255,255,255,0.12)" fontFamily="Georgia, serif" fontStyle="italic">?</text>
         </svg>
         <h2 className="text-xl font-semibold">No maybes yet</h2>
         <p className="text-muted-foreground text-sm mt-1 max-w-xs">
@@ -85,7 +80,8 @@ export default function UndecidedPage({ undecided, onDecide }: UndecidedPageProp
               </button>
               <button
                 onClick={() => onDecide(match, "yes")}
-                className="w-10 h-10 rounded-full bg-foreground text-background hover:bg-foreground/80 active:scale-95 transition-all flex items-center justify-center"
+                className="w-10 h-10 rounded-full active:scale-95 transition-all flex items-center justify-center text-white"
+                style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
               >
                 <Check className="w-4 h-4" />
               </button>

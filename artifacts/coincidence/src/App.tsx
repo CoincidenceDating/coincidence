@@ -395,31 +395,29 @@ function AppShell() {
   const tabs: { id: Tab; label: string; icon: (active: boolean) => React.ReactNode }[] = [
     {
       id: "swipe",
-      label: "Swipe",
+      label: "Discover",
       icon: (a) => (
         <div className="relative">
-          <Heart className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
+          <Sparkles className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />
           {isBoostActive && (
-            <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-foreground border-2 border-background flex items-center justify-center">
-              <StringIcon className="w-2 h-2 text-background" />
-            </span>
+            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full gradient-btn border-2 border-background" />
           )}
         </div>
       ),
     },
     {
       id: "coincidence",
-      label: "Coincidence",
-      icon: (a) => <Zap className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />,
+      label: "Places",
+      icon: (a) => <Zap className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />,
     },
     {
       id: "matches",
       label: "Matches",
       icon: (a) => (
         <div className="relative">
-          <Sparkles className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
+          <Heart className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />
           {newMatchCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-foreground text-background text-[10px] font-bold flex items-center justify-center leading-none">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full gradient-btn text-white text-[10px] font-bold flex items-center justify-center leading-none">
               {newMatchCount > 9 ? "9+" : newMatchCount}
             </span>
           )}
@@ -428,12 +426,12 @@ function AppShell() {
     },
     {
       id: "undecided",
-      label: "Maybe",
+      label: "Likes",
       icon: (a) => (
         <div className="relative">
-          <HelpCircle className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />
+          <HelpCircle className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />
           {newUndecidedCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold flex items-center justify-center leading-none">
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full gradient-btn text-white text-[10px] font-bold flex items-center justify-center leading-none">
               {newUndecidedCount > 9 ? "9+" : newUndecidedCount}
             </span>
           )}
@@ -443,58 +441,12 @@ function AppShell() {
     {
       id: "profile",
       label: "Profile",
-      icon: (a) => <User className={`w-5 h-5 ${a ? "fill-foreground" : ""}`} />,
+      icon: (a) => <User className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />,
     },
   ];
 
-  const TAB_BG: Record<string, string> = {
-    swipe:       "linear-gradient(155deg, #fafbfc 0%, #f2f5f7 55%, #f8fafb 100%)",
-    coincidence: "linear-gradient(155deg, #faf9f6 0%, #f3f0e8 55%, #faf8f4 100%)",
-    matches:     "linear-gradient(155deg, #f9f9fb 0%, #eeeef4 55%, #f7f7fb 100%)",
-    undecided:   "linear-gradient(155deg, #fafaf8 0%, #f0f0e8 55%, #f8f8f5 100%)",
-    profile:     "linear-gradient(155deg, #f7f7f7 0%, #ebebeb 55%, #f5f5f5 100%)",
-  };
-
   return (
-    <div
-      className="h-screen flex flex-col overflow-hidden relative"
-      style={{ background: TAB_BG[activeTab] ?? TAB_BG.swipe, transition: "background 0.5s ease" }}
-    >
-      {/* ① Linen / noise texture overlay */}
-      <svg
-        aria-hidden
-        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 0, opacity: 0.55 }}
-      >
-        <filter id="linen-noise">
-          <feTurbulence type="fractalNoise" baseFrequency="0.72" numOctaves="4" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-          <feBlend in="SourceGraphic" mode="multiply" />
-        </filter>
-        <rect width="100%" height="100%" filter="url(#linen-noise)" opacity="0.06" />
-      </svg>
-
-      {/* ② Corner rope accents — top-left */}
-      <svg
-        aria-hidden viewBox="0 0 72 72"
-        style={{ position: "absolute", top: 0, left: 0, width: 72, height: 72, pointerEvents: "none", zIndex: 0 }}
-      >
-        <path d="M -4 28 C 8 22, 14 8, 6 0" stroke="rgba(0,0,0,0.13)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <path d="M 6 0 C 22 -2, 30 12, 22 24 C 14 36, 2 34, 4 22 C 6 12, 18 12, 20 22" stroke="rgba(0,0,0,0.10)" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <circle cx="20" cy="22" r="3.5" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
-        <circle cx="20" cy="22" r="1.5" fill="rgba(0,0,0,0.10)" />
-      </svg>
-
-      {/* ② Corner rope accents — top-right */}
-      <svg
-        aria-hidden viewBox="0 0 72 72"
-        style={{ position: "absolute", top: 0, right: 0, width: 72, height: 72, pointerEvents: "none", zIndex: 0, transform: "scaleX(-1)" }}
-      >
-        <path d="M -4 28 C 8 22, 14 8, 6 0" stroke="rgba(0,0,0,0.13)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-        <path d="M 6 0 C 22 -2, 30 12, 22 24 C 14 36, 2 34, 4 22 C 6 12, 18 12, 20 22" stroke="rgba(0,0,0,0.10)" strokeWidth="2" fill="none" strokeLinecap="round" />
-        <circle cx="20" cy="22" r="3.5" fill="none" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
-        <circle cx="20" cy="22" r="1.5" fill="rgba(0,0,0,0.10)" />
-      </svg>
-
+    <div className="h-screen flex flex-col overflow-hidden relative bg-background">
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
         {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} swipedIds={swipedIds} onSwiped={(id) => { setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]); db.addSwiped(id); }} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} />}
@@ -507,29 +459,17 @@ function AppShell() {
         {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={(r) => { setBoostRadius(r); db.upsertBoost(boostCredits, boostActiveUntil, r); }} onActivateBoost={handleActivateBoost} onAddCredits={(n) => { setBoostCredits((c) => { const next = c + n; db.upsertBoost(next, boostActiveUntil, boostRadius); return next; }); }} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} />}
       </main>
 
-      {/* ③ Nav rope divider + nav */}
+      {/* Nav bar */}
       <div className="sticky bottom-0" style={{ zIndex: 1 }}>
-        <svg
-          aria-hidden viewBox="0 0 390 10" preserveAspectRatio="none"
-          style={{ display: "block", width: "100%", height: 10, overflow: "visible" }}
-        >
-          <path
-            d="M 0 5 C 32 1, 65 9, 97 5 C 130 1, 163 9, 195 5 C 228 1, 261 9, 293 5 C 326 1, 359 9, 390 5"
-            stroke="rgba(0,0,0,0.14)" strokeWidth="1.5" fill="none" strokeLinecap="round"
-          />
-          <path
-            d="M 0 5 C 32 1, 65 9, 97 5 C 130 1, 163 9, 195 5 C 228 1, 261 9, 293 5 C 326 1, 359 9, 390 5"
-            stroke="rgba(0,0,0,0.06)" strokeWidth="3.5" fill="none" strokeLinecap="round"
-          />
-        </svg>
-        <nav className="bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <div className="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <nav className="bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-safe">
           <div className="flex max-w-lg mx-auto">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => handleTabChange(tab.id)}
-                className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors ${
-                  activeTab === tab.id ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+                className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-semibold transition-colors ${
+                  activeTab === tab.id ? "text-primary" : "text-muted-foreground hover:text-foreground/70"
                 }`}
               >
                 {tab.icon(activeTab === tab.id)}
