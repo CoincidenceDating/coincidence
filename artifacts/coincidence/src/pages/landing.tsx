@@ -5,185 +5,215 @@ interface LandingPageProps {
   onGetStarted: () => void;
 }
 
+// S-curve: M 90 58 C 90 160, 230 160, 230 262
+// Midpoint at t=0.5 is exactly (160, 160) — where the flare lives
+const PATH = "M 90 58 C 90 160, 230 160, 230 262";
+const CX = 90, CY = 58;   // pink dot
+const PX = 230, PY = 262; // purple dot
+const FX = 160, FY = 160; // flare / star
+
 export default function LandingPage({ onGetStarted }: LandingPageProps) {
   const [pathDone, setPathDone] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(() => setPathDone(true), 1400);
+    const t = setTimeout(() => setPathDone(true), 1500);
     return () => clearTimeout(t);
   }, []);
+
+  const pathAnim = {
+    initial: { pathLength: 0, opacity: 0 },
+    animate: { pathLength: 1, opacity: 1 },
+    transition: { duration: 1.4, delay: 0.2, ease: "easeInOut" as const },
+  };
 
   return (
     <div
       className="fixed inset-0 flex flex-col items-center overflow-hidden"
       style={{ background: "#08080f" }}
     >
-      {/* ── Ambient glow blobs ── */}
-      <div
-        aria-hidden
-        style={{
-          position: "absolute", top: "8%", left: "15%",
-          width: 180, height: 180,
-          background: "radial-gradient(circle, rgba(232,56,125,0.22) 0%, transparent 70%)",
-          filter: "blur(32px)", pointerEvents: "none",
-        }}
-      />
-      <div
-        aria-hidden
-        style={{
-          position: "absolute", top: "32%", right: "12%",
-          width: 200, height: 200,
-          background: "radial-gradient(circle, rgba(155,93,229,0.20) 0%, transparent 70%)",
-          filter: "blur(40px)", pointerEvents: "none",
-        }}
-      />
-
       {/* ── String visual ── */}
-      <div className="w-full flex-1 flex items-center justify-center" style={{ maxHeight: "52%", minHeight: 0 }}>
+      <div
+        className="w-full flex items-center justify-center"
+        style={{ flex: "0 0 52%", minHeight: 0 }}
+      >
         <svg
-          viewBox="0 0 320 260"
-          style={{ width: "100%", maxWidth: 380, height: "100%" }}
+          viewBox="0 0 320 320"
+          style={{ width: "100%", maxWidth: 360, height: "100%" }}
           aria-hidden
+          overflow="visible"
         >
           <defs>
-            <linearGradient id="stringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#E8387D" />
-              <stop offset="50%" stopColor="#C45AE8" />
-              <stop offset="100%" stopColor="#9B5DE5" />
+            {/* Path gradient: pink → lavender → purple */}
+            <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stopColor="#FF5CA0" />
+              <stop offset="48%"  stopColor="#E099D8" />
+              <stop offset="100%" stopColor="#9B8EEF" />
             </linearGradient>
-            <filter id="glow-pink">
-              <feGaussianBlur stdDeviation="4" result="blur" />
+
+            {/* Outer wide blur — gives the neon bloom */}
+            <filter id="f-wide" x="-120%" y="-120%" width="340%" height="340%">
+              <feGaussianBlur stdDeviation="20" />
+            </filter>
+            {/* Mid glow */}
+            <filter id="f-mid" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="9" />
+            </filter>
+            {/* Dot outer bloom */}
+            <filter id="f-dot-pink" x="-300%" y="-300%" width="700%" height="700%">
+              <feGaussianBlur stdDeviation="18" />
+            </filter>
+            <filter id="f-dot-purple" x="-300%" y="-300%" width="700%" height="700%">
+              <feGaussianBlur stdDeviation="18" />
+            </filter>
+            {/* Flare bloom */}
+            <filter id="f-flare-bloom" x="-400%" y="-400%" width="900%" height="900%">
+              <feGaussianBlur stdDeviation="28" />
+            </filter>
+            {/* Ray blur */}
+            <filter id="f-ray" x="-200%" y="-200%" width="500%" height="500%">
+              <feGaussianBlur stdDeviation="3.5" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
-            <filter id="glow-purple">
-              <feGaussianBlur stdDeviation="4" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-            <filter id="glow-star">
-              <feGaussianBlur stdDeviation="7" result="blur" />
-              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
+
+            {/* Fading ray gradients — userSpaceOnUse so coords are absolute */}
+            {/* Horizontal */}
+            <linearGradient id="rL" x1={FX} y1={FY} x2={FX - 148} y2={FY} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="white" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="rR" x1={FX} y1={FY} x2={FX + 148} y2={FY} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="white" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+            {/* Vertical */}
+            <linearGradient id="rU" x1={FX} y1={FY} x2={FX} y2={FY - 130} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="white" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="rD" x1={FX} y1={FY} x2={FX} y2={FY + 130} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="white" stopOpacity="0.85" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+            {/* Diagonal UL */}
+            <linearGradient id="rDUL" x1={FX} y1={FY} x2={FX - 65} y2={FY - 65} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#D8A8FF" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#D8A8FF" stopOpacity="0" />
+            </linearGradient>
+            {/* Diagonal DR */}
+            <linearGradient id="rDDR" x1={FX} y1={FY} x2={FX + 65} y2={FY + 65} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#D8A8FF" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#D8A8FF" stopOpacity="0" />
+            </linearGradient>
+            {/* Diagonal UR */}
+            <linearGradient id="rDUR" x1={FX} y1={FY} x2={FX + 65} y2={FY - 65} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FFAAD8" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#FFAAD8" stopOpacity="0" />
+            </linearGradient>
+            {/* Diagonal DL */}
+            <linearGradient id="rDDL" x1={FX} y1={FY} x2={FX - 65} y2={FY + 65} gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#FFAAD8" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#FFAAD8" stopOpacity="0" />
+            </linearGradient>
           </defs>
 
-          {/* Glow halo around pink dot */}
-          <motion.circle
-            cx={88} cy={62}
-            r={22}
-            fill="rgba(232,56,125,0.15)"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.25, 0.15] }}
-            transition={{ delay: 0.2, duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          {/* ── Pink dot bloom ── */}
+          <motion.circle cx={CX} cy={CY} r={18} fill="#FF3A7A"
+            filter="url(#f-dot-pink)"
+            initial={{ opacity: 0 }} animate={{ opacity: 0.85 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
           />
-          <motion.circle
-            cx={88} cy={62}
-            r={12}
-            fill="rgba(232,56,125,0.25)"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
+          {/* ── Purple dot bloom ── */}
+          <motion.circle cx={PX} cy={PY} r={18} fill="#7B5CF0"
+            filter="url(#f-dot-purple)"
+            initial={{ opacity: 0 }} animate={{ opacity: 0.85 }}
+            transition={{ delay: 1.45, duration: 0.5 }}
           />
 
-          {/* Glow halo around purple dot */}
-          <motion.circle
-            cx={238} cy={200}
-            r={22}
-            fill="rgba(155,93,229,0.15)"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: [1, 1.2, 1], opacity: [0.15, 0.25, 0.15] }}
-            transition={{ delay: 1.6, duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          {/* ── Path: outer wide neon bloom ── */}
+          <motion.path d={PATH} stroke="url(#sg)" strokeWidth={28} fill="none"
+            strokeLinecap="round" filter="url(#f-wide)" opacity={0.55}
+            {...pathAnim}
           />
-          <motion.circle
-            cx={238} cy={200}
-            r={12}
-            fill="rgba(155,93,229,0.25)"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 1.5, duration: 0.4, ease: "easeOut" }}
+          {/* ── Path: mid inner glow ── */}
+          <motion.path d={PATH} stroke="url(#sg)" strokeWidth={10} fill="none"
+            strokeLinecap="round" filter="url(#f-mid)" opacity={0.85}
+            {...pathAnim}
+          />
+          {/* ── Path: sharp core ── */}
+          <motion.path d={PATH} stroke="url(#sg)" strokeWidth={2.5} fill="none"
+            strokeLinecap="round" opacity={1}
+            {...pathAnim}
           />
 
-          {/* Glow behind path */}
-          <motion.path
-            d="M 88 62 C 72 130, 215 90, 195 152 C 178 206, 252 176, 238 200"
-            stroke="url(#stringGrad)"
-            strokeWidth={12}
-            fill="none"
-            strokeLinecap="round"
-            opacity={0.18}
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.2, delay: 0.3, ease: "easeInOut" }}
-          />
-
-          {/* Main path */}
-          <motion.path
-            d="M 88 62 C 72 130, 215 90, 195 152 C 178 206, 252 176, 238 200"
-            stroke="url(#stringGrad)"
-            strokeWidth={3}
-            fill="none"
-            strokeLinecap="round"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.2, delay: 0.3, ease: "easeInOut" }}
-          />
-
-          {/* Pink dot (filled) */}
-          <motion.circle
-            cx={88} cy={62} r={8}
-            fill="#E8387D"
-            filter="url(#glow-pink)"
+          {/* ── Pink dot ── */}
+          <motion.circle cx={CX} cy={CY} r={14} fill="#FF5CA0"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.35, type: "spring", stiffness: 400 }}
+            transition={{ delay: 0.1, duration: 0.4, type: "spring", stiffness: 320 }}
+          />
+          <motion.circle cx={CX} cy={CY} r={6} fill="#FFADD0"
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
+            transition={{ delay: 0.15, duration: 0.3 }}
           />
 
-          {/* Purple dot (filled) */}
-          <motion.circle
-            cx={238} cy={200} r={8}
-            fill="#9B5DE5"
-            filter="url(#glow-purple)"
+          {/* ── Purple dot ── */}
+          <motion.circle cx={PX} cy={PY} r={14} fill="#9B8EEF"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 1.45, duration: 0.35, type: "spring", stiffness: 400 }}
+            transition={{ delay: 1.45, duration: 0.4, type: "spring", stiffness: 320 }}
+          />
+          <motion.circle cx={PX} cy={PY} r={6} fill="#C8BEFF"
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
+            transition={{ delay: 1.5, duration: 0.3 }}
           />
 
-          {/* Star / sparkle at intersection — appears when path finishes */}
+          {/* ── Lens flare — appears after path finishes ── */}
           {pathDone && (
-            <>
-              {/* Outer glow */}
-              <motion.circle
-                cx={197} cy={139} r={28}
-                fill="rgba(255,255,255,0.04)"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: [1, 1.5, 1], opacity: [0.04, 0.1, 0.04] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+            <motion.g
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              {/* Outermost diffuse bloom */}
+              <circle cx={FX} cy={FY} r={55} fill="#9B5DE5"
+                filter="url(#f-flare-bloom)" opacity={0.5} />
+              {/* Mid purple bloom */}
+              <circle cx={FX} cy={FY} r={28} fill="#CC88FF"
+                filter="url(#f-flare-bloom)" opacity={0.4} />
+
+              {/* Long horizontal rays */}
+              <line x1={FX} y1={FY} x2={FX - 148} y2={FY}
+                stroke="url(#rL)" strokeWidth={2} filter="url(#f-ray)" />
+              <line x1={FX} y1={FY} x2={FX + 148} y2={FY}
+                stroke="url(#rR)" strokeWidth={2} filter="url(#f-ray)" />
+
+              {/* Vertical rays */}
+              <line x1={FX} y1={FY} x2={FX} y2={FY - 130}
+                stroke="url(#rU)" strokeWidth={1.8} filter="url(#f-ray)" />
+              <line x1={FX} y1={FY} x2={FX} y2={FY + 130}
+                stroke="url(#rD)" strokeWidth={1.8} filter="url(#f-ray)" />
+
+              {/* Diagonal rays */}
+              <line x1={FX} y1={FY} x2={FX - 65} y2={FY - 65}
+                stroke="url(#rDUL)" strokeWidth={1.2} filter="url(#f-ray)" />
+              <line x1={FX} y1={FY} x2={FX + 65} y2={FY + 65}
+                stroke="url(#rDDR)" strokeWidth={1.2} filter="url(#f-ray)" />
+              <line x1={FX} y1={FY} x2={FX + 65} y2={FY - 65}
+                stroke="url(#rDUR)" strokeWidth={0.9} filter="url(#f-ray)" />
+              <line x1={FX} y1={FY} x2={FX - 65} y2={FY + 65}
+                stroke="url(#rDDL)" strokeWidth={0.9} filter="url(#f-ray)" />
+
+              {/* Bright center */}
+              <circle cx={FX} cy={FY} r={5} fill="white" opacity={0.95} />
+              <circle cx={FX} cy={FY} r={2.5} fill="white" />
+
+              {/* Gentle pulsing outer ring */}
+              <motion.circle cx={FX} cy={FY} r={18} fill="none"
+                stroke="rgba(200,180,255,0.25)" strokeWidth={1}
+                animate={{ r: [18, 28, 18], opacity: [0.25, 0, 0.25] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
               />
-              {/* Inner glow */}
-              <motion.circle
-                cx={197} cy={139} r={14}
-                fill="rgba(255,255,255,0.08)"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              />
-              {/* 4-pointed star */}
-              <motion.g
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.35, ease: "easeOut" }}
-                style={{ transformOrigin: "197px 139px" }}
-                filter="url(#glow-star)"
-              >
-                {/* Vertical ray */}
-                <line x1="197" y1="121" x2="197" y2="157" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
-                {/* Horizontal ray */}
-                <line x1="179" y1="139" x2="215" y2="139" stroke="white" strokeWidth="1.5" strokeLinecap="round" opacity="0.9" />
-                {/* Diagonal rays (shorter) */}
-                <line x1="185" y1="127" x2="209" y2="151" stroke="white" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
-                <line x1="209" y1="127" x2="185" y2="151" stroke="white" strokeWidth="0.8" strokeLinecap="round" opacity="0.5" />
-                {/* Center bright dot */}
-                <circle cx="197" cy="139" r="3" fill="white" />
-              </motion.g>
-            </>
+            </motion.g>
           )}
         </svg>
       </div>
@@ -206,7 +236,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           ✦ coincidence
         </h1>
         <p
-          className="mt-5 text-white/45 font-semibold tracking-[0.22em] leading-relaxed"
+          className="mt-5 text-white/40 font-semibold tracking-[0.22em] leading-relaxed"
           style={{ fontSize: "clamp(0.6rem, 2.8vw, 0.72rem)" }}
         >
           SOME CONNECTIONS<br />ARE MEANT TO FIND YOU.
@@ -215,11 +245,11 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
 
       {/* ── Wave decoration ── */}
       <motion.div
-        className="w-full mt-auto"
+        className="w-full"
         style={{ marginTop: "auto", flexShrink: 0 }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1.2, duration: 0.8 }}
+        transition={{ delay: 1.1, duration: 0.8 }}
       >
         <svg
           viewBox="0 0 390 120"
@@ -228,86 +258,50 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
           preserveAspectRatio="none"
         >
           <defs>
-            <linearGradient id="waveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#E8387D" stopOpacity="0" />
-              <stop offset="30%" stopColor="#E8387D" stopOpacity="0.35" />
-              <stop offset="60%" stopColor="#C45AE8" stopOpacity="0.30" />
+            <linearGradient id="wg1" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="#E8387D" stopOpacity="0" />
+              <stop offset="30%"  stopColor="#E8387D" stopOpacity="0.4" />
+              <stop offset="65%"  stopColor="#C45AE8" stopOpacity="0.32" />
               <stop offset="100%" stopColor="#9B5DE5" stopOpacity="0" />
             </linearGradient>
-            <linearGradient id="waveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#9B5DE5" stopOpacity="0" />
-              <stop offset="40%" stopColor="#9B5DE5" stopOpacity="0.25" />
-              <stop offset="70%" stopColor="#E8387D" stopOpacity="0.20" />
+            <linearGradient id="wg2" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="#9B5DE5" stopOpacity="0" />
+              <stop offset="40%"  stopColor="#9B5DE5" stopOpacity="0.28" />
+              <stop offset="75%"  stopColor="#E8387D" stopOpacity="0.22" />
               <stop offset="100%" stopColor="#E8387D" stopOpacity="0" />
             </linearGradient>
-            <linearGradient id="waveGrad3" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#E8387D" stopOpacity="0" />
-              <stop offset="50%" stopColor="#C45AE8" stopOpacity="0.15" />
+            <linearGradient id="wg3" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="#E8387D" stopOpacity="0" />
+              <stop offset="50%"  stopColor="#C45AE8" stopOpacity="0.16" />
               <stop offset="100%" stopColor="#9B5DE5" stopOpacity="0" />
             </linearGradient>
           </defs>
-
-          {/* Wave layer 1 - prominent */}
-          <path
-            d="M -30 80 C 60 40, 120 100, 195 65 C 270 30, 330 90, 420 55"
-            stroke="url(#waveGrad1)"
-            strokeWidth="1.5"
-            fill="none"
-            strokeLinecap="round"
-          />
-          {/* Wave layer 2 - offset */}
-          <path
-            d="M -40 95 C 50 60, 130 110, 195 78 C 260 46, 340 100, 430 70"
-            stroke="url(#waveGrad2)"
-            strokeWidth="1.2"
-            fill="none"
-            strokeLinecap="round"
-          />
-          {/* Wave layer 3 - subtle */}
-          <path
-            d="M -20 68 C 70 30, 140 85, 195 55 C 250 25, 320 80, 410 45"
-            stroke="url(#waveGrad3)"
-            strokeWidth="0.8"
-            fill="none"
-            strokeLinecap="round"
-          />
-          {/* Wave layer 4 - deep */}
-          <path
-            d="M 0 108 C 80 75, 150 118, 220 90 C 290 62, 355 108, 430 82"
-            stroke="url(#waveGrad1)"
-            strokeWidth="0.7"
-            fill="none"
-            strokeLinecap="round"
-            opacity="0.5"
-          />
-          {/* Wave layer 5 - very subtle */}
-          <path
-            d="M -50 55 C 30 28, 100 72, 180 48 C 260 24, 335 68, 430 40"
-            stroke="url(#waveGrad2)"
-            strokeWidth="0.5"
-            fill="none"
-            strokeLinecap="round"
-            opacity="0.4"
-          />
+          <path d="M -30 80 C 60 40, 120 100, 195 65 C 270 30, 330 90, 420 55"
+            stroke="url(#wg1)" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+          <path d="M -40 95 C 50 60, 130 110, 195 78 C 260 46, 340 100, 430 70"
+            stroke="url(#wg2)" strokeWidth="1.2" fill="none" strokeLinecap="round" />
+          <path d="M -20 68 C 70 30, 140 85, 195 55 C 250 25, 320 80, 410 45"
+            stroke="url(#wg3)" strokeWidth="0.8" fill="none" strokeLinecap="round" />
+          <path d="M 0 108 C 80 75, 150 118, 220 90 C 290 62, 355 108, 430 82"
+            stroke="url(#wg1)" strokeWidth="0.7" fill="none" strokeLinecap="round" opacity="0.5" />
+          <path d="M -50 55 C 30 28, 100 72, 180 48 C 260 24, 335 68, 430 40"
+            stroke="url(#wg2)" strokeWidth="0.5" fill="none" strokeLinecap="round" opacity="0.4" />
         </svg>
       </motion.div>
 
-      {/* ── Pagination dots + button ── */}
+      {/* ── Dots + button ── */}
       <motion.div
         className="w-full px-8 pb-14 flex flex-col items-center gap-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8, duration: 0.6, ease: "easeOut" }}
       >
-        {/* Dots */}
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-white/70" />
           <span className="w-2 h-2 rounded-full bg-white/25" />
           <span className="w-2 h-2 rounded-full bg-white/25" />
           <span className="w-2 h-2 rounded-full bg-white/25" />
         </div>
-
-        {/* Get Started button */}
         <button
           onClick={onGetStarted}
           className="w-full py-4 rounded-full text-white font-semibold text-base active:scale-[0.97] transition-transform"
