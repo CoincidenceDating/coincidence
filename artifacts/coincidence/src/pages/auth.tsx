@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, EyeOff, ArrowRight, ChevronLeft, Check, Mail, AtSign, Lock, ChevronDown, Search } from "lucide-react";
+import { Eye, EyeOff, ArrowRight, ChevronLeft, Check, Mail, AtSign, Lock, ChevronDown, Search, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export interface AccountData {
+  id: string;
   username: string;
   email: string;
   phone: string;
-  passwordEncoded: string;
 }
 
 interface AuthPageProps {
@@ -16,9 +17,6 @@ interface AuthPageProps {
   onLogin: () => void;
 }
 
-function encodePassword(pw: string): string {
-  return btoa(encodeURIComponent(pw));
-}
 function validateEmail(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
@@ -264,6 +262,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const totalSteps = 3;
 
@@ -298,32 +297,74 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     return Object.keys(e).length === 0;
   }
 
-  function handleNextStep() {
-    if (step === 0 && validateStep0()) goNext();
-    else if (step === 1 && validateStep1()) goNext();
-    else if (step === 2 && validateStep2()) {
-      onCreateAccount({
-        username: username.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phoneCountry.dialCode + phoneLocal.replace(/[\s\-().]/g, ""),
-        passwordEncoded: encodePassword(password),
+  async function handleNextStep() {
+    if (step === 0 && validateStep0()) { goNext(); return; }
+    if (step === 1 && validateStep1()) { goNext(); return; }
+    if (step === 2 && validateStep2()) {
+      setIsLoading(true);
+      const trimEmail = email.trim().toLowerCase();
+      const trimUser  = username.trim();
+      const phone     = phoneCountry.dialCode + phoneLocal.replace(/[\s\-().]/g, "");
+
+      const { data, error } = await supabase.auth.signUp({
+        email: trimEmail,
+        password,
+        options: { data: { username: trimUser, phone } },
       });
+
+      if (error) {
+        setErrors({ confirm: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        await supabase.from("usernames").upsert(
+          { username: trimUser, email: trimEmail, user_id: data.user.id },
+          { onConflict: "username" }
+        );
+        onCreateAccount({ id: data.user.id, username: trimUser, email: trimEmail, phone });
+      } else {
+        setErrors({ confirm: "Please check your email to confirm your account, then log in." });
+      }
+      setIsLoading(false);
     }
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     setLoginError("");
-    if (!existingAccount) { setLoginError("No account found. Please create one."); return; }
-    const id = loginIdentifier.trim().toLowerCase();
-    if (existingAccount.email !== id && existingAccount.username.toLowerCase() !== id) {
-      setLoginError("Email or username not found");
+    setIsLoading(true);
+    let loginEmail = loginIdentifier.trim().toLowerCase();
+
+    if (!loginEmail.includes("@")) {
+      const { data } = await supabase
+        .from("usernames")
+        .select("email")
+        .eq("username", loginEmail)
+        .maybeSingle();
+      if (!data?.email) {
+        setLoginError("Username not found");
+        setIsLoading(false);
+        return;
+      }
+      loginEmail = data.email as string;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+
+    if (error) {
+      setLoginError(error.message === "Invalid login credentials" ? "Incorrect email or password" : error.message);
+      setIsLoading(false);
       return;
     }
-    if (existingAccount.passwordEncoded !== encodePassword(loginPassword)) {
-      setLoginError("Incorrect password");
-      return;
+
+    if (data.user) {
+      onLogin();
     }
-    onLogin();
+    setIsLoading(false);
   }
 
   const stepTitles = ["Your contact info", "Pick a username", "Create a password"];
@@ -443,9 +484,14 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
 
             <button
               onClick={handleNextStep}
-              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all"
+              disabled={isLoading}
+              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              {step === totalSteps - 1 ? <><Check className="w-4 h-4" /> Create account</> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+              {isLoading && step === totalSteps - 1
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account…</>
+                : step === totalSteps - 1
+                  ? <><Check className="w-4 h-4" /> Create account</>
+                  : <>Continue <ArrowRight className="w-4 h-4" /></>}
             </button>
           </>
         )}
@@ -470,9 +516,10 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
             )}
             <button
               onClick={handleLogin}
-              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all"
+              disabled={isLoading}
+              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-foreground text-background font-semibold text-sm hover:bg-foreground/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Log in <ArrowRight className="w-4 h-4" />
+              {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : <>Log in <ArrowRight className="w-4 h-4" /></>}
             </button>
             {!existingAccount && (
               <p className="mt-4 text-center text-xs text-muted-foreground">

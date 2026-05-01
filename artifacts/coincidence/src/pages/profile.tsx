@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import * as db from "@/lib/db";
 import { myProfile, type Match, type CheckIn } from "@/lib/data";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -107,6 +108,13 @@ function loadProfile(): EditableProfile {
 
 function saveProfile(p: EditableProfile) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+  db.upsertProfile({
+    name: p.name, age: p.age, bio: p.bio,
+    hometown: p.hometown, height: p.height,
+    hobbies: p.hobbies,
+    looking_for: p.lookingFor ?? "Everyone",
+    setup_complete: true,
+  });
 }
 
 /* ─── component ─────────────────────────────── */
@@ -119,6 +127,24 @@ export default function ProfilePage({
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
   const [draft, setDraft]     = useState<EditableProfile>(editable);
+
+  useEffect(() => {
+    db.getProfile().then((data) => {
+      if (!data) return;
+      const p: EditableProfile = {
+        name:     data.name ?? myProfile.name,
+        age:      data.age  ?? myProfile.age,
+        bio:      data.bio  ?? myProfile.bio,
+        hometown: data.hometown ?? "",
+        height:   data.height  ?? "5'8\"",
+        hobbies:  data.hobbies ?? [...myProfile.interests],
+        lookingFor: data.looking_for ?? "Everyone",
+      };
+      setEditable(p);
+      setDraft(p);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
+    });
+  }, []);
   const [showEdit, setShowEdit] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [purchasedPack, setPurchasedPack] = useState<string | null>(null);
