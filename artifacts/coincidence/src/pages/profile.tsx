@@ -16,9 +16,9 @@ const BOOST_DURATION_MS = 30 * 60 * 1000;
 const RADIUS_OPTIONS = [1, 5, 10, 25];
 
 const STRING_PACKS = [
-  { id: "s3",  count: 3,  label: "3 strings",  price: "$0.99",  tag: "" },
-  { id: "s5",  count: 5,  label: "5 strings",  price: "$1.49",  tag: "Popular" },
-  { id: "s10", count: 10, label: "10 strings", price: "$2.49",  tag: "Best value" },
+  { id: "s1",  count: 1,  label: "1 string",   price: "£3.99",  tag: "" },
+  { id: "s5",  count: 5,  label: "5 strings",  price: "£18.99", tag: "Popular" },
+  { id: "s10", count: 10, label: "10 strings", price: "£34.99", tag: "Best value" },
 ];
 
 const HEIGHT_OPTIONS: string[] = [];
