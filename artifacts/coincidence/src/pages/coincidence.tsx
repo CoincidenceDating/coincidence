@@ -85,6 +85,13 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
+  const ACTIVATE_RADIUS_MI = 0.15;
+  const distanceToVenue =
+    userCoords && location?.lat != null && location?.lng != null
+      ? haversineDistanceMiles(userCoords.lat, userCoords.lng, location.lat, location.lng)
+      : null;
+  const tooFar = distanceToVenue !== null && distanceToVenue > ACTIVATE_RADIUS_MI;
+
   async function handleActivate() {
     if (!selectedLocation || !location) return;
     setIsActivating(true);
@@ -504,12 +511,17 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               )}
             </div>
 
-            <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating} onClick={handleActivate}>
+            <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating || tooFar} onClick={handleActivate}>
               {isActivating
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>
                 : <><Zap className="w-4 h-4 mr-2" />Activate Coincidence Mode</>
               }
             </Button>
+            {tooFar && distanceToVenue !== null && (
+              <p className="text-center text-xs text-muted-foreground mt-2">
+                You're {formatDistance(distanceToVenue)} away — you need to be at this spot to activate
+              </p>
+            )}
 
             {/* ── String Theory explanation ── */}
             <div className="mt-10 pt-8 border-t border-foreground/8">
