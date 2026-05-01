@@ -16,15 +16,18 @@ export async function getProfile() {
 
 /* ── photos ───────────────────────────────────────────── */
 
-export async function uploadPhoto(file: File): Promise<string | null> {
+export async function uploadPhoto(file: File): Promise<{ url: string | null; error: string | null }> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) return { url: null, error: "Not logged in" };
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `${user.id}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage.from("profile-photos").upload(path, file);
-  if (error) return null;
+  if (error) {
+    console.error("[uploadPhoto]", error.message, error);
+    return { url: null, error: error.message };
+  }
   const { data: { publicUrl } } = supabase.storage.from("profile-photos").getPublicUrl(path);
-  return publicUrl;
+  return { url: publicUrl, error: null };
 }
 
 export async function savePhotos(photos: string[]) {

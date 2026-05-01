@@ -129,6 +129,7 @@ export default function ProfilePage({
   const [draft, setDraft]     = useState<EditableProfile>(editable);
   const [photos, setPhotos]       = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError]         = useState<string | null>(null);
   const [deletingPhoto, setDeletingPhoto]   = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,11 +157,14 @@ export default function ProfilePage({
     if (!file) return;
     if (photos.length >= 6) return;
     setPhotoUploading(true);
-    const url = await db.uploadPhoto(file);
+    setPhotoError(null);
+    const { url, error } = await db.uploadPhoto(file);
     if (url) {
       const next = [...photos, url];
       setPhotos(next);
       await db.savePhotos(next);
+    } else {
+      setPhotoError(error ?? "Upload failed");
     }
     setPhotoUploading(false);
     if (photoInputRef.current) photoInputRef.current.value = "";
@@ -309,6 +313,14 @@ export default function ProfilePage({
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Photos</h2>
           <span className="text-xs text-muted-foreground">{photos.length}/6</span>
         </div>
+        {photoError && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-3 py-2">
+            <span className="text-red-400 text-xs leading-snug flex-1">{photoError}</span>
+            <button onClick={() => setPhotoError(null)} className="text-red-400/60 hover:text-red-400 shrink-0">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
         <input
           ref={photoInputRef}
           type="file"
