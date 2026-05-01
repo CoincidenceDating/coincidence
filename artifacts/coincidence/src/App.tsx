@@ -32,50 +32,8 @@ function getOpeningText(match: Match): string {
 }
 
 
-function SplashScreen({ onDone }: { onDone: () => void }) {
-  const [phase, setPhase] = useState<"in" | "hold" | "out">("in");
-
-  useEffect(() => {
-    const t1 = setTimeout(() => setPhase("hold"), 80);
-    const t2 = setTimeout(() => setPhase("out"), 3400);
-    const t3 = setTimeout(() => onDone(), 4200);
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
-  }, [onDone]);
-
-  const ready = phase === "hold";
-  const gone  = phase === "out";
-
-  return (
-    <div
-      onClick={() => { setPhase("out"); setTimeout(onDone, 800); }}
-      style={{
-        position: "fixed", inset: 0,
-        background: "#080808",
-        cursor: "pointer",
-        zIndex: 9999,
-        transition: "opacity 0.9s ease",
-        opacity: gone ? 0 : 1,
-        overflow: "hidden",
-      }}
-    >
-      <img
-        src="/splash.png"
-        alt="Coincidence"
-        style={{
-          position: "absolute", inset: 0,
-          width: "100%", height: "100%",
-          objectFit: "cover",
-          objectPosition: "center",
-          opacity: ready ? 1 : 0,
-          transition: "opacity 1.6s ease",
-        }}
-      />
-    </div>
-  );
-}
 
 function AppShell() {
-  const [showSplash, setShowSplash]     = useState(true);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [dataLoading, setDataLoading]   = useState(false);
   const [showSetup, setShowSetup]       = useState(true);
@@ -83,7 +41,7 @@ function AppShell() {
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
 
-  const [showLanding, setShowLanding]   = useState(() => !localStorage.getItem("coincidence-seen-landing"));
+  const [showLanding, setShowLanding]   = useState(true);
 
   const [lookingFor, setLookingFor]     = useState("Everyone");
   const [matches, setMatches]           = useState<Match[]>([]);
@@ -268,7 +226,6 @@ function AppShell() {
     setBlockedIds([]);
     setSwipedIds([]);
     setLookingFor("Everyone");
-    setShowSplash(true);
     setShowSetup(true);
     setIsLoggedOut(false);
   }
@@ -369,19 +326,15 @@ function AppShell() {
     });
   }
 
-  if (showSplash) return <SplashScreen onDone={() => setShowSplash(false)} />;
   if (!sessionChecked) return (
     <div className="h-screen flex items-center justify-center bg-background">
       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
     </div>
   );
-  if ((!account || isLoggedOut) && showLanding && !isLoggedOut) return (
+  if (!account && !isLoggedOut && showLanding) return (
     <AnimatePresence>
       <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-        <LandingPage onGetStarted={() => {
-          localStorage.setItem("coincidence-seen-landing", "1");
-          setShowLanding(false);
-        }} />
+        <LandingPage onGetStarted={() => setShowLanding(false)} />
       </motion.div>
     </AnimatePresence>
   );
