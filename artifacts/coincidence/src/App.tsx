@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import LandingPage from "@/pages/landing";
 import SwipePage from "@/pages/swipe";
 import CoincidencePage from "@/pages/coincidence";
 import MatchesPage from "@/pages/matches";
@@ -81,6 +82,8 @@ function AppShell() {
   const [account, setAccount]           = useState<AccountData | null>(null);
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
+
+  const [showLanding, setShowLanding]   = useState(() => !localStorage.getItem("coincidence-seen-landing"));
 
   const [lookingFor, setLookingFor]     = useState("Everyone");
   const [matches, setMatches]           = useState<Match[]>([]);
@@ -371,6 +374,16 @@ function AppShell() {
     <div className="h-screen flex items-center justify-center bg-background">
       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
     </div>
+  );
+  if ((!account || isLoggedOut) && showLanding && !isLoggedOut) return (
+    <AnimatePresence>
+      <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+        <LandingPage onGetStarted={() => {
+          localStorage.setItem("coincidence-seen-landing", "1");
+          setShowLanding(false);
+        }} />
+      </motion.div>
+    </AnimatePresence>
   );
   if (!account || isLoggedOut) return (
     <AnimatePresence>
