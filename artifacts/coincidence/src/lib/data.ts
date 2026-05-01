@@ -26,6 +26,8 @@ export interface LocationData {
   name: string;
   icon: string;
   users: Profile[];
+  lat?: number;
+  lng?: number;
 }
 
 export interface Match {

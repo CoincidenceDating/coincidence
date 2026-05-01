@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { locations, filterByLookingFor, type Profile, type Match, type CheckIn } from "@/lib/data";
-import { type GeoStatus, type GeoCoords, haversineDistanceMiles, formatDistance, getMockLocationCoords } from "@/lib/geo";
+import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMiles, formatDistance, fetchNearbyVenues } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -39,6 +39,21 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
   const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
+  const [venueStatus, setVenueStatus] = useState<VenueStatus>("idle");
+  const [nearbyLocations, setNearbyLocations] = useState<typeof locations | null>(null);
+
+  const allMockUsers = locations.flatMap((l) => l.users);
+
+  const loadVenues = useCallback(async (lat: number, lng: number) => {
+    setVenueStatus("loading");
+    try {
+      const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
+      setNearbyLocations(fetched);
+      setVenueStatus("ready");
+    } catch {
+      setVenueStatus("error");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const requestLocation = useCallback(() => {
     if (!("geolocation" in navigator)) {
@@ -48,15 +63,18 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     setGeoStatus("requesting");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setUserCoords(coords);
         setGeoStatus("granted");
+        loadVenues(coords.lat, coords.lng);
       },
       () => setGeoStatus("denied"),
       { enableHighAccuracy: true, timeout: 8000 },
     );
-  }, []);
+  }, [loadVenues]);
 
-  const location = locations.find((l) => l.id === selectedLocation);
+  const activeLocations = nearbyLocations ?? locations;
+  const location = activeLocations.find((l) => l.id === selectedLocation);
   const users: Profile[] = filterByLookingFor(location?.users ?? [], lookingFor)
     .filter((p) => !blockedIds.includes(p.id));
   const currentUser = users[currentIndex];
@@ -308,22 +326,13 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
             {/* ── Hot Spots ── */}
             {(() => {
-              const withDistances = locations.map((loc) => {
-                const distMi = userCoords
-                  ? haversineDistanceMiles(
-                      userCoords.lat, userCoords.lng,
-                      getMockLocationCoords(loc.id, userCoords.lat, userCoords.lng).lat,
-                      getMockLocationCoords(loc.id, userCoords.lat, userCoords.lng).lng,
-                    )
-                  : null;
+              const displayList = activeLocations.map((loc) => {
+                const distMi =
+                  userCoords && loc.lat != null && loc.lng != null
+                    ? haversineDistanceMiles(userCoords.lat, userCoords.lng, loc.lat, loc.lng)
+                    : null;
                 return { ...loc, distMi };
               });
-
-              const sorted = [...withDistances].sort((a, b) =>
-                geoStatus === "granted" && a.distMi !== null && b.distMi !== null
-                  ? a.distMi - b.distMi
-                  : b.users.length - a.users.length
-              );
 
               return (
                 <div className="mb-6">
@@ -331,73 +340,99 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                     <Flame className="w-3.5 h-3.5 text-muted-foreground" />
                     <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hot Spots</span>
                     <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">
-                      {geoStatus === "granted" ? "nearest first" : "tap to select"}
+                      {venueStatus === "ready" ? "nearest first" : "tap to select"}
                     </span>
 
-                    {/* GPS enable / status button */}
-                    {geoStatus === "idle" || geoStatus === "denied" || geoStatus === "unavailable" ? (
+                    {/* GPS enable / status */}
+                    {(geoStatus === "idle" || geoStatus === "denied" || geoStatus === "unavailable") && (
                       <button
                         onClick={requestLocation}
                         disabled={geoStatus === "unavailable"}
                         className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
                       >
                         <Navigation className="w-3 h-3" />
-                        {geoStatus === "denied" ? "Location denied" : geoStatus === "unavailable" ? "No GPS" : "Enable location"}
+                        {geoStatus === "denied" ? "Location denied" : geoStatus === "unavailable" ? "No GPS" : "Use my location"}
                       </button>
-                    ) : geoStatus === "requesting" ? (
+                    )}
+                    {(geoStatus === "requesting" || venueStatus === "loading") && (
                       <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
                           <Navigation className="w-3 h-3" />
                         </motion.div>
-                        Locating…
+                        {geoStatus === "requesting" ? "Locating…" : "Finding nearby…"}
                       </span>
-                    ) : (
+                    )}
+                    {venueStatus === "ready" && (
                       <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
                         <LocateFixed className="w-3 h-3" />
-                        Live
+                        Near you
                       </span>
+                    )}
+                    {venueStatus === "error" && (
+                      <button onClick={() => userCoords && loadVenues(userCoords.lat, userCoords.lng)} className="ml-auto text-[10px] text-muted-foreground hover:text-foreground underline">
+                        Retry
+                      </button>
                     )}
                   </div>
 
-                  <div className="space-y-2">
-                    {sorted.map((loc) => {
-                      const count = loc.users.length;
-                      const isSelected = selectedLocation === loc.id;
-                      const heat = count >= 4
-                        ? { dot: "bg-red-400", bar: "w-full" }
-                        : count === 3
-                        ? { dot: "bg-orange-400", bar: "w-3/4" }
-                        : { dot: "bg-yellow-400", bar: "w-1/2" };
-                      return (
-                        <button
-                          key={loc.id}
-                          onClick={() => handleHotSpotTap(loc.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border active:scale-[0.98] transition-all text-left ${isSelected ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent/40 border-border"}`}
-                        >
-                          <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
-                            {iconMap[loc.icon]}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium text-sm block truncate">{loc.name}</span>
-                            {geoStatus === "granted" && loc.distMi !== null && (
-                              <span className={`text-[10px] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
-                                {formatDistance(loc.distMi)}
-                              </span>
-                            )}
+                  {/* Loading skeleton */}
+                  {venueStatus === "loading" && (
+                    <div className="space-y-2">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card animate-pulse">
+                          <div className="w-4 h-4 rounded bg-muted shrink-0" />
+                          <div className="flex-1 space-y-1.5">
+                            <div className="h-3 rounded bg-muted w-3/4" />
+                            <div className="h-2 rounded bg-muted w-1/3" />
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)" }}>
-                              <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.22)" }} />
-                            </div>
-                            <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
-                            <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
-                              {count} {count === 1 ? "person" : "people"}
+                          <div className="w-16 h-2 rounded bg-muted shrink-0" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Venue list */}
+                  {venueStatus !== "loading" && (
+                    <div className="space-y-2">
+                      {displayList.map((loc) => {
+                        const count = loc.users.length;
+                        const isSelected = selectedLocation === loc.id;
+                        const heat = count >= 4
+                          ? { dot: "bg-red-400", bar: "w-full" }
+                          : count === 3
+                          ? { dot: "bg-orange-400", bar: "w-3/4" }
+                          : { dot: "bg-yellow-400", bar: "w-1/2" };
+                        return (
+                          <button
+                            key={loc.id}
+                            onClick={() => handleHotSpotTap(loc.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border active:scale-[0.98] transition-all text-left ${isSelected ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent/40 border-border"}`}
+                          >
+                            <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
+                              {iconMap[loc.icon]}
                             </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium text-sm block truncate">{loc.name}</span>
+                              {loc.distMi !== null && (
+                                <span className={`text-[10px] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                                  {formatDistance(loc.distMi)} away
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.07)" }}>
+                                <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.22)" }} />
+                              </div>
+                              <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
+                              <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                                {count} {count === 1 ? "person" : "people"}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -408,7 +443,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                   <SelectValue placeholder="Or choose manually…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {locations.map((loc) => (
+                  {activeLocations.map((loc) => (
                     <SelectItem key={loc.id} value={loc.id}>
                       <span className="flex items-center gap-2">{iconMap[loc.icon]}{loc.name}</span>
                     </SelectItem>

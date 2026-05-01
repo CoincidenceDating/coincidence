@@ -1,6 +1,17 @@
+import type { LocationData, Profile } from "./data";
+
 export type GeoStatus = "idle" | "requesting" | "granted" | "denied" | "unavailable";
+export type VenueStatus = "idle" | "loading" | "ready" | "error";
 
 export interface GeoCoords {
+  lat: number;
+  lng: number;
+}
+
+export interface RealVenue {
+  id: string;
+  name: string;
+  amenity: string;
   lat: number;
   lng: number;
 }
@@ -22,7 +33,7 @@ export function haversineDistanceMiles(
 
 export function formatDistance(miles: number): string {
   if (miles < 0.05) return "Here now";
-  if (miles < 0.2) return `${Math.round(miles * 5280 / 50) * 50} ft`;
+  if (miles < 0.2) return `${Math.round((miles * 5280) / 50) * 50} ft`;
   return `${miles.toFixed(1)} mi`;
 }
 
@@ -35,11 +46,70 @@ function deterministicHash(str: string): number {
   return h >>> 0;
 }
 
-export function getMockLocationCoords(locationId: string, userLat: number, userLng: number): GeoCoords {
-  const h1 = deterministicHash(locationId + "_lat");
-  const h2 = deterministicHash(locationId + "_lng");
-  // Spread locations within ~0.1–1.8 miles of user
-  const latOff = ((h1 % 10000) / 10000 - 0.5) * 0.052;
-  const lngOff = ((h2 % 10000) / 10000 - 0.5) * 0.065;
-  return { lat: userLat + latOff, lng: userLng + lngOff };
+function amenityToIcon(amenity: string): string {
+  if (amenity === "cafe") return "coffee";
+  if (amenity === "bar") return "wine";
+  if (amenity === "pub") return "beer";
+  return "sparkles";
+}
+
+function assignUsersToVenue(venueName: string, pool: Profile[]): Profile[] {
+  const seed = deterministicHash(venueName);
+  const count = 2 + (seed % 3);
+  const indices = new Set<number>();
+  let h = seed;
+  while (indices.size < Math.min(count, pool.length)) {
+    h = deterministicHash(String(h));
+    indices.add(h % pool.length);
+  }
+  return Array.from(indices).map((i) => pool[i]);
+}
+
+export async function fetchNearbyVenues(
+  lat: number,
+  lng: number,
+  allUsers: Profile[],
+): Promise<LocationData[]> {
+  const radius = 2000;
+  const query = `[out:json][timeout:12];(node["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng});way["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng}););out center 12;`;
+
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "data=" + encodeURIComponent(query),
+    signal: AbortSignal.timeout(14000),
+  });
+
+  if (!res.ok) throw new Error("Overpass API error");
+
+  const json = await res.json();
+
+  const venues: RealVenue[] = (json.elements as Array<Record<string, unknown>>)
+    .filter((el) => {
+      const tags = el.tags as Record<string, string> | undefined;
+      return tags?.name;
+    })
+    .map((el) => {
+      const tags = el.tags as Record<string, string>;
+      const elLat = typeof el.lat === "number" ? el.lat : (el.center as Record<string, number> | undefined)?.lat;
+      const elLng = typeof el.lon === "number" ? el.lon : (el.center as Record<string, number> | undefined)?.lon;
+      return { id: String(el.id), name: tags.name, amenity: tags.amenity, lat: elLat!, lng: elLng! };
+    })
+    .filter((v) => v.lat != null && v.lng != null);
+
+  if (venues.length === 0) throw new Error("No venues found");
+
+  const sorted = venues
+    .map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat, v.lng) }))
+    .sort((a, b) => a.distMi - b.distMi)
+    .slice(0, 6);
+
+  return sorted.map((v) => ({
+    id: v.id,
+    name: v.name,
+    icon: amenityToIcon(v.amenity),
+    lat: v.lat,
+    lng: v.lng,
+    users: assignUsersToVenue(v.name, allUsers),
+  }));
 }
