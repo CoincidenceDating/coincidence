@@ -980,18 +980,17 @@ export default function ProfilePage({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
             onClick={e => { if (e.target === e.currentTarget) setShowStore(false); }}
           >
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 350, damping: 35 }}
-              className="w-full max-w-md bg-background rounded-t-3xl px-6 pt-5 pb-10 space-y-6"
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              className="w-full max-w-md bg-background rounded-3xl px-6 pt-6 pb-6 space-y-6 overflow-y-auto"
+              style={{ maxHeight: "80vh" }}
             >
-              <div className="w-10 h-1 rounded-full bg-muted mx-auto" />
-
               <div className="flex items-start justify-between">
                 <div>
                   <h2 className="text-xl font-bold">Get more string</h2>
