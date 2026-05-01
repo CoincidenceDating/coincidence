@@ -13,6 +13,7 @@ import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
 import SetupPage, { type SetupData } from "@/pages/setup";
 import AuthPage, { type AccountData } from "@/pages/auth";
+import ReloginPage from "@/pages/relogin";
 import { Heart, Zap, Sparkles, HelpCircle, User, Loader2 } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Match, CheckIn } from "@/lib/data";
@@ -344,19 +345,26 @@ function AppShell() {
       </motion.div>
     </AnimatePresence>
   );
-  if (showSplash && !!account) return (
+  if (showSplash && (!!account || hasAccount)) return (
     <AnimatePresence>
       <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
         <AnimatedSplash onDone={() => setShowSplash(false)} />
       </motion.div>
     </AnimatePresence>
   );
-  if (!account || isLoggedOut) return (
+  if (isLoggedOut) return (
+    <AnimatePresence>
+      <motion.div key="relogin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+        <ReloginPage onLogin={handleLogin} />
+      </motion.div>
+    </AnimatePresence>
+  );
+  if (!account) return (
     <AnimatePresence>
       <motion.div key="auth" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
         <AuthPage
-          defaultMode={isLoggedOut && account ? "login" : "create"}
-          existingAccount={account}
+          defaultMode="create"
+          existingAccount={null}
           onCreateAccount={handleCreateAccount}
           onLogin={handleLogin}
         />
