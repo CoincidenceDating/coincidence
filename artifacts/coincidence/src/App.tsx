@@ -382,7 +382,7 @@ function AppShell() {
     },
     {
       id: "coincidence",
-      label: "Places",
+      label: "Coincidence",
       icon: (a) => <Zap className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />,
     },
     {
@@ -401,7 +401,7 @@ function AppShell() {
     },
     {
       id: "undecided",
-      label: "Likes",
+      label: "Maybe",
       icon: (a) => (
         <div className="relative">
           <HelpCircle className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />
