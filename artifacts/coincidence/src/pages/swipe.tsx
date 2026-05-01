@@ -25,6 +25,7 @@ interface SwipePageProps {
   blockedIds: string[];
   swipedIds: string[];
   onSwiped: (id: string) => void;
+  onGoToProfile: () => void;
 }
 
 export default function SwipePage({
@@ -40,6 +41,7 @@ export default function SwipePage({
   blockedIds,
   swipedIds,
   onSwiped,
+  onGoToProfile,
 }: SwipePageProps) {
   const [pulse, setPulse] = useState(false);
 
@@ -78,7 +80,7 @@ export default function SwipePage({
       {/* ── Header ── */}
       <div className="w-full max-w-sm flex items-center justify-between py-4 mb-1">
         {/* Profile icon */}
-        <button className="w-9 h-9 rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
+        <button onClick={onGoToProfile} className="w-9 h-9 rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors">
           <User className="w-4.5 h-4.5" />
         </button>
 

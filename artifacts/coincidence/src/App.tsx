@@ -427,7 +427,7 @@ function AppShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden relative bg-background">
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} swipedIds={swipedIds} onSwiped={(id) => { setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]); db.addSwiped(id); }} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} swipedIds={swipedIds} onSwiped={(id) => { setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]); db.addSwiped(id); }} onGoToProfile={() => setActiveTab("profile")} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
