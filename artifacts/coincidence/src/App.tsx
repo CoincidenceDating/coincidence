@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import LandingPage from "@/pages/landing";
+import AnimatedSplash from "@/pages/splash-animated";
 import SwipePage from "@/pages/swipe";
 import CoincidencePage from "@/pages/coincidence";
 import MatchesPage from "@/pages/matches";
@@ -42,6 +43,7 @@ function AppShell() {
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
 
   const [showLanding, setShowLanding]   = useState(true);
+  const [showSplash, setShowSplash]     = useState(true);
 
   const [lookingFor, setLookingFor]     = useState("Everyone");
   const [matches, setMatches]           = useState<Match[]>([]);
@@ -347,6 +349,13 @@ function AppShell() {
           onCreateAccount={handleCreateAccount}
           onLogin={handleLogin}
         />
+      </motion.div>
+    </AnimatePresence>
+  );
+  if (showSplash && !showSetup) return (
+    <AnimatePresence>
+      <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+        <AnimatedSplash onDone={() => setShowSplash(false)} />
       </motion.div>
     </AnimatePresence>
   );
