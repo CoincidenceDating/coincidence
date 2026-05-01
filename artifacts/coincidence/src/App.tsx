@@ -78,6 +78,8 @@ function AppShell() {
           email: u.email ?? "",
           phone: (u.user_metadata?.phone as string) ?? "",
         };
+        localStorage.setItem("coincidence-has-account", "1");
+        setShowLanding(false);
         setAccount(acct);
         setIsLoggedOut(false);
         loadUserData();
@@ -335,7 +337,7 @@ function AppShell() {
       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
     </div>
   );
-  if (showLanding) return (
+  if (showLanding && !account) return (
     <AnimatePresence>
       <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
         <LandingPage onGetStarted={() => setShowLanding(false)} />
