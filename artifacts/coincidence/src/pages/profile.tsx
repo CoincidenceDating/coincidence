@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import * as db from "@/lib/db";
 import { myProfile, type Match, type CheckIn } from "@/lib/data";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, MapPin, Zap, Wine, Beer, Coffee, Sparkles,
   ShoppingBag, X, Pencil, Plus, Home, Ruler, ChevronUp, ChevronDown,
-  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell,
+  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StringIcon } from "@/components/StringIcon";
@@ -127,6 +127,10 @@ export default function ProfilePage({
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
   const [draft, setDraft]     = useState<EditableProfile>(editable);
+  const [photos, setPhotos]       = useState<string[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [deletingPhoto, setDeletingPhoto]   = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     db.getProfile().then((data) => {
@@ -142,9 +146,32 @@ export default function ProfilePage({
       };
       setEditable(p);
       setDraft(p);
+      setPhotos(data.photos ?? []);
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
     });
   }, []);
+
+  const handleAddPhoto = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (photos.length >= 6) return;
+    setPhotoUploading(true);
+    const url = await db.uploadPhoto(file);
+    if (url) {
+      const next = [...photos, url];
+      setPhotos(next);
+      await db.savePhotos(next);
+    }
+    setPhotoUploading(false);
+    if (photoInputRef.current) photoInputRef.current.value = "";
+  }, [photos]);
+
+  const handleDeletePhoto = useCallback(async (url: string) => {
+    setDeletingPhoto(url);
+    const next = await db.deletePhoto(url, photos);
+    setPhotos(next);
+    setDeletingPhoto(null);
+  }, [photos]);
   const [showEdit, setShowEdit] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [purchasedPack, setPurchasedPack] = useState<string | null>(null);
@@ -226,8 +253,12 @@ export default function ProfilePage({
               />
             )}
           </AnimatePresence>
-          <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-foreground text-background text-3xl font-bold z-10">
-            {initials}
+          <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-foreground text-background text-3xl font-bold z-10 overflow-hidden">
+            {photos[0] ? (
+              <img src={photos[0]} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <span>{initials}</span>
+            )}
             {isBoostActive && (
               <motion.div
                 animate={{ rotate: 360 }}
@@ -264,6 +295,62 @@ export default function ProfilePage({
         >
           <Pencil className="w-3 h-3" /> Edit profile
         </button>
+      </div>
+
+      {/* ── Photos ── */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Photos</h2>
+          <span className="text-xs text-muted-foreground">{photos.length}/6</span>
+        </div>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAddPhoto}
+        />
+        <div className="grid grid-cols-3 gap-2">
+          {photos.map((url) => (
+            <motion.div
+              key={url}
+              layout
+              className="relative aspect-square rounded-xl overflow-hidden bg-muted"
+            >
+              <img src={url} alt="Profile photo" className="w-full h-full object-cover" />
+              <button
+                onClick={() => handleDeletePhoto(url)}
+                disabled={deletingPhoto === url}
+                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center transition-opacity hover:bg-black/80"
+              >
+                {deletingPhoto === url ? (
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                    className="w-3 h-3 border border-white/60 border-t-white rounded-full" />
+                ) : (
+                  <X className="w-3 h-3 text-white" />
+                )}
+              </button>
+            </motion.div>
+          ))}
+          {photos.length < 6 && (
+            <motion.button
+              layout
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoUploading}
+              className="aspect-square rounded-xl border-2 border-dashed border-border hover:border-foreground/40 flex flex-col items-center justify-center gap-1.5 transition-colors text-muted-foreground hover:text-foreground disabled:opacity-50"
+            >
+              {photoUploading ? (
+                <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                  className="w-5 h-5 border-2 border-muted-foreground/40 border-t-foreground rounded-full" />
+              ) : (
+                <>
+                  <ImagePlus className="w-5 h-5" />
+                  <span className="text-[10px] font-medium">Add photo</span>
+                </>
+              )}
+            </motion.button>
+          )}
+        </div>
       </div>
 
       {/* ── Stats ── */}

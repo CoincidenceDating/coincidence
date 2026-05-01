@@ -10,8 +10,45 @@ export async function getProfile() {
     user_id: string; name: string; age: number; bio: string;
     hometown: string; height: string; hobbies: string[];
     looking_for: string; age_min: number; age_max: number;
-    setup_complete: boolean;
+    setup_complete: boolean; photos: string[];
   } | null;
+}
+
+/* ── photos ───────────────────────────────────────────── */
+
+export async function uploadPhoto(file: File): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `${user.id}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from("profile-photos").upload(path, file);
+  if (error) return null;
+  const { data: { publicUrl } } = supabase.storage.from("profile-photos").getPublicUrl(path);
+  return publicUrl;
+}
+
+export async function savePhotos(photos: string[]) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_profiles").upsert(
+    { user_id: user.id, photos, updated_at: new Date().toISOString() },
+    { onConflict: "user_id" }
+  );
+}
+
+export async function deletePhoto(url: string, currentPhotos: string[]): Promise<string[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return currentPhotos;
+  try {
+    const urlObj = new URL(url);
+    const parts = urlObj.pathname.split("/profile-photos/");
+    if (parts.length >= 2) {
+      await supabase.storage.from("profile-photos").remove([decodeURIComponent(parts[1])]);
+    }
+  } catch {}
+  const next = currentPhotos.filter(p => p !== url);
+  await savePhotos(next);
+  return next;
 }
 
 export async function upsertProfile(fields: Record<string, unknown>) {
@@ -182,6 +219,10 @@ export async function deleteAllUserData() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   const uid = user.id;
+  const { data: files } = await supabase.storage.from("profile-photos").list(uid);
+  if (files && files.length > 0) {
+    await supabase.storage.from("profile-photos").remove(files.map(f => `${uid}/${f.name}`));
+  }
   await Promise.all([
     supabase.from("user_profiles").delete().eq("user_id", uid),
     supabase.from("user_matches").delete().eq("user_id", uid),
