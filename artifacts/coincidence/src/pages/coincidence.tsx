@@ -5,7 +5,8 @@ import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMile
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Zap, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2 } from "lucide-react";
+import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2 } from "lucide-react";
+import { StringIcon } from "@/components/StringIcon";
 import * as db from "@/lib/db";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -393,7 +394,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
           <>
             <div className="text-center mb-8">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-muted mb-4">
-                <Zap className="w-8 h-8 text-foreground" />
+                <StringIcon className="w-8 h-8 text-foreground" />
               </div>
               <h1 className="text-2xl font-bold">Coincidence Mode</h1>
               <p className="text-muted-foreground text-sm mt-1">Pick a spot and see who is around</p>
@@ -532,7 +533,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
             <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating || tooFar} onClick={handleActivate}>
               {isActivating
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>
-                : <><Zap className="w-4 h-4 mr-2" />Activate Coincidence Mode</>
+                : <><StringIcon className="w-4 h-4 mr-2" />Activate Coincidence Mode</>
               }
             </Button>
             {tooFar && distanceToVenue !== null && (
@@ -633,7 +634,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               </div>
             ) : done ? (
               <div className="text-center py-16 text-muted-foreground">
-                <Zap className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <StringIcon className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="font-medium">You've seen everyone here</p>
                 <p className="text-xs mt-1">Come back later for new faces</p>
                 <Button variant="outline" size="sm" className="mt-6" onClick={handleDeactivate}>
