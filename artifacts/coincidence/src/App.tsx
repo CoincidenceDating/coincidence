@@ -42,7 +42,8 @@ function AppShell() {
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
 
-  const [showLanding, setShowLanding]   = useState(true);
+  const hasAccount = !!localStorage.getItem("coincidence-has-account");
+  const [showLanding, setShowLanding]   = useState(!hasAccount);
   const [showSplash, setShowSplash]     = useState(true);
 
   const [lookingFor, setLookingFor]     = useState("Everyone");
@@ -165,6 +166,7 @@ function AppShell() {
   }
 
   function handleCreateAccount(data: AccountData) {
+    localStorage.setItem("coincidence-has-account", "1");
     setAccount(data);
     setIsLoggedOut(false);
     loadUserData();
@@ -333,10 +335,17 @@ function AppShell() {
       <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
     </div>
   );
-  if (!account && !isLoggedOut && showLanding) return (
+  if (showLanding) return (
     <AnimatePresence>
       <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
         <LandingPage onGetStarted={() => setShowLanding(false)} />
+      </motion.div>
+    </AnimatePresence>
+  );
+  if (showSplash && !showSetup) return (
+    <AnimatePresence>
+      <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
+        <AnimatedSplash onDone={() => setShowSplash(false)} />
       </motion.div>
     </AnimatePresence>
   );
@@ -349,13 +358,6 @@ function AppShell() {
           onCreateAccount={handleCreateAccount}
           onLogin={handleLogin}
         />
-      </motion.div>
-    </AnimatePresence>
-  );
-  if (showSplash && !showSetup) return (
-    <AnimatePresence>
-      <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
-        <AnimatedSplash onDone={() => setShowSplash(false)} />
       </motion.div>
     </AnimatePresence>
   );

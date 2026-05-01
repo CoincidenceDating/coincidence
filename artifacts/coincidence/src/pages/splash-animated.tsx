@@ -14,8 +14,8 @@ export default function AnimatedSplash({ onDone }: AnimatedSplashProps) {
   const [pathDone, setPathDone] = useState(false);
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPathDone(true), 1500);
-    const t2 = setTimeout(() => onDone(), 3000);
+    const t1 = setTimeout(() => setPathDone(true), 1000);
+    const t2 = setTimeout(() => onDone(), 2000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
 
