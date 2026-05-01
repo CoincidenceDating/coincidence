@@ -37,7 +37,7 @@ function getOpeningText(match: Match): string {
 function AppShell() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [dataLoading, setDataLoading]   = useState(false);
-  const [showSetup, setShowSetup]       = useState(true);
+  const [showSetup, setShowSetup]       = useState(false);
   const [account, setAccount]           = useState<AccountData | null>(null);
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
@@ -344,7 +344,7 @@ function AppShell() {
       </motion.div>
     </AnimatePresence>
   );
-  if (showSplash && !showSetup) return (
+  if (showSplash && !!account) return (
     <AnimatePresence>
       <motion.div key="splash" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}>
         <AnimatedSplash onDone={() => setShowSplash(false)} />
