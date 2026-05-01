@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 interface AnimatedSplashProps {
@@ -12,12 +12,14 @@ const FX = 160, FY = 160;
 
 export default function AnimatedSplash({ onDone }: AnimatedSplashProps) {
   const [pathDone, setPathDone] = useState(false);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     const t1 = setTimeout(() => setPathDone(true), 1000);
-    const t2 = setTimeout(() => onDone(), 2000);
+    const t2 = setTimeout(() => onDoneRef.current(), 2000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [onDone]);
+  }, []);
 
   const pathAnim = {
     initial: { pathLength: 0, opacity: 0 },
