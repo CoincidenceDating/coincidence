@@ -192,4 +192,5 @@ export async function deleteAllUserData() {
     supabase.from("user_swiped").delete().eq("user_id", uid),
     supabase.from("usernames").delete().eq("user_id", uid),
   ]);
+  await supabase.rpc("delete_user");
 }
