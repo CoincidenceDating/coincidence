@@ -90,6 +90,14 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false); setJustCheckedIn(false);
   }
 
+  function handleStopLocation() {
+    setGeoStatus("idle");
+    setUserCoords(null);
+    setVenueStatus("idle");
+    setNearbyLocations(null);
+    setSelectedLocation("");
+  }
+
   function handleCheckIn() {
     if (!location || alreadyCheckedIn) return;
     onCheckIn({
@@ -330,10 +338,15 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                   <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">nearest first</span>
                 )}
                 {venueStatus === "ready" && (
-                  <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <LocateFixed className="w-3 h-3" />
-                    Near you
-                  </span>
+                  <button
+                    onClick={handleStopLocation}
+                    className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors group"
+                    title="Stop using location"
+                  >
+                    <LocateFixed className="w-3 h-3 group-hover:hidden" />
+                    <span className="group-hover:hidden">Near you</span>
+                    <span className="hidden group-hover:inline text-[10px]">Stop using location</span>
+                  </button>
                 )}
                 {venueStatus === "error" && (
                   <button onClick={() => userCoords && loadVenues(userCoords.lat, userCoords.lng)} className="ml-auto text-[10px] text-muted-foreground hover:text-foreground underline">
