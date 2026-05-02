@@ -88,7 +88,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     watchIdRef.current = id;
   }, [loadVenues]);
 
-  const activeLocations = nearbyLocations ?? [];
+  const activeLocations = [...(nearbyLocations ?? [])].sort((a, b) => b.users.length - a.users.length);
   const location = activeLocations.find((l) => l.id === selectedLocation);
   const filteredMockUsers = filterByLookingFor(location?.users ?? [], lookingFor)
     .filter((p) => !blockedIds.includes(p.id));
