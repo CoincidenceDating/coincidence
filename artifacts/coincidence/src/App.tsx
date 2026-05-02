@@ -268,7 +268,7 @@ function AppShell() {
       name: data.name,
       age: data.age,
       bio: data.bio,
-      photos: [],
+      photos: data.photos ?? [],
       gender: data.gender ?? "prefer-not-to-say",
     }));
     setShowSetup(false);
@@ -283,8 +283,8 @@ function AppShell() {
       name: updated.name,
       age: updated.age,
       bio: updated.bio,
-      photos: [],
-      gender: "",
+      photos: myProfileSnapshot?.photos ?? [],
+      gender: myProfileSnapshot?.gender ?? "",
     }));
     refreshDiscoverProfiles(lf, profilePrefs.ageMin, profilePrefs.ageMax);
   }
