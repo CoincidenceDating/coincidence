@@ -13,7 +13,9 @@ export function isRealUserId(id: string): boolean {
 /* ── profile ──────────────────────────────────────────────── */
 
 export async function getProfile() {
-  const { data } = await supabase.from("user_profiles").select("*").maybeSingle();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).maybeSingle();
   return data as {
     user_id: string; name: string; age: number; bio: string;
     hometown: string; height: string; hobbies: string[];
