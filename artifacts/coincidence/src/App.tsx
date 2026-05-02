@@ -75,7 +75,9 @@ function AppShell() {
   const [hasWhoLikedMeAccess, setHasWhoLikedMeAccess] = useState(false);
   const [whoLikedMeExpiresAt, setWhoLikedMeExpiresAt] = useState<number | null>(null);
 
-  const matchesSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const matchesSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const gpsWatchRef    = useRef<number | null>(null);
+  const lastGpsSaveRef = useRef<number>(0);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -97,7 +99,7 @@ function AppShell() {
         setShowLanding(false);
         setAccount(acct);
         setIsLoggedOut(false);
-        loadUserData().then(() => requestGpsLocation());
+        loadUserData().then(() => startGpsWatch());
       }
       setSessionChecked(true);
     });
@@ -213,20 +215,56 @@ function AppShell() {
     }
   }
 
-  function requestGpsLocation() {
+  function stopGpsWatch() {
+    if (gpsWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+      gpsWatchRef.current = null;
+    }
+  }
+
+  function startGpsWatch() {
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
+    stopGpsWatch();
+
+    const GPS_SAVE_INTERVAL_MS = 2 * 60 * 1000;
+
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLat(latitude);
         setUserLng(longitude);
-        db.updateUserLocation(latitude, longitude);
-        refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
+
+        const now = Date.now();
+        if (now - lastGpsSaveRef.current > GPS_SAVE_INTERVAL_MS) {
+          lastGpsSaveRef.current = now;
+          db.updateUserLocation(latitude, longitude);
+        }
       },
       () => {},
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60 * 1000 }
     );
   }
+
+  // Refresh location the moment the user comes back to the tab
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState === "visible" && gpsWatchRef.current !== null) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const { latitude, longitude } = pos.coords;
+            setUserLat(latitude);
+            setUserLng(longitude);
+            lastGpsSaveRef.current = Date.now();
+            db.updateUserLocation(latitude, longitude);
+          },
+          () => {},
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 0 }
+        );
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   // Countdown tick
   useEffect(() => {
@@ -316,6 +354,7 @@ function AppShell() {
   }
 
   async function handleLogout() {
+    stopGpsWatch();
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
@@ -340,6 +379,7 @@ function AppShell() {
   }
 
   async function handleDeleteAccount() {
+    stopGpsWatch();
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
