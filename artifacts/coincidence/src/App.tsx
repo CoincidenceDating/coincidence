@@ -66,6 +66,10 @@ function AppShell() {
   const [boostRadius, setBoostRadius]           = useState(5);
   const [blockedIds, setBlockedIds]     = useState<string[]>([]);
   const [swipedIds, setSwipedIds]       = useState<string[]>([]);
+  const [whoLikedMeCount, setWhoLikedMeCount]         = useState(0);
+  const [whoLikedMeProfiles, setWhoLikedMeProfiles]   = useState<Profile[]>([]);
+  const [hasWhoLikedMeAccess, setHasWhoLikedMeAccess] = useState(false);
+  const [whoLikedMeExpiresAt, setWhoLikedMeExpiresAt] = useState<number | null>(null);
 
   const matchesSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -136,7 +140,7 @@ function AppShell() {
   async function loadUserData() {
     setDataLoading(true);
     try {
-      const [m, u, t, c, boost, blocked, swiped, profile] = await Promise.all([
+      const [m, u, t, c, boost, blocked, swiped, profile, likedMeCount, access, expiry] = await Promise.all([
         db.getMatches(false),
         db.getMatches(true),
         db.getThreads(),
@@ -145,7 +149,16 @@ function AppShell() {
         db.getBlocked(),
         db.getSwiped(),
         db.getProfile(),
+        db.getWhoLikedMeCount(),
+        db.hasWhoLikedMeAccess(),
+        db.getWhoLikedMeExpiry(),
       ]);
+      setWhoLikedMeCount(likedMeCount);
+      setHasWhoLikedMeAccess(access);
+      setWhoLikedMeExpiresAt(expiry);
+      if (access) {
+        db.getWhoLikedMe().then(setWhoLikedMeProfiles);
+      }
       setMatches(m);
       setUndecided(u);
       setThreads(t);
@@ -328,6 +341,30 @@ function AppShell() {
     setLookingFor("Everyone");
     setShowSetup(true);
     setIsLoggedOut(false);
+  }
+
+  async function handleUnlockWhoLikedMe() {
+    // TODO: replace with Stripe checkout session when Stripe is connected
+    await db.grantWhoLikedMeAccess();
+    const [profiles, expiry] = await Promise.all([
+      db.getWhoLikedMe(),
+      db.getWhoLikedMeExpiry(),
+    ]);
+    setHasWhoLikedMeAccess(true);
+    setWhoLikedMeProfiles(profiles);
+    setWhoLikedMeExpiresAt(expiry);
+  }
+
+  async function handleLikeBack(profile: Profile) {
+    setWhoLikedMeProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+    setWhoLikedMeCount((c) => Math.max(0, c - 1));
+    await handleRealRightSwipe(profile);
+  }
+
+  async function handlePassLiker(profile: Profile) {
+    setWhoLikedMeProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+    setWhoLikedMeCount((c) => Math.max(0, c - 1));
+    await db.addSwiped(profile.id, false);
   }
 
   function handleCheckIn(checkIn: CheckIn) {
@@ -591,7 +628,17 @@ function AppShell() {
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
         )}
         {activeTab === "undecided" && (
-          <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
+          <UndecidedPage
+            undecided={undecided}
+            onDecide={handleUndecidedDecision}
+            whoLikedMeCount={whoLikedMeCount}
+            whoLikedMeProfiles={whoLikedMeProfiles}
+            hasWhoLikedMeAccess={hasWhoLikedMeAccess}
+            whoLikedMeExpiresAt={whoLikedMeExpiresAt}
+            onUnlockWhoLikedMe={handleUnlockWhoLikedMe}
+            onLikeBack={handleLikeBack}
+            onPassLiker={handlePassLiker}
+          />
         )}
         {activeTab === "profile" && (
           <ProfilePage

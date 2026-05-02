@@ -422,6 +422,43 @@ export async function getActiveUsersAtVenue(venueId: string): Promise<import("./
   return (data ?? []).map((r) => r.profile_data as import("./data").Profile);
 }
 
+/* ── who liked me ─────────────────────────────────────────── */
+
+export async function getWhoLikedMeCount(): Promise<number> {
+  const { data, error } = await supabase.rpc("get_who_liked_me_count");
+  if (error) return 0;
+  return (data as number) ?? 0;
+}
+
+export async function getWhoLikedMe(): Promise<import("./data").Profile[]> {
+  const { data, error } = await supabase.rpc("get_who_liked_me");
+  if (error) return [];
+  return (data ?? []).map((r: {
+    user_id: string; name: string; age: number; bio: string;
+    photos: string[]; gender: string;
+  }) => buildProfileSnapshot(r));
+}
+
+export async function hasWhoLikedMeAccess(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("has_who_liked_me_access");
+  if (error) return false;
+  return data === true;
+}
+
+export async function grantWhoLikedMeAccess(): Promise<void> {
+  await supabase.rpc("grant_who_liked_me_access");
+}
+
+export async function getWhoLikedMeExpiry(): Promise<number | null> {
+  const { data } = await supabase
+    .from("who_liked_access")
+    .select("expires_at")
+    .maybeSingle();
+  if (!data?.expires_at) return null;
+  const ms = new Date(data.expires_at as string).getTime();
+  return ms > Date.now() ? ms : null;
+}
+
 /* ── nuke all user data ───────────────────────────────────── */
 
 export async function deleteAllUserData() {
