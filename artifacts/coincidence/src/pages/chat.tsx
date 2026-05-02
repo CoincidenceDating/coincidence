@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, MoreVertical, UserX, Flag, X } from "lucide-react";
 import type { Match } from "@/lib/data";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
+import { isRealUserId, getRealMessages, sendRealMessage, subscribeToMessages } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 export interface Message {
   id: string;
@@ -24,17 +26,6 @@ const AUTO_REPLIES = [
   "I love that about you already",
 ];
 
-function getOpeningMessage(match: Match): string {
-  if (match.source === "swipe") {
-    return "Hey! We matched 👋 How's your day going?";
-  }
-  const loc = match.locationName ?? "there";
-  if (match.locationIcon === "coffee") return `This place has the best coffee, right? So glad we found each other at ${loc}!`;
-  if (match.locationIcon === "wine") return `What a night at ${loc}! Really glad we connected 🍷`;
-  if (match.locationIcon === "beer") return `${loc} is my favourite spot. Crazy we hadn't crossed paths before!`;
-  return `What are the odds of running into you at ${loc}? Glad we did 😄`;
-}
-
 const REPORT_REASONS = [
   "Inappropriate messages",
   "Feels fake or spam",
@@ -53,10 +44,15 @@ interface ChatPageProps {
 }
 
 export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, onReport }: ChatPageProps) {
+  const isRealUser = isRealUserId(match.profile.id);
+
+  const [localMessages, setLocalMessages] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(isRealUser);
   const [draft, setDraft] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [showMenu, setShowMenu] = useState(false);
   const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false);
@@ -66,24 +62,66 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
 
   const firstName = match.profile.name.split(" ")[0];
 
+  const displayMessages = isRealUser ? localMessages : messages;
+
+  useEffect(() => {
+    if (!isRealUser) return;
+
+    let cancelled = false;
+
+    (async () => {
+      const msgs = await getRealMessages(match.profile.id);
+      if (!cancelled) {
+        setLocalMessages(msgs);
+        setLoadingMessages(false);
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+
+      const channel = subscribeToMessages(user.id, match.profile.id, (msg) => {
+        setLocalMessages((prev) => [...prev, msg]);
+      });
+      channelRef.current = channel;
+    })();
+
+    return () => {
+      cancelled = true;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [match.profile.id, isRealUser]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [displayMessages, isTyping]);
 
-  function handleSend() {
+  async function handleSend() {
     const text = draft.trim();
     if (!text) return;
     setDraft("");
-    onSend(match.profile.id, text);
 
-    // Simulate typing indicator then auto-reply
-    setTimeout(() => setIsTyping(true), 800);
-    const delay = 1400 + Math.random() * 800;
-    setTimeout(() => {
-      setIsTyping(false);
-      const reply = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)];
-      onSend(`__them__${match.profile.id}`, reply);
-    }, delay);
+    if (isRealUser) {
+      const optimistic: Message = {
+        id: `opt-${Date.now()}-${Math.random()}`,
+        text,
+        from: "me",
+        timestamp: Date.now(),
+      };
+      setLocalMessages((prev) => [...prev, optimistic]);
+      await sendRealMessage(match.profile.id, text);
+    } else {
+      onSend(match.profile.id, text);
+      setTimeout(() => setIsTyping(true), 800);
+      const delay = 1400 + Math.random() * 800;
+      setTimeout(() => {
+        setIsTyping(false);
+        const reply = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)];
+        onSend(`__them__${match.profile.id}`, reply);
+      }, delay);
+    }
   }
 
   function handleKey(e: React.KeyboardEvent) {
@@ -134,13 +172,11 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
         {/* ── String connection header ── */}
         <div className="flex flex-col items-center pt-3 pb-5">
           <div className="flex items-center">
-            {/* Match avatar */}
             <ProfileAvatar profile={match.profile} size={38} />
 
-            {/* Rope SVG — sags when no messages, ties when messages exist */}
             <svg viewBox="0 0 130 36" style={{ width: 130, height: 36, overflow: "visible" }} aria-hidden>
               <motion.path
-                d={messages.length > 0
+                d={displayMessages.length > 0
                   ? "M 5 18 C 42 14, 88 22, 125 18"
                   : "M 5 18 C 35 32, 95 32, 125 18"
                 }
@@ -149,15 +185,14 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                 fill="none"
                 strokeLinecap="round"
                 animate={{
-                  d: messages.length > 0
+                  d: displayMessages.length > 0
                     ? "M 5 18 C 42 14, 88 22, 125 18"
                     : "M 5 18 C 35 32, 95 32, 125 18",
                 }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
               />
-              {/* Texture strand */}
               <motion.path
-                d={messages.length > 0
+                d={displayMessages.length > 0
                   ? "M 5 18 C 42 14, 88 22, 125 18"
                   : "M 5 18 C 35 32, 95 32, 125 18"
                 }
@@ -167,38 +202,36 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                 fill="none"
                 strokeLinecap="round"
                 animate={{
-                  d: messages.length > 0
+                  d: displayMessages.length > 0
                     ? "M 5 18 C 42 14, 88 22, 125 18"
                     : "M 5 18 C 35 32, 95 32, 125 18",
                 }}
                 transition={{ duration: 0.7, ease: "easeOut" }}
               />
-              {/* Knot — appears when tied */}
               <motion.circle
                 cx={65} cy={18}
                 r={4.5}
                 fill="rgba(232,56,125,0.70)"
                 initial={{ scale: 0, opacity: 0 }}
-                animate={messages.length > 0
+                animate={displayMessages.length > 0
                   ? { scale: 1, opacity: 1, cy: 18 }
                   : { scale: 0, opacity: 0, cy: 25 }
                 }
-                transition={{ duration: 0.5, delay: messages.length > 0 ? 0.4 : 0, ease: "easeOut" }}
+                transition={{ duration: 0.5, delay: displayMessages.length > 0 ? 0.4 : 0, ease: "easeOut" }}
               />
               <motion.circle
                 cx={65} cy={18}
                 r={2}
                 fill="rgba(255,255,255,0.90)"
                 initial={{ scale: 0, opacity: 0 }}
-                animate={messages.length > 0
+                animate={displayMessages.length > 0
                   ? { scale: 1, opacity: 1 }
                   : { scale: 0, opacity: 0 }
                 }
-                transition={{ duration: 0.4, delay: messages.length > 0 ? 0.5 : 0 }}
+                transition={{ duration: 0.4, delay: displayMessages.length > 0 ? 0.5 : 0 }}
               />
             </svg>
 
-            {/* You avatar */}
             <div
               style={{ width: 38, height: 38, borderRadius: "50%", background: "#111", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: "700", color: "rgba(255,255,255,0.45)", flexShrink: 0 }}
             >
@@ -211,38 +244,44 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
             initial={{ opacity: 0 }}
             transition={{ delay: 0.3 }}
           >
-            {messages.length > 0 ? "the string is tied" : "the invisible string"}
+            {displayMessages.length > 0 ? "the string is tied" : "the invisible string"}
           </motion.p>
         </div>
 
-        {messages.map((msg) => {
-          const isMe = msg.from === "me";
-          return (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 8, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-            >
-              {!isMe && (
-                <ProfileAvatar profile={match.profile} size={28} className="mr-2 mt-1 self-end" />
-              )}
-              <div
-                className={`max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                  isMe
-                    ? "bg-primary text-primary-foreground rounded-br-sm"
-                    : "bg-muted text-foreground rounded-bl-sm"
-                }`}
+        {loadingMessages ? (
+          <div className="flex justify-center py-8">
+            <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+          </div>
+        ) : (
+          displayMessages.map((msg) => {
+            const isMe = msg.from === "me";
+            return (
+              <motion.div
+                key={msg.id}
+                initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
               >
-                {msg.text}
-              </div>
-            </motion.div>
-          );
-        })}
+                {!isMe && (
+                  <ProfileAvatar profile={match.profile} size={28} className="mr-2 mt-1 self-end" />
+                )}
+                <div
+                  className={`max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                    isMe
+                      ? "bg-primary text-primary-foreground rounded-br-sm"
+                      : "bg-muted text-foreground rounded-bl-sm"
+                  }`}
+                >
+                  {msg.text}
+                </div>
+              </motion.div>
+            );
+          })
+        )}
 
-        {/* Typing indicator */}
-        {isTyping && (
+        {/* Typing indicator — only for fake profiles */}
+        {!isRealUser && isTyping && (
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -279,7 +318,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={handleKey}
-          placeholder={`Message ${match.profile.name.split(" ")[0]}...`}
+          placeholder={`Message ${firstName}...`}
           className="flex-1 px-4 py-2.5 rounded-full bg-muted text-sm outline-none focus:ring-2 focus:ring-primary/40 transition-all"
           autoFocus
         />

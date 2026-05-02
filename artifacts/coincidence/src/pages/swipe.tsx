@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { type Match, type Profile } from "@/lib/data";
+import { isRealUserId } from "@/lib/db";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
 import { MapPin, User, Sparkles, Loader2 } from "lucide-react";
@@ -23,6 +24,7 @@ interface SwipePageProps {
   onDoubleStringCredit: () => void;
   blockedIds: string[];
   onSwiped: (id: string, liked: boolean) => void;
+  onRealRightSwipe: (profile: Profile) => void;
   onGoToProfile: () => void;
   discoverProfiles: Profile[];
   isLoadingProfiles: boolean;
@@ -39,11 +41,13 @@ export default function SwipePage({
   onDoubleStringCredit,
   blockedIds,
   onSwiped,
+  onRealRightSwipe,
   onGoToProfile,
   discoverProfiles,
   isLoadingProfiles,
 }: SwipePageProps) {
   const [pulse, setPulse] = useState(false);
+  const [stringSentName, setStringSentName] = useState<string | null>(null);
 
   const filteredProfiles = (discoverProfiles ?? []).filter((p) => !blockedIds.includes(p.id));
 
@@ -51,12 +55,15 @@ export default function SwipePage({
 
   function handleSwipe(dir: "left" | "right" | "maybe") {
     if (!profile) return;
-    if (dir === "right") {
-      onMatch({ profile, source: "swipe", matchedAt: Date.now() });
-    } else if (dir === "maybe") {
-      onMaybe({ profile, source: "swipe", matchedAt: Date.now() });
+    if (dir === "right" && isRealUserId(profile.id)) {
+      onRealRightSwipe(profile);
+      setStringSentName(profile.name.split(" ")[0]);
+      setTimeout(() => setStringSentName(null), 2800);
+    } else {
+      if (dir === "right") onMatch({ profile, source: "swipe", matchedAt: Date.now() });
+      else if (dir === "maybe") onMaybe({ profile, source: "swipe", matchedAt: Date.now() });
+      onSwiped(profile.id, dir === "right");
     }
-    onSwiped(profile.id, dir === "right");
   }
 
   function handleDoubleString() {
@@ -109,7 +116,7 @@ export default function SwipePage({
               >
                 <StringIcon className="w-3 h-3" />
               </motion.div>
-              {boostRadius}mi
+              {formatBoostTime(boostTimeLeft)} · {boostRadius}mi
             </motion.div>
           ) : (
             <motion.button
@@ -195,6 +202,24 @@ export default function SwipePage({
               <MapPin className="w-3.5 h-3.5 shrink-0" />
               <span>Try checking into a new place to discover more people</span>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── String sent toast ── */}
+      <AnimatePresence>
+        {stringSentName && (
+          <motion.div
+            key="string-sent"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            className="fixed bottom-28 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-2xl text-white text-sm font-medium shadow-xl"
+            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+          >
+            <StringIcon className="w-4 h-4 shrink-0" />
+            String sent to {stringSentName} — you'll match when they like you back
           </motion.div>
         )}
       </AnimatePresence>

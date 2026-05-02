@@ -2,7 +2,15 @@ import { supabase } from "./supabase";
 import type { Match, CheckIn } from "./data";
 import type { Message } from "@/pages/chat";
 
-/* ── profile ──────────────────────────────────────────── */
+/* ── UUID helper ──────────────────────────────────────────── */
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function isRealUserId(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
+/* ── profile ──────────────────────────────────────────────── */
 
 export async function getProfile() {
   const { data } = await supabase.from("user_profiles").select("*").maybeSingle();
@@ -10,11 +18,11 @@ export async function getProfile() {
     user_id: string; name: string; age: number; bio: string;
     hometown: string; height: string; hobbies: string[];
     looking_for: string; age_min: number; age_max: number;
-    setup_complete: boolean; photos: string[];
+    setup_complete: boolean; photos: string[]; gender: string;
   } | null;
 }
 
-/* ── photos ───────────────────────────────────────────── */
+/* ── photos ───────────────────────────────────────────────── */
 
 export async function uploadPhoto(file: File): Promise<{ url: string | null; error: string | null }> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -63,7 +71,38 @@ export async function upsertProfile(fields: Record<string, unknown>) {
   );
 }
 
-/* ── matches ──────────────────────────────────────────── */
+/* ── profile snapshot builder ─────────────────────────────── */
+
+const GRADIENTS = [
+  "linear-gradient(160deg,#1a1a2e 0%,#2d1b69 100%)",
+  "linear-gradient(160deg,#141e30 0%,#243b55 100%)",
+  "linear-gradient(160deg,#0f2027 0%,#2c5364 100%)",
+  "linear-gradient(160deg,#232526 0%,#414345 100%)",
+  "linear-gradient(160deg,#1c1c2e 0%,#3d3d5c 100%)",
+  "linear-gradient(160deg,#2c3e50 0%,#4ca1af 100%)",
+];
+
+export function buildProfileSnapshot(raw: {
+  user_id: string; name: string; age: number; bio: string;
+  photos: string[]; gender?: string;
+}): import("./data").Profile {
+  const initials = raw.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
+  const gradientIdx = raw.user_id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GRADIENTS.length;
+  return {
+    id: raw.user_id,
+    name: raw.name,
+    age: raw.age,
+    bio: raw.bio,
+    avatar: initials,
+    distance: "Nearby",
+    gradient: GRADIENTS[gradientIdx],
+    gender: (raw.gender ?? "prefer-not-to-say") as import("./data").Gender,
+    photo: raw.photos?.[0],
+    photos: raw.photos ?? [],
+  };
+}
+
+/* ── matches ──────────────────────────────────────────────── */
 
 export async function getMatches(isUndecided: boolean): Promise<Match[]> {
   const { data } = await supabase
@@ -117,7 +156,113 @@ export async function promoteUndecided(profileId: string) {
     .eq("profile_id", profileId);
 }
 
-/* ── threads (messages) ───────────────────────────────── */
+/* ── mutual match RPC ─────────────────────────────────────── */
+
+export async function createMutualMatch(
+  targetUserId: string,
+  targetProfileData: object,
+  myProfileData: object,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("create_mutual_match", {
+    target_user_id: targetUserId,
+    p_profile_data: targetProfileData,
+    p_my_profile_data: myProfileData,
+  });
+  if (error) return false;
+  return data === true;
+}
+
+/* ── real-time messages ───────────────────────────────────── */
+
+export async function sendRealMessage(receiverId: string, text: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("messages").insert({
+    sender_id: user.id,
+    receiver_id: receiverId,
+    text,
+  });
+}
+
+export async function getRealMessages(partnerId: string): Promise<Message[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data } = await supabase
+    .from("messages")
+    .select("id, sender_id, text, created_at")
+    .or(
+      `and(sender_id.eq.${user.id},receiver_id.eq.${partnerId}),and(sender_id.eq.${partnerId},receiver_id.eq.${user.id})`
+    )
+    .order("created_at", { ascending: true });
+  return (data ?? []).map((r) => ({
+    id: r.id as string,
+    text: r.text as string,
+    from: (r.sender_id as string) === user.id ? "me" : "them",
+    timestamp: new Date(r.created_at as string).getTime(),
+  }));
+}
+
+export function subscribeToMessages(
+  myId: string,
+  partnerId: string,
+  onMessage: (msg: Message) => void,
+) {
+  return supabase
+    .channel(`chat:${myId}:${partnerId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${myId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          id: string; text: string; sender_id: string; created_at: string;
+        };
+        if (row.sender_id === partnerId) {
+          onMessage({
+            id: row.id,
+            text: row.text,
+            from: "them",
+            timestamp: new Date(row.created_at).getTime(),
+          });
+        }
+      },
+    )
+    .subscribe();
+}
+
+export function subscribeToNewMatches(
+  myId: string,
+  onMatch: (profileId: string, profileData: object) => void,
+) {
+  return supabase
+    .channel(`new-matches:${myId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "user_matches",
+        filter: `user_id=eq.${myId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          profile_id: string;
+          profile_data: object;
+          is_undecided: boolean;
+        };
+        if (!row.is_undecided) {
+          onMatch(row.profile_id, row.profile_data);
+        }
+      },
+    )
+    .subscribe();
+}
+
+/* ── threads (messages for fake profiles) ────────────────── */
 
 export async function getThreads(): Promise<Record<string, Message[]>> {
   const { data } = await supabase.from("user_threads").select("profile_id, messages");
@@ -137,7 +282,7 @@ export async function upsertThread(profileId: string, messages: Message[]) {
   );
 }
 
-/* ── check-ins ────────────────────────────────────────── */
+/* ── check-ins ────────────────────────────────────────────── */
 
 export async function getCheckins(): Promise<CheckIn[]> {
   const { data } = await supabase
@@ -167,7 +312,7 @@ export async function addCheckin(c: CheckIn) {
   );
 }
 
-/* ── boost / string credits ───────────────────────────── */
+/* ── boost / string credits ───────────────────────────────── */
 
 export async function getBoost(): Promise<{ credits: number; until: number | null; radius: number }> {
   const { data } = await supabase.from("user_boosts").select("*").maybeSingle();
@@ -184,7 +329,7 @@ export async function upsertBoost(credits: number, until: number | null, radius:
   );
 }
 
-/* ── blocked ──────────────────────────────────────────── */
+/* ── blocked ──────────────────────────────────────────────── */
 
 export async function getBlocked(): Promise<string[]> {
   const { data } = await supabase.from("user_blocked").select("blocked_profile_id");
@@ -200,7 +345,7 @@ export async function addBlocked(profileId: string) {
   );
 }
 
-/* ── swiped ───────────────────────────────────────────── */
+/* ── swiped ───────────────────────────────────────────────── */
 
 export async function getSwiped(): Promise<string[]> {
   const { data } = await supabase.from("user_swiped").select("profile_id");
@@ -216,16 +361,7 @@ export async function addSwiped(profileId: string, liked = false) {
   );
 }
 
-/* ── discover real profiles ───────────────────────────── */
-
-const GRADIENTS = [
-  "linear-gradient(160deg,#1a1a2e 0%,#2d1b69 100%)",
-  "linear-gradient(160deg,#141e30 0%,#243b55 100%)",
-  "linear-gradient(160deg,#0f2027 0%,#2c5364 100%)",
-  "linear-gradient(160deg,#232526 0%,#414345 100%)",
-  "linear-gradient(160deg,#1c1c2e 0%,#3d3d5c 100%)",
-  "linear-gradient(160deg,#2c3e50 0%,#4ca1af 100%)",
-];
+/* ── discover real profiles ───────────────────────────────── */
 
 export async function getDiscoverProfiles(
   lookingFor: string,
@@ -241,22 +377,7 @@ export async function getDiscoverProfiles(
   return (data ?? []).map((r: {
     user_id: string; name: string; age: number; bio: string;
     photos: string[]; gender: string;
-  }) => {
-    const initials = r.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
-    const gradientIdx = r.user_id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GRADIENTS.length;
-    return {
-      id: r.user_id,
-      name: r.name,
-      age: r.age,
-      bio: r.bio,
-      avatar: initials,
-      distance: "Nearby",
-      gradient: GRADIENTS[gradientIdx],
-      gender: r.gender as import("./data").Gender,
-      photo: r.photos?.[0],
-      photos: r.photos ?? [],
-    };
-  });
+  }) => buildProfileSnapshot(r));
 }
 
 export async function checkMutualLike(targetUserId: string): Promise<boolean> {
@@ -264,7 +385,7 @@ export async function checkMutualLike(targetUserId: string): Promise<boolean> {
   return data === true;
 }
 
-/* ── presence ─────────────────────────────────────────── */
+/* ── presence ─────────────────────────────────────────────── */
 
 export async function upsertPresence(venueId: string, venueName: string, profileData: object) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -301,7 +422,7 @@ export async function getActiveUsersAtVenue(venueId: string): Promise<import("./
   return (data ?? []).map((r) => r.profile_data as import("./data").Profile);
 }
 
-/* ── nuke all user data ───────────────────────────────── */
+/* ── nuke all user data ───────────────────────────────────── */
 
 export async function deleteAllUserData() {
   const { data: { user } } = await supabase.auth.getUser();
@@ -312,6 +433,7 @@ export async function deleteAllUserData() {
     await supabase.storage.from("profile-photos").remove(files.map(f => `${uid}/${f.name}`));
   }
   await Promise.all([
+    supabase.from("messages").delete().or(`sender_id.eq.${uid},receiver_id.eq.${uid}`),
     supabase.from("user_profiles").delete().eq("user_id", uid),
     supabase.from("user_matches").delete().eq("user_id", uid),
     supabase.from("user_threads").delete().eq("user_id", uid),

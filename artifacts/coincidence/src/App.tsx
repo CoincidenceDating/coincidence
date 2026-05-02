@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 import LandingPage from "@/pages/landing";
 import AnimatedSplash from "@/pages/splash-animated";
 import SwipePage from "@/pages/swipe";
@@ -16,7 +17,7 @@ import AuthPage, { type AccountData } from "@/pages/auth";
 import ReloginPage from "@/pages/relogin";
 import { Heart, Sparkles, HelpCircle, User, Loader2 } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
-import type { Match, CheckIn } from "@/lib/data";
+import type { Match, CheckIn, Profile } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import * as db from "@/lib/db";
 
@@ -33,9 +34,9 @@ function getOpeningText(match: Match): string {
   return `What are the odds of running into you at ${loc}? Glad we did 😄`;
 }
 
-
-
 function AppShell() {
+  const { toast } = useToast();
+
   const [sessionChecked, setSessionChecked] = useState(false);
   const [dataLoading, setDataLoading]   = useState(false);
   const [showSetup, setShowSetup]       = useState(false);
@@ -48,7 +49,8 @@ function AppShell() {
   const [showSplash, setShowSplash]     = useState(true);
 
   const [lookingFor, setLookingFor]     = useState("Everyone");
-  const [discoverProfiles, setDiscoverProfiles] = useState<import("./lib/data").Profile[]>([]);
+  const [myProfileSnapshot, setMyProfileSnapshot] = useState<Profile | null>(null);
+  const [discoverProfiles, setDiscoverProfiles] = useState<Profile[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
   const [profilePrefs, setProfilePrefs] = useState({ ageMin: 18, ageMax: 50 });
   const [matches, setMatches]           = useState<Match[]>([]);
@@ -64,6 +66,8 @@ function AppShell() {
   const [boostRadius, setBoostRadius]           = useState(5);
   const [blockedIds, setBlockedIds]     = useState<string[]>([]);
   const [swipedIds, setSwipedIds]       = useState<string[]>([]);
+
+  const matchesSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -109,6 +113,26 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function subscribeToIncomingMatches(userId: string) {
+    if (matchesSubRef.current) {
+      supabase.removeChannel(matchesSubRef.current);
+    }
+    matchesSubRef.current = db.subscribeToNewMatches(userId, (profileId, profileData) => {
+      const profile = profileData as Match["profile"];
+      const match: Match = { profile, source: "swipe", matchedAt: Date.now() };
+      setMatches((prev) => {
+        const exists = prev.some((m) => m.profile.id === profileId);
+        if (exists) return prev;
+        return [...prev, match];
+      });
+      setNewMatchCount((c) => c + 1);
+      toast({
+        title: "It's a match!",
+        description: `You and ${profile.name.split(" ")[0]} both liked each other`,
+      });
+    });
+  }
+
   async function loadUserData() {
     setDataLoading(true);
     try {
@@ -139,10 +163,16 @@ function AppShell() {
         setProfilePrefs({ ageMin: amin, ageMax: amax });
         setShowSetup(!profile.setup_complete);
         if (profile.setup_complete) {
+          setMyProfileSnapshot(db.buildProfileSnapshot(profile));
           refreshDiscoverProfiles(lf, amin, amax);
         }
       } else {
         setShowSetup(true);
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        subscribeToIncomingMatches(user.id);
       }
     } finally {
       setDataLoading(false);
@@ -218,6 +248,14 @@ function AppShell() {
     db.upsertProfile(profileFields);
     setLookingFor(lf);
     setProfilePrefs({ ageMin: amin, ageMax: amax });
+    setMyProfileSnapshot(db.buildProfileSnapshot({
+      user_id: account?.id ?? "",
+      name: data.name,
+      age: data.age,
+      bio: data.bio,
+      photos: [],
+      gender: data.gender ?? "prefer-not-to-say",
+    }));
     setShowSetup(false);
     refreshDiscoverProfiles(lf, amin, amax);
   }
@@ -228,6 +266,10 @@ function AppShell() {
   }
 
   async function handleLogout() {
+    if (matchesSubRef.current) {
+      supabase.removeChannel(matchesSubRef.current);
+      matchesSubRef.current = null;
+    }
     await supabase.auth.signOut();
     setUndecided([]);
     setMatches([]);
@@ -242,11 +284,16 @@ function AppShell() {
     setBlockedIds([]);
     setSwipedIds([]);
     setDiscoverProfiles([]);
+    setMyProfileSnapshot(null);
     setActiveTab("swipe");
     setIsLoggedOut(true);
   }
 
   async function handleDeleteAccount() {
+    if (matchesSubRef.current) {
+      supabase.removeChannel(matchesSubRef.current);
+      matchesSubRef.current = null;
+    }
     await db.deleteAllUserData();
     await supabase.auth.signOut();
     setAccount(null);
@@ -262,6 +309,7 @@ function AppShell() {
     setBlockedIds([]);
     setSwipedIds([]);
     setDiscoverProfiles([]);
+    setMyProfileSnapshot(null);
     setLookingFor("Everyone");
     setShowSetup(true);
     setIsLoggedOut(false);
@@ -314,6 +362,17 @@ function AppShell() {
     if (activeTab !== "undecided") setNewUndecidedCount((c) => c + 1);
   }
 
+  async function handleRealRightSwipe(profile: Profile) {
+    setSwipedIds((prev) => prev.includes(profile.id) ? prev : [...prev, profile.id]);
+    setDiscoverProfiles((prev) => prev.filter((p) => p.id !== profile.id));
+    await db.addSwiped(profile.id, true);
+    if (!myProfileSnapshot) return;
+    const mutual = await db.createMutualMatch(profile.id, profile, myProfileSnapshot);
+    if (mutual) {
+      handleMatch({ profile, source: "swipe", matchedAt: Date.now() });
+    }
+  }
+
   function handleUndecidedDecision(match: Match, decision: "yes" | "no") {
     setUndecided((prev) => prev.filter((m) => m.profile.id !== match.profile.id));
     if (decision === "yes") {
@@ -345,18 +404,20 @@ function AppShell() {
   }
 
   function handleOpenChat(match: Match) {
-    setThreads((prev) => {
-      if (prev[match.profile.id]) { return prev; }
-      const opening: Message = {
-        id: `open-${match.profile.id}`,
-        text: getOpeningText(match),
-        from: "them",
-        timestamp: Date.now(),
-      };
-      const updated = { ...prev, [match.profile.id]: [opening] };
-      db.upsertThread(match.profile.id, updated[match.profile.id]);
-      return updated;
-    });
+    if (!db.isRealUserId(match.profile.id)) {
+      setThreads((prev) => {
+        if (prev[match.profile.id]) { return prev; }
+        const opening: Message = {
+          id: `open-${match.profile.id}`,
+          text: getOpeningText(match),
+          from: "them",
+          timestamp: Date.now(),
+        };
+        const updated = { ...prev, [match.profile.id]: [opening] };
+        db.upsertThread(match.profile.id, updated[match.profile.id]);
+        return updated;
+      });
+    }
     setActiveChat(match);
   }
 
@@ -476,15 +537,68 @@ function AppShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden relative bg-background">
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} onSwiped={(id, liked) => { setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]); setDiscoverProfiles((prev) => prev.filter(p => p.id !== id)); db.addSwiped(id, liked); }} onGoToProfile={() => setActiveTab("profile")} discoverProfiles={discoverProfiles} isLoadingProfiles={isLoadingProfiles} />}
-        {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} />}
+        {activeTab === "swipe" && (
+          <SwipePage
+            onMatch={handleMatch}
+            onMaybe={handleMaybe}
+            isBoostActive={isBoostActive}
+            boostTimeLeft={boostTimeLeft}
+            boostRadius={boostRadius}
+            boostCredits={boostCredits}
+            onActivateBoost={handleActivateBoost}
+            onDoubleStringCredit={handleDoubleStringCredit}
+            blockedIds={blockedIds}
+            onSwiped={(id, liked) => {
+              setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
+              setDiscoverProfiles((prev) => prev.filter(p => p.id !== id));
+              db.addSwiped(id, liked);
+            }}
+            onRealRightSwipe={handleRealRightSwipe}
+            onGoToProfile={() => setActiveTab("profile")}
+            discoverProfiles={discoverProfiles}
+            isLoadingProfiles={isLoadingProfiles}
+          />
+        )}
+        {activeTab === "coincidence" && (
+          <CoincidencePage
+            onMatch={handleMatch}
+            onMaybe={handleMaybe}
+            onCheckIn={handleCheckIn}
+            onSendMessage={handleOpenChat}
+            checkedInLocations={checkedInLocations}
+            lookingFor={lookingFor}
+            boostCredits={boostCredits}
+            onDoubleStringCredit={handleDoubleStringCredit}
+            blockedIds={blockedIds}
+          />
+        )}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
         )}
         {activeTab === "undecided" && (
           <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
-        {activeTab === "profile" && <ProfilePage matches={matches} checkIns={checkIns} boostCredits={boostCredits} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} onBoostRadiusChange={(r) => { setBoostRadius(r); db.upsertBoost(boostCredits, boostActiveUntil, r); }} onActivateBoost={handleActivateBoost} onAddCredits={(n) => { setBoostCredits((c) => { const next = c + n; db.upsertBoost(next, boostActiveUntil, boostRadius); return next; }); }} onLogout={handleLogout} onDeleteAccount={handleDeleteAccount} />}
+        {activeTab === "profile" && (
+          <ProfilePage
+            matches={matches}
+            checkIns={checkIns}
+            boostCredits={boostCredits}
+            isBoostActive={isBoostActive}
+            boostTimeLeft={boostTimeLeft}
+            boostRadius={boostRadius}
+            onBoostRadiusChange={(r) => { setBoostRadius(r); db.upsertBoost(boostCredits, boostActiveUntil, r); }}
+            onActivateBoost={handleActivateBoost}
+            onAddCredits={(n) => {
+              setBoostCredits((c) => {
+                const next = c + n;
+                db.upsertBoost(next, boostActiveUntil, boostRadius);
+                return next;
+              });
+            }}
+            onLogout={handleLogout}
+            onDeleteAccount={handleDeleteAccount}
+          />
+        )}
       </main>
 
       {/* Nav bar */}
