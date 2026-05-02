@@ -10,12 +10,13 @@ import SwipePage from "@/pages/swipe";
 import CoincidencePage from "@/pages/coincidence";
 import MatchesPage from "@/pages/matches";
 import UndecidedPage from "@/pages/undecided";
+import LikedPage from "@/pages/liked";
 import ProfilePage from "@/pages/profile";
 import ChatPage, { type Message } from "@/pages/chat";
 import SetupPage, { type SetupData } from "@/pages/setup";
 import AuthPage, { type AccountData } from "@/pages/auth";
 import ReloginPage from "@/pages/relogin";
-import { Heart, Sparkles, HelpCircle, User, Loader2 } from "lucide-react";
+import { Heart, Sparkles, HelpCircle, User, Loader2, Eye } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Match, CheckIn, Profile } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
@@ -23,7 +24,7 @@ import * as db from "@/lib/db";
 
 const queryClient = new QueryClient();
 
-type Tab = "swipe" | "coincidence" | "matches" | "undecided" | "profile";
+type Tab = "swipe" | "coincidence" | "matches" | "liked" | "undecided" | "profile";
 
 function getOpeningText(match: Match): string {
   if (match.source === "swipe") return "Hey! We matched 👋 How's your day going?";
@@ -566,6 +567,20 @@ function AppShell() {
       ),
     },
     {
+      id: "liked",
+      label: "Liked",
+      icon: (a) => (
+        <div className="relative">
+          <Eye className={`w-5 h-5 ${a ? "text-primary" : ""}`} />
+          {whoLikedMeCount > 0 && !hasWhoLikedMeAccess && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full gradient-btn text-white text-[10px] font-bold flex items-center justify-center leading-none">
+              {whoLikedMeCount > 9 ? "9+" : whoLikedMeCount}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
       id: "undecided",
       label: "Maybe",
       icon: (a) => (
@@ -627,10 +642,8 @@ function AppShell() {
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
         )}
-        {activeTab === "undecided" && (
-          <UndecidedPage
-            undecided={undecided}
-            onDecide={handleUndecidedDecision}
+        {activeTab === "liked" && (
+          <LikedPage
             whoLikedMeCount={whoLikedMeCount}
             whoLikedMeProfiles={whoLikedMeProfiles}
             hasWhoLikedMeAccess={hasWhoLikedMeAccess}
@@ -639,6 +652,9 @@ function AppShell() {
             onLikeBack={handleLikeBack}
             onPassLiker={handlePassLiker}
           />
+        )}
+        {activeTab === "undecided" && (
+          <UndecidedPage undecided={undecided} onDecide={handleUndecidedDecision} />
         )}
         {activeTab === "profile" && (
           <ProfilePage
