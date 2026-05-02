@@ -262,6 +262,11 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   const [loginError, setLoginError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSent, setResetSent] = useState(false);
+  const [resetError, setResetError] = useState("");
+
   const totalSteps = 2;
 
   function goNext() { setDir(1); setErrors({}); setStep((s) => s + 1); }
@@ -271,6 +276,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     setErrors({}); setLoginError(""); setStep(0); setDir(1);
     setEmail(""); setPhoneLocal(""); setPassword(""); setConfirmPassword("");
     setLoginIdentifier(""); setLoginPassword("");
+    setResetMode(false); setResetEmail(""); setResetSent(false); setResetError("");
     setMode(m);
   }
 
@@ -315,6 +321,24 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
       }
       setIsLoading(false);
     }
+  }
+
+  async function handleResetPassword() {
+    if (!resetEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail.trim())) {
+      setResetError("Enter a valid email address");
+      return;
+    }
+    setIsLoading(true);
+    setResetError("");
+    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
+      redirectTo: window.location.origin,
+    });
+    if (error) {
+      setResetError(error.message);
+    } else {
+      setResetSent(true);
+    }
+    setIsLoading(false);
   }
 
   async function handleLogin() {
@@ -455,7 +479,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
           </>
         )}
 
-        {mode === "login" && (
+        {mode === "login" && !resetMode && (
           <motion.div key="login" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
             <div className="mb-7">
               <h2 className="text-2xl font-bold text-foreground leading-tight">Welcome back</h2>
@@ -468,6 +492,14 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
               <PasswordField label="Password" value={loginPassword} onChange={setLoginPassword}
                 show={showLoginPw} onToggle={() => setShowLoginPw((v) => !v)} autoComplete="current-password" />
             </div>
+            <div className="mt-2 text-right">
+              <button
+                onClick={() => { setResetMode(true); setResetEmail(loginIdentifier); }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+              >
+                Forgot password?
+              </button>
+            </div>
             {loginError && (
               <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-3 text-xs text-red-500 font-medium">
                 {loginError}
@@ -476,7 +508,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
             <button
               onClick={handleLogin}
               disabled={isLoading}
-              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
             >
               {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Signing in…</> : <>Log in <ArrowRight className="w-4 h-4" /></>}
@@ -486,6 +518,65 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
                 No account yet?{" "}
                 <button onClick={() => switchMode("create")} className="underline underline-offset-2 text-foreground font-medium">Create one</button>
               </p>
+            )}
+          </motion.div>
+        )}
+
+        {mode === "login" && resetMode && (
+          <motion.div key="reset" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.22 }}>
+            {resetSent ? (
+              <div className="flex flex-col items-center gap-5 pt-4 text-center">
+                <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}>
+                  <Check className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-foreground">Check your email</h2>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    We sent a reset link to <span className="font-medium text-foreground">{resetEmail}</span>. Click it to set a new password.
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setResetMode(false); setResetSent(false); setResetEmail(""); }}
+                  className="mt-2 text-sm font-medium text-foreground underline underline-offset-2"
+                >
+                  Back to log in
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="mb-7">
+                  <button
+                    onClick={() => { setResetMode(false); setResetError(""); }}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4 -ml-1 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Back
+                  </button>
+                  <h2 className="text-2xl font-bold text-foreground leading-tight">Reset password</h2>
+                  <p className="text-sm text-muted-foreground mt-1">We'll send you a link to set a new one</p>
+                </div>
+                <Field
+                  label="Email address"
+                  icon={<Mail className="w-4 h-4" />}
+                  type="email"
+                  value={resetEmail}
+                  onChange={setResetEmail}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+                {resetError && (
+                  <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-2 text-xs text-red-500 font-medium">
+                    {resetError}
+                  </motion.p>
+                )}
+                <button
+                  onClick={handleResetPassword}
+                  disabled={isLoading}
+                  className="mt-6 w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+                >
+                  {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</> : <>Send reset link <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </>
             )}
           </motion.div>
         )}

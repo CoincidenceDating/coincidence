@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronLeft, Home, Ruler, ChevronUp, ChevronDown, Check } from "lucide-react";
+import { ChevronRight, ChevronLeft, Home, Ruler, ChevronUp, ChevronDown, Check, Camera, X, Loader2 } from "lucide-react";
+import { uploadPhoto } from "@/lib/db";
 
-/* ─── constants (mirrored from profile) ──────── */
+/* ─── constants ──────────────────────────────────────────── */
 const HEIGHT_OPTIONS: string[] = [];
 for (let ft = 4; ft <= 7; ft++) {
   const maxIn = ft === 7 ? 0 : 11;
@@ -31,13 +32,14 @@ export interface SetupData {
   lookingFor: string;
   ageMin: number;
   ageMax: number;
+  photos: string[];
 }
 
 interface SetupPageProps {
   onComplete: (data: SetupData) => void;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 6;
 
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? "100%" : "-100%", opacity: 0 }),
@@ -59,6 +61,10 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
   const [lookingFor, setLookingFor] = useState("Everyone");
   const [ageMin, setAgeMin]     = useState(18);
   const [ageMax, setAgeMax]     = useState(40);
+  const [photos, setPhotos]     = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const heightIdx = HEIGHT_OPTIONS.indexOf(height);
 
@@ -66,17 +72,11 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
     .split(" ").filter(Boolean).slice(0, 2)
     .map(w => w[0].toUpperCase()).join("") || "?";
 
-  function goNext() {
-    setDir(1);
-    setStep(s => s + 1);
-  }
-  function goBack() {
-    setDir(-1);
-    setStep(s => s - 1);
-  }
+  function goNext() { setDir(1); setStep(s => s + 1); }
+  function goBack() { setDir(-1); setStep(s => s - 1); }
 
   function finish() {
-    onComplete({ name: name.trim() || "You", age, bio, hometown, height, hobbies, gender: gender || "prefer-not-to-say", lookingFor, ageMin, ageMax });
+    onComplete({ name: name.trim() || "You", age, bio, hometown, height, hobbies, gender: gender || "prefer-not-to-say", lookingFor, ageMin, ageMax, photos });
   }
 
   function toggleHobby(h: string) {
@@ -85,12 +85,28 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
     );
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || photos.length >= 3) return;
+    e.target.value = "";
+    setIsUploading(true);
+    setUploadError("");
+    const { url, error } = await uploadPhoto(file);
+    if (error || !url) {
+      setUploadError(error ?? "Upload failed — try again");
+    } else {
+      setPhotos(prev => [...prev, url]);
+    }
+    setIsUploading(false);
+  }
+
   const canNext = [
-    name.trim().length > 0,  // step 0: name required
-    gender.length > 0,        // step 1: gender required
-    true,                     // step 2: bio optional
-    hobbies.length > 0,       // step 3: at least 1 hobby
-    true,                     // step 4: preferences
+    name.trim().length > 0,
+    gender.length > 0,
+    true,
+    hobbies.length > 0,
+    true,
+    photos.length > 0,
   ][step];
 
   const stepTitles = [
@@ -99,6 +115,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
     "Your story",
     "What do you love?",
     "Your preferences",
+    "Add your photos",
   ];
   const stepSubs = [
     "This is how you'll appear to others.",
@@ -106,6 +123,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
     "Write something that feels like you.",
     "Pick as many as you like.",
     "Who are you hoping to cross paths with?",
+    "At least one photo so people can recognise you.",
   ];
 
   return (
@@ -162,7 +180,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
             {/* ── Step 0: Name ── */}
             {step === 0 && (
               <div className="flex flex-col items-center gap-8">
-                {/* Live avatar preview */}
                 <motion.div
                   className="w-28 h-28 rounded-full bg-foreground text-background flex items-center justify-center text-3xl font-bold"
                   animate={{ scale: initials !== "?" ? 1 : 0.92 }}
@@ -189,7 +206,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
             {/* ── Step 1: Gender / Age / Height / Hometown ── */}
             {step === 1 && (
               <div className="space-y-6">
-                {/* Gender */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">I am a</label>
                   <div className="grid grid-cols-3 gap-2">
@@ -216,7 +232,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
                   )}
                 </div>
 
-                {/* Age */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">Age</label>
                   <div className="flex items-center gap-6">
@@ -228,7 +243,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
                   </div>
                 </div>
 
-                {/* Height */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">Height</label>
                   <div className="flex items-center gap-4">
@@ -249,7 +263,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
                   </div>
                 </div>
 
-                {/* Hometown */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">Hometown</label>
                   <div className="relative">
@@ -279,7 +292,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
                 />
                 <p className="text-xs text-muted-foreground text-right">{bio.length}/160</p>
 
-                {/* Inspiration prompts */}
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Need inspiration?</p>
                   {[
@@ -330,7 +342,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
             {/* ── Step 4: Preferences ── */}
             {step === 4 && (
               <div className="space-y-8">
-                {/* Looking for */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">Looking for</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -350,7 +361,6 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
                   </div>
                 </div>
 
-                {/* Age range */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">
                     Age range · {ageMin}–{ageMax}
@@ -374,14 +384,72 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
 
-                {/* Tagline tease */}
-                <div className="flex flex-col items-center gap-2 pt-2 opacity-50">
-                  <div className="w-8 h-8 rounded-lg overflow-hidden">
-                    <img src="/logo.png" alt="Coincidence" className="w-full h-full object-cover scale-[1.35]" />
+            {/* ── Step 5: Photos ── */}
+            {step === 5 && (
+              <div className="space-y-5">
+                {/* Thumbnails */}
+                {photos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {photos.map((url, i) => (
+                      <div key={url} className="relative aspect-square rounded-2xl overflow-hidden">
+                        <img src={url} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          onClick={() => setPhotos(prev => prev.filter(p => p !== url))}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    ))}
+                    {photos.length < 3 && Array.from({ length: 3 - photos.length }).map((_, i) => (
+                      <div key={`empty-${i}`} className="aspect-square rounded-2xl border-2 border-dashed border-border" />
+                    ))}
                   </div>
-                  <p className="text-xs italic text-muted-foreground">making the invisible string – visible</p>
-                </div>
+                )}
+
+                {/* Upload button */}
+                {photos.length < 3 && (
+                  <>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={handlePhotoUpload}
+                      disabled={isUploading}
+                    />
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                      className="w-full flex flex-col items-center justify-center gap-3 py-10 rounded-3xl border-2 border-dashed border-border hover:border-foreground/40 transition-colors disabled:opacity-60"
+                    >
+                      {isUploading ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                      ) : (
+                        <Camera className="w-8 h-8 text-muted-foreground" />
+                      )}
+                      <p className="text-sm text-muted-foreground font-medium">
+                        {isUploading ? "Uploading…" : photos.length === 0 ? "Tap to add a photo" : "Add another photo"}
+                      </p>
+                    </motion.button>
+                  </>
+                )}
+
+                {uploadError && (
+                  <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-red-500 text-center font-medium">
+                    {uploadError}
+                  </motion.p>
+                )}
+
+                <p className="text-xs text-muted-foreground text-center">
+                  {photos.length === 0
+                    ? "You need at least one photo to continue"
+                    : `${photos.length} of 3 photos added`}
+                </p>
               </div>
             )}
 
@@ -404,7 +472,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
           onClick={step < TOTAL_STEPS - 1 ? goNext : finish}
           disabled={!canNext}
           className="flex-1 h-12 rounded-full font-semibold text-sm text-white flex items-center justify-center gap-2 disabled:opacity-30 transition-all"
-            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+          style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
         >
           {step < TOTAL_STEPS - 1 ? (
             <>Continue <ChevronRight className="w-4 h-4" /></>

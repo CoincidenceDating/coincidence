@@ -244,6 +244,7 @@ function AppShell() {
       looking_for: lf,
       age_min: amin, age_max: amax,
       setup_complete: true,
+      photos: data.photos ?? [],
     };
     db.upsertProfile(profileFields);
     setLookingFor(lf);
