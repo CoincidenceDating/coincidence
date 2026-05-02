@@ -164,7 +164,7 @@ export default function UndecidedPage({
                 className="px-5 py-3 rounded-2xl text-white text-sm font-semibold shadow-lg"
                 style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
               >
-                See who liked you · £5 · 24h
+                See what fate already started · £5 · 24h
               </motion.button>
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function UndecidedPage({
                 >
                   <Heart className="w-7 h-7 fill-white text-white" />
                 </div>
-                <h2 className="text-xl font-bold">See who liked you</h2>
+                <h2 className="text-xl font-bold">See what fate already started</h2>
                 <p className="text-sm text-muted-foreground">
                   {whoLikedMeCount} {whoLikedMeCount === 1 ? "person is" : "people are"} waiting for you to notice them
                 </p>
