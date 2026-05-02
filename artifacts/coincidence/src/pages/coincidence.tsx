@@ -5,7 +5,7 @@ import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMile
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2, Lock, Search, X } from "lucide-react";
+import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2, Search, X } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import * as db from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -125,12 +125,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
-  const ACTIVATE_RADIUS_MI = 0.15;
-  const distanceToVenue =
-    userCoords && location?.lat != null && location?.lng != null
-      ? haversineDistanceMiles(userCoords.lat, userCoords.lng, location.lat, location.lng)
-      : null;
-  const tooFar = distanceToVenue !== null && distanceToVenue > ACTIVATE_RADIUS_MI;
 
   async function handleActivate() {
     if (!selectedLocation || !location) return;
@@ -628,7 +622,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                     const distMi = userCoords && loc.lat != null && loc.lng != null
                       ? haversineDistanceMiles(userCoords.lat, userCoords.lng, loc.lat, loc.lng)
                       : null;
-                    const locTooFar = distMi !== null && distMi > ACTIVATE_RADIUS_MI;
                     const count = venueRealCounts[loc.id] ?? 0;
                     const isSelected = selectedLocation === loc.id;
                     const heat = count >= 4
@@ -639,24 +632,21 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                     return (
                       <button
                         key={loc.id}
-                        onClick={() => !locTooFar && handleHotSpotTap(loc.id)}
-                        disabled={locTooFar}
+                        onClick={() => handleHotSpotTap(loc.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left
-                          ${locTooFar
-                            ? "opacity-40 cursor-not-allowed border-border bg-card"
-                            : isSelected
-                              ? "bg-foreground text-background border-foreground active:scale-[0.98]"
-                              : "bg-card hover:bg-accent/40 border-border active:scale-[0.98]"
+                          ${isSelected
+                            ? "bg-foreground text-background border-foreground active:scale-[0.98]"
+                            : "bg-card hover:bg-accent/40 border-border active:scale-[0.98]"
                           }`}
                       >
                         <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
-                          {locTooFar ? <Lock className="w-4 h-4" /> : iconMap[loc.icon]}
+                          {iconMap[loc.icon]}
                         </span>
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-sm block truncate">{loc.name}</span>
                           {distMi !== null && (
                             <span className={`text-[10px] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
-                              {locTooFar ? `${formatDistance(distMi)} away — go there to unlock` : `${formatDistance(distMi)} away`}
+                              {formatDistance(distMi)} away
                             </span>
                           )}
                         </div>
@@ -685,17 +675,12 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               )}
             </div>
 
-            <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating || tooFar} onClick={handleActivate}>
+            <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating} onClick={handleActivate}>
               {isActivating
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>
                 : <><StringIcon className="w-4 h-4 mr-2" />Activate Coincidence Mode</>
               }
             </Button>
-            {tooFar && distanceToVenue !== null && (
-              <p className="text-center text-xs text-muted-foreground mt-2">
-                You're {formatDistance(distanceToVenue)} away — you need to be at this spot to activate
-              </p>
-            )}
 
             {/* ── String Theory explanation ── */}
             <div className="mt-10 pt-8 border-t border-foreground/8">
