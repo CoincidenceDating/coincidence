@@ -382,23 +382,23 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
       {/* ── Report flow ── */}
       <AnimatePresence>
         {showReport && (
-          <>
+          <motion.div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center px-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => { if (!reportSubmitted) setShowReport(false); }}
+          >
             <motion.div
-              className="absolute inset-0 bg-black/50 z-10"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => { if (!reportSubmitted) setShowReport(false); }}
-            />
-            <motion.div
-              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl z-20 p-6"
-              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 280 }}
+              className="w-full max-w-sm bg-card rounded-3xl p-6 overflow-y-auto"
+              style={{ maxHeight: "80vh" }}
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ type: "spring", damping: 32, stiffness: 380 }}
+              onClick={e => e.stopPropagation()}
             >
-              <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-5" />
               <AnimatePresence mode="wait">
                 {reportSubmitted ? (
-                  <motion.div
-                    key="done"
-                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                  <motion.div key="done" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col items-center py-4 gap-3"
                   >
                     <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
@@ -426,9 +426,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                     </div>
                     <div className="space-y-2 mb-4">
                       {REPORT_REASONS.map((reason) => (
-                        <button
-                          key={reason}
-                          onClick={() => setReportReason(reason)}
+                        <button key={reason} onClick={() => setReportReason(reason)}
                           className={`w-full text-left px-4 py-3 rounded-xl text-sm border transition-all ${
                             reportReason === reason
                               ? "bg-foreground text-background border-foreground"
@@ -439,9 +437,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                         </button>
                       ))}
                     </div>
-                    <button
-                      disabled={!reportReason}
-                      onClick={() => setReportSubmitted(true)}
+                    <button disabled={!reportReason} onClick={() => setReportSubmitted(true)}
                       className="w-full py-3.5 rounded-xl bg-foreground text-background text-sm font-semibold disabled:opacity-30 active:scale-[0.98] transition-all"
                     >
                       Submit report
@@ -450,7 +446,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
                 )}
               </AnimatePresence>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
