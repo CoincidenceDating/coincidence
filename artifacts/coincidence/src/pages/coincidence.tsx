@@ -5,7 +5,7 @@ import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMile
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2 } from "lucide-react";
+import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2, Lock } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import * as db from "@/lib/db";
 
@@ -482,6 +482,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                     const distMi = userCoords && loc.lat != null && loc.lng != null
                       ? haversineDistanceMiles(userCoords.lat, userCoords.lng, loc.lat, loc.lng)
                       : null;
+                    const locTooFar = distMi !== null && distMi > ACTIVATE_RADIUS_MI;
                     const count = loc.users.length;
                     const isSelected = selectedLocation === loc.id;
                     const heat = count >= 4
@@ -492,28 +493,39 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                     return (
                       <button
                         key={loc.id}
-                        onClick={() => handleHotSpotTap(loc.id)}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border active:scale-[0.98] transition-all text-left ${isSelected ? "bg-foreground text-background border-foreground" : "bg-card hover:bg-accent/40 border-border"}`}
+                        onClick={() => !locTooFar && handleHotSpotTap(loc.id)}
+                        disabled={locTooFar}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left
+                          ${locTooFar
+                            ? "opacity-40 cursor-not-allowed border-border bg-card"
+                            : isSelected
+                              ? "bg-foreground text-background border-foreground active:scale-[0.98]"
+                              : "bg-card hover:bg-accent/40 border-border active:scale-[0.98]"
+                          }`}
                       >
                         <span className={`shrink-0 ${isSelected ? "text-background/70" : "text-muted-foreground"}`}>
-                          {iconMap[loc.icon]}
+                          {locTooFar ? <Lock className="w-4 h-4" /> : iconMap[loc.icon]}
                         </span>
                         <div className="flex-1 min-w-0">
                           <span className="font-medium text-sm block truncate">{loc.name}</span>
                           {distMi !== null && (
                             <span className={`text-[10px] ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
-                              {formatDistance(distMi)} away
+                              {locTooFar ? `${formatDistance(distMi)} away — go there to unlock` : `${formatDistance(distMi)} away`}
                             </span>
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)" }}>
-                            <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.28)" }} />
-                          </div>
-                          <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
-                          <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
-                            {count} {count === 1 ? "person" : "people"}
-                          </span>
+                          {!locTooFar && (
+                            <>
+                              <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)" }}>
+                                <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.28)" }} />
+                              </div>
+                              <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
+                              <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                                {count} {count === 1 ? "person" : "people"}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </button>
                     );
