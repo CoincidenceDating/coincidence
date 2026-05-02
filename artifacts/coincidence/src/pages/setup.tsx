@@ -103,7 +103,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
   const canNext = [
     name.trim().length > 0,
     gender.length > 0,
-    true,
+    bio.trim().length > 0,
     hobbies.length > 0,
     true,
     photos.length > 0,

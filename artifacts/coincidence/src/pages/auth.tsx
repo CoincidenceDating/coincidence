@@ -233,7 +233,7 @@ const COUNTRIES: Country[] = [
   { flag: "🇿🇼", name: "Zimbabwe", dialCode: "+263", code: "ZW" },
 ];
 
-const DEFAULT_COUNTRY = COUNTRIES.find((c) => c.code === "US")!;
+const DEFAULT_COUNTRY = COUNTRIES.find((c) => c.code === "GB")!;
 
 const slideVariants = {
   enter: (dir: number) => ({ x: dir * 40, opacity: 0 }),
