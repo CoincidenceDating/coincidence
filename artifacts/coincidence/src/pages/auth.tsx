@@ -266,6 +266,8 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   const [resetEmail, setResetEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [resetError, setResetError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalSteps = 2;
 
@@ -277,6 +279,8 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     setEmail(""); setPhoneLocal(""); setPassword(""); setConfirmPassword("");
     setLoginIdentifier(""); setLoginPassword("");
     setResetMode(false); setResetEmail(""); setResetSent(false); setResetError("");
+    setResendCooldown(0);
+    if (resendTimerRef.current) clearInterval(resendTimerRef.current);
     setMode(m);
   }
 
@@ -323,6 +327,21 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     }
   }
 
+  function startResendCooldown() {
+    setResendCooldown(30);
+    if (resendTimerRef.current) clearInterval(resendTimerRef.current);
+    resendTimerRef.current = setInterval(() => {
+      setResendCooldown((c) => {
+        if (c <= 1) {
+          clearInterval(resendTimerRef.current!);
+          resendTimerRef.current = null;
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  }
+
   async function handleResetPassword() {
     if (!resetEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resetEmail.trim())) {
       setResetError("Enter a valid email address");
@@ -337,6 +356,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
       setResetError(error.message);
     } else {
       setResetSent(true);
+      startResendCooldown();
     }
     setIsLoading(false);
   }
@@ -542,8 +562,29 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
                   </p>
                 </div>
                 <button
-                  onClick={() => { setResetMode(false); setResetSent(false); setResetEmail(""); }}
-                  className="mt-2 text-sm font-medium text-foreground underline underline-offset-2"
+                  onClick={async () => {
+                    if (resendCooldown > 0 || isLoading) return;
+                    setIsLoading(true);
+                    const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
+                      redirectTo: window.location.origin,
+                    });
+                    setIsLoading(false);
+                    if (!error) startResendCooldown();
+                  }}
+                  disabled={resendCooldown > 0 || isLoading}
+                  className="w-full py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+                  style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+                >
+                  {isLoading
+                    ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Sending…</span>
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : "Resend email"
+                  }
+                </button>
+                <button
+                  onClick={() => { setResetMode(false); setResetSent(false); setResetEmail(""); setResendCooldown(0); if (resendTimerRef.current) clearInterval(resendTimerRef.current); }}
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Back to log in
                 </button>
