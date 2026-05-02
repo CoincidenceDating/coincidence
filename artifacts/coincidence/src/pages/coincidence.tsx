@@ -40,6 +40,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
   const [venueStatus, setVenueStatus] = useState<VenueStatus>("idle");
   const [nearbyLocations, setNearbyLocations] = useState<LocationData[] | null>(null);
+  const [venueRealCounts, setVenueRealCounts] = useState<Record<string, number>>({});
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isActivating, setIsActivating] = useState(false);
   const watchIdRef = useRef<number | null>(null);
@@ -59,6 +60,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     try {
       const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
       setNearbyLocations(fetched);
+      const counts = await db.getVenuePresenceCounts(fetched.map((v) => v.id));
+      setVenueRealCounts(counts);
       setVenueStatus("ready");
     } catch {
       setVenueStatus("error");
@@ -88,7 +91,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     watchIdRef.current = id;
   }, [loadVenues]);
 
-  const activeLocations = [...(nearbyLocations ?? [])].sort((a, b) => b.users.length - a.users.length);
+  const activeLocations = [...(nearbyLocations ?? [])].sort((a, b) => (venueRealCounts[b.id] ?? 0) - (venueRealCounts[a.id] ?? 0));
   const location = activeLocations.find((l) => l.id === selectedLocation);
   const filteredMockUsers = filterByLookingFor(location?.users ?? [], lookingFor)
     .filter((p) => !blockedIds.includes(p.id));
@@ -483,7 +486,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                       ? haversineDistanceMiles(userCoords.lat, userCoords.lng, loc.lat, loc.lng)
                       : null;
                     const locTooFar = distMi !== null && distMi > ACTIVATE_RADIUS_MI;
-                    const count = loc.users.length;
+                    const count = venueRealCounts[loc.id] ?? 0;
                     const isSelected = selectedLocation === loc.id;
                     const heat = count >= 4
                       ? { dot: "bg-red-400", bar: "w-full" }

@@ -427,6 +427,22 @@ export async function clearPresence() {
   await supabase.from("user_presence").delete().eq("user_id", user.id);
 }
 
+export async function getVenuePresenceCounts(venueIds: string[]): Promise<Record<string, number>> {
+  if (!venueIds.length) return {};
+  const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+  const { data } = await supabase
+    .from("user_presence")
+    .select("venue_id")
+    .in("venue_id", venueIds)
+    .gt("activated_at", cutoff);
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const id = row.venue_id as string;
+    counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export async function getActiveUsersAtVenue(venueId: string): Promise<import("./data").Profile[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
