@@ -213,13 +213,35 @@ function AppShell() {
     }
   }
 
+  const GPS_CACHE_KEY = "coincidence-gps";
+  const GPS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
   function requestGpsLocation() {
     if (!navigator.geolocation) return;
+
+    // Use cached coords if they're fresh enough — no browser prompt
+    try {
+      const raw = localStorage.getItem(GPS_CACHE_KEY);
+      if (raw) {
+        const { lat, lng, ts } = JSON.parse(raw) as { lat: number; lng: number; ts: number };
+        if (Date.now() - ts < GPS_CACHE_TTL) {
+          setUserLat(lat);
+          setUserLng(lng);
+          refreshDiscoverProfiles(undefined, undefined, undefined, lat, lng, discoverRadius);
+          return;
+        }
+      }
+    } catch {}
+
+    // Cache is stale or missing — ask the browser once
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLat(latitude);
         setUserLng(longitude);
+        try {
+          localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
+        } catch {}
         db.updateUserLocation(latitude, longitude);
         refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
       },
@@ -316,6 +338,7 @@ function AppShell() {
   }
 
   async function handleLogout() {
+    try { localStorage.removeItem(GPS_CACHE_KEY); } catch {}
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
