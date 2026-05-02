@@ -352,7 +352,13 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     });
 
     if (error) {
-      setLoginError(error.message === "Invalid login credentials" ? "Incorrect email or password" : error.message);
+      if (error.message.toLowerCase().includes("email not confirmed")) {
+        setLoginError("Please confirm your email first — check your inbox for a verification link.");
+      } else if (error.message === "Invalid login credentials") {
+        setLoginError("Incorrect email or password");
+      } else {
+        setLoginError(error.message);
+      }
       setIsLoading(false);
       return;
     }
