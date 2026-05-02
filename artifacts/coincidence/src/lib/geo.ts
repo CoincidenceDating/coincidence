@@ -65,6 +65,50 @@ function assignUsersToVenue(venueName: string, pool: Profile[]): Profile[] {
   return Array.from(indices).map((i) => pool[i]);
 }
 
+export async function searchVenuesByName(
+  query: string,
+  lat: number | null,
+  lng: number | null,
+  allUsers: Profile[],
+): Promise<LocationData[]> {
+  if (!query.trim()) return [];
+  const nameFilter = `["name"~"${query.replace(/"/g, "")}",i]`;
+  const areaFilter = lat != null && lng != null ? `(around:5000,${lat},${lng})` : "";
+  const overpassQuery = `[out:json][timeout:12];(node["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]${nameFilter}${areaFilter};way["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]${nameFilter}${areaFilter};);out center 8;`;
+
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "data=" + encodeURIComponent(overpassQuery),
+    signal: AbortSignal.timeout(14000),
+  });
+  if (!res.ok) return [];
+  const json = await res.json();
+
+  const venues: RealVenue[] = (json.elements as Array<Record<string, unknown>>)
+    .filter((el) => (el.tags as Record<string, string> | undefined)?.name)
+    .map((el) => {
+      const tags = el.tags as Record<string, string>;
+      const elLat = typeof el.lat === "number" ? el.lat : (el.center as Record<string, number> | undefined)?.lat;
+      const elLng = typeof el.lon === "number" ? el.lon : (el.center as Record<string, number> | undefined)?.lon;
+      return { id: String(el.id), name: tags.name, amenity: tags.amenity, lat: elLat!, lng: elLng! };
+    })
+    .filter((v) => v.lat != null && v.lng != null);
+
+  const sorted = lat != null && lng != null
+    ? venues.map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat, v.lng) })).sort((a, b) => a.distMi - b.distMi)
+    : venues.map((v) => ({ ...v, distMi: 0 }));
+
+  return sorted.slice(0, 8).map((v) => ({
+    id: v.id,
+    name: v.name,
+    icon: amenityToIcon(v.amenity),
+    lat: v.lat,
+    lng: v.lng,
+    users: assignUsersToVenue(v.name, allUsers),
+  }));
+}
+
 export async function fetchNearbyVenues(
   lat: number,
   lng: number,

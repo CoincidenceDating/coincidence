@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { locations, filterByLookingFor, type Profile, type Match, type CheckIn, type LocationData } from "@/lib/data";
-import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMiles, formatDistance, fetchNearbyVenues } from "@/lib/geo";
+import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMiles, formatDistance, fetchNearbyVenues, searchVenuesByName } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
-import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2, Lock } from "lucide-react";
+import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2, Lock, Search, X } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import * as db from "@/lib/db";
 import { supabase } from "@/lib/supabase";
@@ -46,6 +46,13 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [isActivating, setIsActivating] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  const [venueSearchQuery, setVenueSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<LocationData[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     return () => {
@@ -166,6 +173,47 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
 
   function handleHotSpotTap(locId: string) {
     setSelectedLocation(locId);
+    setShowSearchDropdown(false);
+    setVenueSearchQuery("");
+  }
+
+  function handleVenueSearchChange(q: string) {
+    setVenueSearchQuery(q);
+    if (!q.trim()) { setSearchResults([]); setShowSearchDropdown(false); return; }
+    setShowSearchDropdown(true);
+
+    // Filter local nearby list first
+    const localMatches = (nearbyLocations ?? []).filter((l) =>
+      l.name.toLowerCase().includes(q.toLowerCase())
+    );
+    setSearchResults(localMatches);
+
+    // Debounced Overpass search for extra results
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const remote = await searchVenuesByName(q, userCoords?.lat ?? null, userCoords?.lng ?? null, allMockUsers);
+        // Merge: remote results not already in local matches
+        const localIds = new Set(localMatches.map((l) => l.id));
+        const merged = [...localMatches, ...remote.filter((r) => !localIds.has(r.id))];
+        setSearchResults(merged);
+      } catch { /* keep local results */ }
+      setIsSearching(false);
+    }, 450);
+  }
+
+  function handlePickSearchResult(venue: LocationData) {
+    // If not already in nearbyLocations, add it
+    setNearbyLocations((prev) => {
+      if (!prev) return [venue];
+      if (prev.some((l) => l.id === venue.id)) return prev;
+      return [venue, ...prev];
+    });
+    setSelectedLocation(venue.id);
+    setShowSearchDropdown(false);
+    setVenueSearchQuery("");
+    setSearchResults([]);
   }
 
   function handleDeactivate() {
@@ -444,6 +492,69 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                   </button>
                 )}
               </div>
+
+              {/* Search box — shown once GPS is granted OR denied */}
+              {(venueStatus === "ready" || geoStatus === "denied" || geoStatus === "unavailable") && (
+                <div className="relative mb-3">
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-border bg-card focus-within:border-primary/50 transition-colors">
+                    <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      value={venueSearchQuery}
+                      onChange={(e) => handleVenueSearchChange(e.target.value)}
+                      onFocus={() => venueSearchQuery.trim() && setShowSearchDropdown(true)}
+                      placeholder="Search for a bar, pub, café…"
+                      className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none"
+                    />
+                    {venueSearchQuery ? (
+                      isSearching
+                        ? <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
+                        : <button onClick={() => { setVenueSearchQuery(""); setSearchResults([]); setShowSearchDropdown(false); }} className="text-muted-foreground hover:text-foreground transition-colors shrink-0"><X className="w-3.5 h-3.5" /></button>
+                    ) : null}
+                  </div>
+
+                  {/* Dropdown */}
+                  <AnimatePresence>
+                    {showSearchDropdown && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        transition={{ duration: 0.15 }}
+                        className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden"
+                      >
+                        {searchResults.length === 0 && !isSearching && (
+                          <p className="text-xs text-muted-foreground text-center py-4 px-3">No places found — try a different name</p>
+                        )}
+                        {searchResults.length === 0 && isSearching && (
+                          <p className="text-xs text-muted-foreground text-center py-4 px-3">Searching…</p>
+                        )}
+                        {searchResults.map((venue) => {
+                          const distMi = userCoords && venue.lat != null && venue.lng != null
+                            ? haversineDistanceMiles(userCoords.lat, userCoords.lng, venue.lat, venue.lng)
+                            : null;
+                          return (
+                            <button
+                              key={venue.id}
+                              onClick={() => handlePickSearchResult(venue)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-accent/40 transition-colors text-left border-b border-border last:border-0"
+                            >
+                              <span className="text-muted-foreground shrink-0">{iconMap[venue.icon]}</span>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-sm font-medium block truncate">{venue.name}</span>
+                                {distMi !== null && (
+                                  <span className="text-[10px] text-muted-foreground">{formatDistance(distMi)} away</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
 
               {/* Idle — prompt to share location */}
               {geoStatus === "idle" && (
