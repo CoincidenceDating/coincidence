@@ -524,9 +524,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                         transition={{ duration: 0.15 }}
                         className="absolute z-20 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-xl overflow-hidden"
                       >
-                        {searchResults.length === 0 && !isSearching && (
-                          <p className="text-xs text-muted-foreground text-center py-4 px-3">No places found — try a different name</p>
-                        )}
                         {searchResults.length === 0 && isSearching && (
                           <p className="text-xs text-muted-foreground text-center py-4 px-3">Searching…</p>
                         )}
@@ -550,6 +547,26 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                             </button>
                           );
                         })}
+                        {/* Always show "add anyway" option so user can use any place name */}
+                        {!isSearching && venueSearchQuery.trim().length >= 2 && (
+                          <button
+                            onClick={() => handlePickSearchResult({
+                              id: `custom-${venueSearchQuery.trim().toLowerCase().replace(/\s+/g, "-")}`,
+                              name: venueSearchQuery.trim(),
+                              icon: "sparkles",
+                              lat: userCoords?.lat,
+                              lng: userCoords?.lng,
+                              users: [],
+                            })}
+                            className="w-full flex items-center gap-3 px-3 py-3 hover:bg-primary/10 transition-colors text-left border-t border-border"
+                          >
+                            <MapPin className="w-4 h-4 text-primary shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium text-primary block truncate">Use "{venueSearchQuery.trim()}"</span>
+                              <span className="text-[10px] text-muted-foreground">Add as a custom location</span>
+                            </div>
+                          </button>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
