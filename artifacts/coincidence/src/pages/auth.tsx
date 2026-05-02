@@ -349,8 +349,9 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     }
     setIsLoading(true);
     setResetError("");
+    const redirectTo = window.location.href.split("#")[0].split("?")[0];
     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
-      redirectTo: window.location.origin,
+      redirectTo,
     });
     if (error) {
       setResetError(error.message);
@@ -565,8 +566,9 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
                   onClick={async () => {
                     if (resendCooldown > 0 || isLoading) return;
                     setIsLoading(true);
+                    const redirectTo = window.location.href.split("#")[0].split("?")[0];
                     const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim().toLowerCase(), {
-                      redirectTo: window.location.origin,
+                      redirectTo,
                     });
                     setIsLoading(false);
                     if (!error) startResendCooldown();

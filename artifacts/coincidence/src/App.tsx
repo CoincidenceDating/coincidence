@@ -24,6 +24,83 @@ import * as db from "@/lib/db";
 
 const queryClient = new QueryClient();
 
+function PasswordRecoveryScreen({ onDone }: { onDone: () => void }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  async function handleSubmit() {
+    setError("");
+    if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
+    if (password !== confirm) { setError("Passwords don't match"); return; }
+    setLoading(true);
+    const { error: err } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    setDone(true);
+    setTimeout(onDone, 2200);
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
+      <div className="w-full max-w-sm">
+        <div className="mb-8 text-center">
+          <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: "linear-gradient(135deg,#E8387D 0%,#9B5DE5 100%)" }}>
+            {done
+              ? <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>
+              : <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+            }
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">{done ? "Password updated!" : "Set new password"}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{done ? "Taking you back to log in…" : "Choose a strong password for your account"}</p>
+        </div>
+
+        {!done && (
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">New password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full px-4 py-3 rounded-2xl bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Confirm password</label>
+              <input
+                type="password"
+                value={confirm}
+                onChange={e => setConfirm(e.target.value)}
+                placeholder="Same as above"
+                className="w-full px-4 py-3 rounded-2xl bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="mt-2 w-full py-3.5 rounded-2xl font-semibold text-sm text-white active:scale-[0.98] transition-all disabled:opacity-60"
+              style={{ background: "linear-gradient(135deg,#E8387D 0%,#9B5DE5 100%)" }}
+            >
+              {loading
+                ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving…</span>
+                : "Save new password"
+              }
+            </button>
+            <button onClick={onDone} className="text-sm text-muted-foreground hover:text-foreground transition-colors text-center">
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 type Tab = "swipe" | "coincidence" | "matches" | "liked" | "undecided" | "profile";
 
 function getOpeningText(match: Match): string {
@@ -40,6 +117,7 @@ function AppShell() {
 
   const [sessionChecked, setSessionChecked] = useState(false);
   const [dataLoading, setDataLoading]   = useState(false);
+  const [showPasswordRecovery, setShowPasswordRecovery] = useState(false);
   const [showSetup, setShowSetup]       = useState(false);
   const [account, setAccount]           = useState<AccountData | null>(null);
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
@@ -106,6 +184,8 @@ function AppShell() {
       if (event === "SIGNED_OUT") {
         setAccount(null);
         setIsLoggedOut(true);
+      } else if (event === "PASSWORD_RECOVERY") {
+        setShowPasswordRecovery(true);
       } else if (event === "SIGNED_IN" && session?.user) {
         const u = session.user;
         setAccount({
@@ -570,6 +650,8 @@ function AppShell() {
       </motion.div>
     </AnimatePresence>
   );
+  if (showPasswordRecovery) return <PasswordRecoveryScreen onDone={() => setShowPasswordRecovery(false)} />;
+
   if (isLoggedOut) return (
     <AnimatePresence>
       <motion.div key="relogin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
