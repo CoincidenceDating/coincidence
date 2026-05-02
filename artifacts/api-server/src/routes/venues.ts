@@ -1,8 +1,10 @@
 import { Router } from "express";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
 const FSQ_API_KEY = process.env.FOURSQUARE_API_KEY ?? "";
+logger.info({ keySet: FSQ_API_KEY.length > 0, keyPrefix: FSQ_API_KEY.slice(0, 4), keyLength: FSQ_API_KEY.length }, "Foursquare key loaded");
 
 const CATEGORY_TO_ICON: Record<string, string> = {
   "13003": "coffee",
