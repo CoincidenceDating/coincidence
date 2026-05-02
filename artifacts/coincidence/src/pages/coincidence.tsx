@@ -515,17 +515,13 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                           )}
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          {!locTooFar && (
-                            <>
-                              <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)" }}>
-                                <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.28)" }} />
-                              </div>
-                              <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
-                              <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
-                                {count} {count === 1 ? "person" : "people"}
-                              </span>
-                            </>
-                          )}
+                          <div className="w-14 h-1 rounded-full overflow-hidden" style={{ background: isSelected ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)" }}>
+                            <div className={`h-full rounded-full ${heat.bar}`} style={{ background: isSelected ? "rgba(255,255,255,0.6)" : "rgba(255,255,255,0.28)" }} />
+                          </div>
+                          <span className={`w-1.5 h-1.5 rounded-full ${heat.dot} shrink-0`} />
+                          <span className={`text-[10px] w-10 text-right ${isSelected ? "text-background/60" : "text-muted-foreground"}`}>
+                            {count} {count === 1 ? "person" : "people"}
+                          </span>
                         </div>
                       </button>
                     );
