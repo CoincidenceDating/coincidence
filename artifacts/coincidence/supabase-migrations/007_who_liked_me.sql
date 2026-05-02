@@ -41,7 +41,7 @@ AS $$
   WHERE s.profile_id = auth.uid()::TEXT
     AND s.liked = true
     AND p.setup_complete = true
-  ORDER BY s.created_at DESC
+  ORDER BY s.swiped_at DESC
   LIMIT 100;
 $$;
 
