@@ -318,10 +318,12 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
         return;
       }
 
-      if (data.user) {
+      if (data.session && data.user) {
         onCreateAccount({ id: data.user.id, email: trimEmail, phone });
-      } else {
+      } else if (data.user) {
         setErrors({ confirm: "Please check your email to confirm your account, then log in." });
+      } else {
+        setErrors({ confirm: "Something went wrong. Please try again." });
       }
       setIsLoading(false);
     }

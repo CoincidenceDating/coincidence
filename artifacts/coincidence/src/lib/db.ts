@@ -39,7 +39,8 @@ export async function getProfile() {
 /* ── photos ───────────────────────────────────────────────── */
 
 export async function uploadPhoto(file: File): Promise<{ url: string | null; error: string | null }> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
   if (!user) return { url: null, error: "Not logged in" };
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `${user.id}/${Date.now()}.${ext}`;
