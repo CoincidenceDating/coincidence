@@ -369,17 +369,33 @@ export async function getDiscoverProfiles(
   lookingFor: string,
   ageMin: number,
   ageMax: number,
+  lat?: number | null,
+  lng?: number | null,
+  radiusMiles?: number | null,
 ): Promise<import("./data").Profile[]> {
+  const radiusKm = radiusMiles != null ? radiusMiles * 1.60934 : null;
   const { data, error } = await supabase.rpc("get_discover_profiles", {
     p_looking_for: lookingFor,
     p_age_min: ageMin,
     p_age_max: ageMax,
+    p_lat:       lat       ?? null,
+    p_lng:       lng       ?? null,
+    p_radius_km: radiusKm  ?? null,
   });
   if (error) return [];
   return (data ?? []).map((r: {
     user_id: string; name: string; age: number; bio: string;
     photos: string[]; gender: string;
   }) => buildProfileSnapshot(r));
+}
+
+export async function updateUserLocation(lat: number, lng: number) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_profiles").upsert(
+    { user_id: user.id, lat, lng, updated_at: new Date().toISOString() },
+    { onConflict: "user_id" }
+  );
 }
 
 export async function checkMutualLike(targetUserId: string): Promise<boolean> {

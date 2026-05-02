@@ -65,6 +65,9 @@ function AppShell() {
   const [boostActiveUntil, setBoostActiveUntil] = useState<number | null>(null);
   const [boostTimeLeft, setBoostTimeLeft]       = useState(0);
   const [boostRadius, setBoostRadius]           = useState(5);
+  const [discoverRadius, setDiscoverRadius]     = useState(25);
+  const [userLat, setUserLat]   = useState<number | null>(null);
+  const [userLng, setUserLng]   = useState<number | null>(null);
   const [blockedIds, setBlockedIds]     = useState<string[]>([]);
   const [swipedIds, setSwipedIds]       = useState<string[]>([]);
   const [whoLikedMeCount, setWhoLikedMeCount]         = useState(0);
@@ -94,7 +97,7 @@ function AppShell() {
         setShowLanding(false);
         setAccount(acct);
         setIsLoggedOut(false);
-        loadUserData();
+        loadUserData().then(() => requestGpsLocation());
       }
       setSessionChecked(true);
     });
@@ -193,18 +196,36 @@ function AppShell() {
     }
   }
 
-  async function refreshDiscoverProfiles(lf?: string, amin?: number, amax?: number) {
+  async function refreshDiscoverProfiles(lf?: string, amin?: number, amax?: number, lat?: number | null, lng?: number | null, radiusMi?: number) {
     setIsLoadingProfiles(true);
     try {
       const profiles = await db.getDiscoverProfiles(
         lf  ?? lookingFor,
         amin ?? profilePrefs.ageMin,
         amax ?? profilePrefs.ageMax,
+        lat  !== undefined ? lat  : userLat,
+        lng  !== undefined ? lng  : userLng,
+        radiusMi !== undefined ? radiusMi : discoverRadius,
       );
       setDiscoverProfiles(profiles);
     } finally {
       setIsLoadingProfiles(false);
     }
+  }
+
+  function requestGpsLocation() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        setUserLat(latitude);
+        setUserLng(longitude);
+        db.updateUserLocation(latitude, longitude);
+        refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+    );
   }
 
   // Countdown tick
@@ -624,6 +645,12 @@ function AppShell() {
             onGoToProfile={() => setActiveTab("profile")}
             discoverProfiles={discoverProfiles}
             isLoadingProfiles={isLoadingProfiles}
+            discoverRadius={discoverRadius}
+            hasGps={userLat !== null}
+            onRadiusChange={(r) => {
+              setDiscoverRadius(r);
+              refreshDiscoverProfiles(undefined, undefined, undefined, userLat, userLng, r);
+            }}
           />
         )}
         {activeTab === "coincidence" && (
