@@ -86,6 +86,7 @@ interface ProfilePageProps {
   onAddCredits: (count: number) => void;
   onLogout: () => void;
   onDeleteAccount: () => void;
+  onProfileUpdate?: (updated: EditableProfile) => void;
 }
 
 /* ─── persistence ───────────────────────────── */
@@ -122,11 +123,12 @@ export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost, onAddCredits,
-  onLogout, onDeleteAccount,
+  onLogout, onDeleteAccount, onProfileUpdate,
 }: ProfilePageProps) {
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
   const [draft, setDraft]     = useState<EditableProfile>(editable);
+  const [isSaving, setIsSaving] = useState(false);
   const [photos, setPhotos]       = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError]         = useState<string | null>(null);
@@ -210,10 +212,20 @@ export default function ProfilePage({
 
   /* edit helpers */
   function openEdit() { setDraft({ ...editable }); setShowEdit(true); }
-  function saveEdit() {
+  async function saveEdit() {
+    setIsSaving(true);
     const saved = { ...draft };
     setEditable(saved);
-    saveProfile(saved);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(saved)); } catch {}
+    await db.upsertProfile({
+      name: saved.name, age: saved.age, bio: saved.bio,
+      hometown: saved.hometown, height: saved.height,
+      hobbies: saved.hobbies,
+      looking_for: saved.lookingFor ?? "Everyone",
+      setup_complete: true,
+    });
+    onProfileUpdate?.(saved);
+    setIsSaving(false);
     setShowEdit(false);
   }
   function cancelEdit() { setShowEdit(false); }
@@ -823,8 +835,12 @@ export default function ProfilePage({
                 <div className="w-10 h-1 rounded-full bg-muted absolute left-1/2 -translate-x-1/2 top-3" />
                 <h2 className="text-lg font-bold">Edit profile</h2>
                 <div className="flex gap-2">
-                  <button onClick={cancelEdit} className="text-sm text-muted-foreground hover:text-foreground transition-colors">Cancel</button>
-                  <button onClick={saveEdit} className="text-sm font-semibold text-foreground border border-foreground px-3 py-1 rounded-full hover:bg-foreground hover:text-background transition-all">Save</button>
+                  <button onClick={cancelEdit} disabled={isSaving} className="text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40">Cancel</button>
+                  <button onClick={saveEdit} disabled={isSaving} className="text-sm font-semibold text-foreground border border-foreground px-3 py-1 rounded-full hover:bg-foreground hover:text-background transition-all disabled:opacity-60 flex items-center gap-1.5">
+                    {isSaving ? (
+                      <><motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }} className="w-3 h-3 border border-foreground/40 border-t-foreground rounded-full" />Saving…</>
+                    ) : "Save"}
+                  </button>
                 </div>
               </div>
 

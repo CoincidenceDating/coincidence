@@ -261,6 +261,20 @@ function AppShell() {
     refreshDiscoverProfiles(lf, amin, amax);
   }
 
+  function handleProfileUpdate(updated: { name: string; age: number; bio: string; hometown: string; height: string; hobbies: string[]; lookingFor?: string }) {
+    const lf = updated.lookingFor ?? "Everyone";
+    setLookingFor(lf);
+    setMyProfileSnapshot(db.buildProfileSnapshot({
+      user_id: account?.id ?? "",
+      name: updated.name,
+      age: updated.age,
+      bio: updated.bio,
+      photos: [],
+      gender: "",
+    }));
+    refreshDiscoverProfiles(lf, profilePrefs.ageMin, profilePrefs.ageMax);
+  }
+
   function handleResetSetup() {
     db.upsertProfile({ setup_complete: false });
     setShowSetup(true);
@@ -598,6 +612,7 @@ function AppShell() {
             }}
             onLogout={handleLogout}
             onDeleteAccount={handleDeleteAccount}
+            onProfileUpdate={handleProfileUpdate}
           />
         )}
       </main>
