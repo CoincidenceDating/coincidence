@@ -65,7 +65,9 @@ function PasswordRecoveryScreen({ onDone }: { onDone: () => void }) {
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
                 placeholder="At least 8 characters"
+                autoFocus
                 className="w-full px-4 py-3 rounded-2xl bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>
@@ -75,6 +77,7 @@ function PasswordRecoveryScreen({ onDone }: { onDone: () => void }) {
                 type="password"
                 value={confirm}
                 onChange={e => setConfirm(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSubmit()}
                 placeholder="Same as above"
                 className="w-full px-4 py-3 rounded-2xl bg-card border border-border text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
@@ -90,9 +93,6 @@ function PasswordRecoveryScreen({ onDone }: { onDone: () => void }) {
                 ? <span className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving…</span>
                 : "Save new password"
               }
-            </button>
-            <button onClick={onDone} className="text-sm text-muted-foreground hover:text-foreground transition-colors text-center">
-              Cancel
             </button>
           </div>
         )}
@@ -154,6 +154,7 @@ function AppShell() {
   const [whoLikedMeExpiresAt, setWhoLikedMeExpiresAt] = useState<number | null>(null);
 
   const matchesSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const inRecoveryRef = useRef(false);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -185,8 +186,11 @@ function AppShell() {
         setAccount(null);
         setIsLoggedOut(true);
       } else if (event === "PASSWORD_RECOVERY") {
+        inRecoveryRef.current = true;
         setShowPasswordRecovery(true);
+        setAccount(null);
       } else if (event === "SIGNED_IN" && session?.user) {
+        if (inRecoveryRef.current) return;
         const u = session.user;
         setAccount({
           id: u.id,
@@ -650,7 +654,13 @@ function AppShell() {
       </motion.div>
     </AnimatePresence>
   );
-  if (showPasswordRecovery) return <PasswordRecoveryScreen onDone={() => setShowPasswordRecovery(false)} />;
+  if (showPasswordRecovery) return <PasswordRecoveryScreen onDone={async () => {
+    inRecoveryRef.current = false;
+    setShowPasswordRecovery(false);
+    await supabase.auth.signOut();
+    setAccount(null);
+    setIsLoggedOut(true);
+  }} />;
 
   if (isLoggedOut) return (
     <AnimatePresence>
