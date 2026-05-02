@@ -124,7 +124,8 @@ router.get("/venues/nearby", async (req, res) => {
     );
 
     if (!fsqRes.ok) {
-      req.log.error({ status: fsqRes.status }, "Foursquare nearby API error");
+      const body = await fsqRes.text().catch(() => "");
+      req.log.error({ status: fsqRes.status, body }, "Foursquare nearby API error");
       res.status(502).json({ error: "Nearby venue search failed" });
       return;
     }
