@@ -200,16 +200,7 @@ function AppShell() {
     if (!boostedIds.length) return profiles;
     const boosted = profiles.filter((p) => boostedIds.includes(p.id));
     const rest    = profiles.filter((p) => !boostedIds.includes(p.id));
-    if (!boosted.length) return profiles;
-    const deck = [...rest];
-    for (const bp of boosted) {
-      const third = Math.floor(deck.length / 3);
-      const two   = Math.floor((deck.length * 2) / 3);
-      deck.splice(two,   0, { ...bp, id: bp.id + "_b3" });
-      deck.splice(third, 0, { ...bp, id: bp.id + "_b2" });
-      deck.unshift(bp);
-    }
-    return deck;
+    return [...boosted, ...rest];
   }
 
   async function refreshDiscoverProfiles(lf?: string, amin?: number, amax?: number, lat?: number | null, lng?: number | null, radiusMi?: number) {
