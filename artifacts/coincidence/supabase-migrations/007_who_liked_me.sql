@@ -24,7 +24,7 @@ AS $$
   SELECT COUNT(*)::INTEGER
   FROM user_swiped s
   JOIN user_profiles p ON p.user_id = s.user_id
-  WHERE s.profile_id = auth.uid()
+  WHERE s.profile_id = auth.uid()::TEXT
     AND s.liked = true
     AND p.setup_complete = true;
 $$;
@@ -38,7 +38,7 @@ AS $$
   SELECT p.*
   FROM user_swiped s
   JOIN user_profiles p ON p.user_id = s.user_id
-  WHERE s.profile_id = auth.uid()
+  WHERE s.profile_id = auth.uid()::TEXT
     AND s.liked = true
     AND p.setup_complete = true
   ORDER BY s.created_at DESC
