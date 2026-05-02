@@ -681,19 +681,19 @@ export default function ProfilePage({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
             onClick={e => { if (e.target === e.currentTarget) setShowSettings(false); }}
           >
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 380, damping: 36 }}
-              className="w-full max-w-lg bg-card rounded-t-3xl pb-10 overflow-hidden"
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ type: "spring", stiffness: 380, damping: 32 }}
+              className="w-full max-w-lg bg-card rounded-3xl overflow-hidden overflow-y-auto"
+              style={{ maxHeight: "80vh" }}
             >
-              {/* Handle + header */}
+              {/* Header */}
               <div className="px-6 pt-5 pb-4 border-b border-border">
-                <div className="w-10 h-1 rounded-full bg-muted-foreground/20 mx-auto mb-4" />
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold">Settings</h2>
                   <button onClick={() => setShowSettings(false)}
