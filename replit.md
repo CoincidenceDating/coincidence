@@ -52,4 +52,12 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
+## Stripe Payments (Pending)
+- `stripe` and `stripe-replit-sync` packages are installed at workspace root
+- Stripe integration NOT yet connected — user will create a Stripe account later
+- When ready: connect via Replit Integrations tab (Stripe connector) OR provide `sk_test_...` / `sk_live_...` key as a secret
+- String packs are ONE-TIME purchases (not subscriptions): 1 string £3.99, 5 strings £18.99, 10 strings £34.99
+- Checkout mode should be `payment` (not `subscription`)
+- After payment: webhook should add strings to `user_profiles` in Supabase
+
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
