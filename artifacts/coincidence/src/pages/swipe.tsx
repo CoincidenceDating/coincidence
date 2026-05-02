@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { type Match, type Profile } from "@/lib/data";
-import { isRealUserId } from "@/lib/db";
+import { isRealUserId, baseProfileId } from "@/lib/db";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
 import { MapPin, User, Sparkles, Loader2, Navigation } from "lucide-react";
@@ -64,20 +64,22 @@ export default function SwipePage({
 
   function handleSwipe(dir: "left" | "right" | "maybe") {
     if (!profile) return;
+    const cleanProfile: Profile = { ...profile, id: baseProfileId(profile.id) };
     if (dir === "right" && isRealUserId(profile.id)) {
-      onRealRightSwipe(profile);
-      setStringSentName(profile.name.split(" ")[0]);
+      onRealRightSwipe(cleanProfile);
+      setStringSentName(cleanProfile.name.split(" ")[0]);
       setTimeout(() => setStringSentName(null), 2800);
     } else {
-      if (dir === "right") onMatch({ profile, source: "swipe", matchedAt: Date.now() });
-      else if (dir === "maybe") onMaybe({ profile, source: "swipe", matchedAt: Date.now() });
+      if (dir === "right") onMatch({ profile: cleanProfile, source: "swipe", matchedAt: Date.now() });
+      else if (dir === "maybe") onMaybe({ profile: cleanProfile, source: "swipe", matchedAt: Date.now() });
       onSwiped(profile.id, dir === "right");
     }
   }
 
   function handleDoubleString() {
     if (!profile || boostCredits < 2) return;
-    onMatch({ profile, source: "swipe", matchedAt: Date.now(), superLike: true });
+    const cleanProfile: Profile = { ...profile, id: baseProfileId(profile.id) };
+    onMatch({ profile: cleanProfile, source: "swipe", matchedAt: Date.now(), superLike: true });
     onDoubleStringCredit();
     onSwiped(profile.id, true);
   }

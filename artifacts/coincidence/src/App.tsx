@@ -196,18 +196,37 @@ function AppShell() {
     }
   }
 
+  function spreadBoostedProfiles(profiles: Profile[], boostedIds: string[]): Profile[] {
+    if (!boostedIds.length) return profiles;
+    const boosted = profiles.filter((p) => boostedIds.includes(p.id));
+    const rest    = profiles.filter((p) => !boostedIds.includes(p.id));
+    if (!boosted.length) return profiles;
+    const deck = [...rest];
+    for (const bp of boosted) {
+      const third = Math.floor(deck.length / 3);
+      const two   = Math.floor((deck.length * 2) / 3);
+      deck.splice(two,   0, { ...bp, id: bp.id + "_b3" });
+      deck.splice(third, 0, { ...bp, id: bp.id + "_b2" });
+      deck.unshift(bp);
+    }
+    return deck;
+  }
+
   async function refreshDiscoverProfiles(lf?: string, amin?: number, amax?: number, lat?: number | null, lng?: number | null, radiusMi?: number) {
     setIsLoadingProfiles(true);
     try {
-      const profiles = await db.getDiscoverProfiles(
-        lf  ?? lookingFor,
-        amin ?? profilePrefs.ageMin,
-        amax ?? profilePrefs.ageMax,
-        lat  !== undefined ? lat  : userLat,
-        lng  !== undefined ? lng  : userLng,
-        radiusMi !== undefined ? radiusMi : discoverRadius,
-      );
-      setDiscoverProfiles(profiles);
+      const [profiles, boostedIds] = await Promise.all([
+        db.getDiscoverProfiles(
+          lf  ?? lookingFor,
+          amin ?? profilePrefs.ageMin,
+          amax ?? profilePrefs.ageMax,
+          lat  !== undefined ? lat  : userLat,
+          lng  !== undefined ? lng  : userLng,
+          radiusMi !== undefined ? radiusMi : discoverRadius,
+        ),
+        db.getBoostedProfileIds(),
+      ]);
+      setDiscoverProfiles(spreadBoostedProfiles(profiles, boostedIds));
     } finally {
       setIsLoadingProfiles(false);
     }
@@ -468,9 +487,10 @@ function AppShell() {
   }
 
   async function handleRealRightSwipe(profile: Profile) {
-    setSwipedIds((prev) => prev.includes(profile.id) ? prev : [...prev, profile.id]);
-    setDiscoverProfiles((prev) => prev.filter((p) => p.id !== profile.id));
-    await db.addSwiped(profile.id, true);
+    const baseId = db.baseProfileId(profile.id);
+    setSwipedIds((prev) => prev.includes(baseId) ? prev : [...prev, baseId]);
+    setDiscoverProfiles((prev) => prev.filter((p) => db.baseProfileId(p.id) !== baseId));
+    await db.addSwiped(baseId, true);
     if (!myProfileSnapshot) return;
     const mutual = await db.createMutualMatch(profile.id, profile, myProfileSnapshot);
     if (mutual) {
@@ -668,9 +688,10 @@ function AppShell() {
             onDoubleStringCredit={handleDoubleStringCredit}
             blockedIds={blockedIds}
             onSwiped={(id, liked) => {
-              setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
-              setDiscoverProfiles((prev) => prev.filter(p => p.id !== id));
-              db.addSwiped(id, liked);
+              const baseId = db.baseProfileId(id);
+              setSwipedIds((prev) => prev.includes(baseId) ? prev : [...prev, baseId]);
+              setDiscoverProfiles((prev) => prev.filter(p => db.baseProfileId(p.id) !== baseId));
+              db.addSwiped(baseId, liked);
             }}
             onRealRightSwipe={handleRealRightSwipe}
             onGoToProfile={() => setActiveTab("profile")}

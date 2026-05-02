@@ -6,8 +6,20 @@ import type { Message } from "@/pages/chat";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export function baseProfileId(id: string): string {
+  return id.replace(/_b[23]$/, "");
+}
+
 export function isRealUserId(id: string): boolean {
-  return UUID_RE.test(id);
+  return UUID_RE.test(baseProfileId(id));
+}
+
+export async function getBoostedProfileIds(): Promise<string[]> {
+  const { data } = await supabase
+    .from("user_boosts")
+    .select("user_id")
+    .gt("until", Date.now());
+  return (data ?? []).map((r) => r.user_id as string);
 }
 
 /* ── profile ──────────────────────────────────────────────── */
