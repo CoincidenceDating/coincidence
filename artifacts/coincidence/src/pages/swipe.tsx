@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { swipeProfiles, filterByLookingFor, type Match } from "@/lib/data";
+import { type Match, type Profile } from "@/lib/data";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
-import { MapPin, User, Sparkles } from "lucide-react";
+import { MapPin, User, Sparkles, Loader2 } from "lucide-react";
 
 function formatBoostTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -21,11 +21,11 @@ interface SwipePageProps {
   boostCredits: number;
   onActivateBoost: () => void;
   onDoubleStringCredit: () => void;
-  lookingFor: string;
   blockedIds: string[];
-  swipedIds: string[];
-  onSwiped: (id: string) => void;
+  onSwiped: (id: string, liked: boolean) => void;
   onGoToProfile: () => void;
+  discoverProfiles: Profile[];
+  isLoadingProfiles: boolean;
 }
 
 export default function SwipePage({
@@ -37,16 +37,15 @@ export default function SwipePage({
   boostCredits,
   onActivateBoost,
   onDoubleStringCredit,
-  lookingFor,
   blockedIds,
-  swipedIds,
   onSwiped,
   onGoToProfile,
+  discoverProfiles,
+  isLoadingProfiles,
 }: SwipePageProps) {
   const [pulse, setPulse] = useState(false);
 
-  const filteredProfiles = filterByLookingFor(swipeProfiles, lookingFor)
-    .filter((p) => !blockedIds.includes(p.id) && !swipedIds.includes(p.id));
+  const filteredProfiles = (discoverProfiles ?? []).filter((p) => !blockedIds.includes(p.id));
 
   const profile = filteredProfiles[0];
 
@@ -57,14 +56,14 @@ export default function SwipePage({
     } else if (dir === "maybe") {
       onMaybe({ profile, source: "swipe", matchedAt: Date.now() });
     }
-    onSwiped(profile.id);
+    onSwiped(profile.id, dir === "right");
   }
 
   function handleDoubleString() {
     if (!profile || boostCredits < 2) return;
     onMatch({ profile, source: "swipe", matchedAt: Date.now(), superLike: true });
     onDoubleStringCredit();
-    onSwiped(profile.id);
+    onSwiped(profile.id, true);
   }
 
   function handleActivate() {
@@ -146,7 +145,18 @@ export default function SwipePage({
       </div>
 
       <AnimatePresence mode="wait">
-        {profile ? (
+        {isLoadingProfiles ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-4 pt-12"
+          >
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Finding people near you…</p>
+          </motion.div>
+        ) : profile ? (
           <motion.div key={profile.id} className="w-full flex justify-center">
             <SwipeCard
               profile={profile}
@@ -164,7 +174,6 @@ export default function SwipePage({
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="flex flex-col items-center gap-5 text-center px-8"
           >
-            {/* Animated string icon */}
             <motion.div
               className="w-20 h-20 rounded-full bg-muted flex items-center justify-center"
               animate={{ scale: [1, 1.06, 1] }}
@@ -178,7 +187,7 @@ export default function SwipePage({
                 You've seen everyone nearby
               </p>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                You've interacted with everyone in your radius. Check back later — or switch to the Coincidence tab to find people at places you visit.
+                Check back later — or switch to the Coincidence tab to find people at places you visit.
               </p>
             </div>
 

@@ -27,6 +27,7 @@ export interface SetupData {
   hometown: string;
   height: string;
   hobbies: string[];
+  gender: string;
   lookingFor: string;
   ageMin: number;
   ageMax: number;
@@ -54,6 +55,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
   const [hometown, setHometown] = useState("");
   const [bio, setBio]           = useState("");
   const [hobbies, setHobbies]   = useState<string[]>([]);
+  const [gender, setGender]     = useState("");
   const [lookingFor, setLookingFor] = useState("Everyone");
   const [ageMin, setAgeMin]     = useState(18);
   const [ageMax, setAgeMax]     = useState(40);
@@ -74,7 +76,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
   }
 
   function finish() {
-    onComplete({ name: name.trim() || "You", age, bio, hometown, height, hobbies, lookingFor, ageMin, ageMax });
+    onComplete({ name: name.trim() || "You", age, bio, hometown, height, hobbies, gender: gender || "prefer-not-to-say", lookingFor, ageMin, ageMax });
   }
 
   function toggleHobby(h: string) {
@@ -85,7 +87,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
 
   const canNext = [
     name.trim().length > 0,  // step 0: name required
-    true,                     // step 1: age/height/hometown all optional
+    gender.length > 0,        // step 1: gender required
     true,                     // step 2: bio optional
     hobbies.length > 0,       // step 3: at least 1 hobby
     true,                     // step 4: preferences
@@ -93,7 +95,7 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
 
   const stepTitles = [
     "What's your name?",
-    "A bit about you",
+    "How do you identify?",
     "Your story",
     "What do you love?",
     "Your preferences",
@@ -184,9 +186,36 @@ export default function SetupPage({ onComplete }: SetupPageProps) {
               </div>
             )}
 
-            {/* ── Step 1: Age / Height / Hometown ── */}
+            {/* ── Step 1: Gender / Age / Height / Hometown ── */}
             {step === 1 && (
               <div className="space-y-6">
+                {/* Gender */}
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">I am a</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: "man", label: "Man" },
+                      { value: "woman", label: "Woman" },
+                      { value: "non-binary", label: "Non-binary" },
+                    ].map(opt => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setGender(opt.value)}
+                        className={`py-3.5 rounded-2xl text-sm font-semibold transition-all border-2 ${
+                          gender === opt.value
+                            ? "bg-foreground text-background border-foreground"
+                            : "border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                  {!gender && (
+                    <p className="text-xs text-muted-foreground mt-2">Select one to continue</p>
+                  )}
+                </div>
+
                 {/* Age */}
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block mb-3">Age</label>

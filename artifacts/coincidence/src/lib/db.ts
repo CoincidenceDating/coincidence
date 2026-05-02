@@ -207,13 +207,61 @@ export async function getSwiped(): Promise<string[]> {
   return (data ?? []).map((r) => r.profile_id as string);
 }
 
-export async function addSwiped(profileId: string) {
+export async function addSwiped(profileId: string, liked = false) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from("user_swiped").upsert(
-    { user_id: user.id, profile_id: profileId },
+    { user_id: user.id, profile_id: profileId, liked },
     { onConflict: "user_id,profile_id" }
   );
+}
+
+/* ── discover real profiles ───────────────────────────── */
+
+const GRADIENTS = [
+  "linear-gradient(160deg,#1a1a2e 0%,#2d1b69 100%)",
+  "linear-gradient(160deg,#141e30 0%,#243b55 100%)",
+  "linear-gradient(160deg,#0f2027 0%,#2c5364 100%)",
+  "linear-gradient(160deg,#232526 0%,#414345 100%)",
+  "linear-gradient(160deg,#1c1c2e 0%,#3d3d5c 100%)",
+  "linear-gradient(160deg,#2c3e50 0%,#4ca1af 100%)",
+];
+
+export async function getDiscoverProfiles(
+  lookingFor: string,
+  ageMin: number,
+  ageMax: number,
+): Promise<import("./data").Profile[]> {
+  const { data, error } = await supabase.rpc("get_discover_profiles", {
+    p_looking_for: lookingFor,
+    p_age_min: ageMin,
+    p_age_max: ageMax,
+  });
+  if (error) return [];
+  return (data ?? []).map((r: {
+    user_id: string; name: string; age: number; bio: string;
+    photos: string[]; gender: string;
+  }) => {
+    const initials = r.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
+    const gradientIdx = r.user_id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GRADIENTS.length;
+    return {
+      id: r.user_id,
+      name: r.name,
+      age: r.age,
+      bio: r.bio,
+      avatar: initials,
+      distance: "Nearby",
+      gradient: GRADIENTS[gradientIdx],
+      gender: r.gender as import("./data").Gender,
+      photo: r.photos?.[0],
+      photos: r.photos ?? [],
+    };
+  });
+}
+
+export async function checkMutualLike(targetUserId: string): Promise<boolean> {
+  const { data } = await supabase.rpc("check_mutual_like", { target_user_id: targetUserId });
+  return data === true;
 }
 
 /* ── presence ─────────────────────────────────────────── */

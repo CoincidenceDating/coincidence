@@ -48,6 +48,9 @@ function AppShell() {
   const [showSplash, setShowSplash]     = useState(true);
 
   const [lookingFor, setLookingFor]     = useState("Everyone");
+  const [discoverProfiles, setDiscoverProfiles] = useState<import("./lib/data").Profile[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+  const [profilePrefs, setProfilePrefs] = useState({ ageMin: 18, ageMax: 50 });
   const [matches, setMatches]           = useState<Match[]>([]);
   const [undecided, setUndecided]       = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount]       = useState(0);
@@ -129,13 +132,34 @@ function AppShell() {
       setBlockedIds(blocked);
       setSwipedIds(swiped);
       if (profile) {
-        setLookingFor(profile.looking_for ?? "Everyone");
+        const lf   = profile.looking_for ?? "Everyone";
+        const amin = profile.age_min ?? 18;
+        const amax = profile.age_max ?? 50;
+        setLookingFor(lf);
+        setProfilePrefs({ ageMin: amin, ageMax: amax });
         setShowSetup(!profile.setup_complete);
+        if (profile.setup_complete) {
+          refreshDiscoverProfiles(lf, amin, amax);
+        }
       } else {
         setShowSetup(true);
       }
     } finally {
       setDataLoading(false);
+    }
+  }
+
+  async function refreshDiscoverProfiles(lf?: string, amin?: number, amax?: number) {
+    setIsLoadingProfiles(true);
+    try {
+      const profiles = await db.getDiscoverProfiles(
+        lf  ?? lookingFor,
+        amin ?? profilePrefs.ageMin,
+        amax ?? profilePrefs.ageMax,
+      );
+      setDiscoverProfiles(profiles);
+    } finally {
+      setIsLoadingProfiles(false);
     }
   }
 
@@ -179,17 +203,23 @@ function AppShell() {
   }
 
   function handleSetupComplete(data: SetupData) {
+    const lf   = data.lookingFor ?? "Everyone";
+    const amin = data.ageMin ?? 18;
+    const amax = data.ageMax ?? 50;
     const profileFields = {
       name: data.name, age: data.age, bio: data.bio,
       hometown: data.hometown, height: data.height,
       hobbies: data.hobbies,
-      looking_for: data.lookingFor ?? "Everyone",
-      age_min: data.ageMin ?? 18, age_max: data.ageMax ?? 50,
+      gender: data.gender ?? "prefer-not-to-say",
+      looking_for: lf,
+      age_min: amin, age_max: amax,
       setup_complete: true,
     };
     db.upsertProfile(profileFields);
-    setLookingFor(data.lookingFor ?? "Everyone");
+    setLookingFor(lf);
+    setProfilePrefs({ ageMin: amin, ageMax: amax });
     setShowSetup(false);
+    refreshDiscoverProfiles(lf, amin, amax);
   }
 
   function handleResetSetup() {
@@ -211,6 +241,7 @@ function AppShell() {
     setBoostTimeLeft(0);
     setBlockedIds([]);
     setSwipedIds([]);
+    setDiscoverProfiles([]);
     setActiveTab("swipe");
     setIsLoggedOut(true);
   }
@@ -230,6 +261,7 @@ function AppShell() {
     setBoostTimeLeft(0);
     setBlockedIds([]);
     setSwipedIds([]);
+    setDiscoverProfiles([]);
     setLookingFor("Everyone");
     setShowSetup(true);
     setIsLoggedOut(false);
@@ -295,7 +327,18 @@ function AppShell() {
   function handleTabChange(tab: Tab) {
     if (tab === "matches") setNewMatchCount(0);
     if (tab === "undecided") setNewUndecidedCount(0);
-    if (tab === "swipe" || tab === "coincidence") {
+    if (tab === "swipe") {
+      db.getProfile().then((p) => {
+        if (p?.looking_for) {
+          const lf   = p.looking_for;
+          const amin = p.age_min ?? 18;
+          const amax = p.age_max ?? 50;
+          setLookingFor(lf);
+          setProfilePrefs({ ageMin: amin, ageMax: amax });
+          refreshDiscoverProfiles(lf, amin, amax);
+        }
+      });
+    } else if (tab === "coincidence") {
       db.getProfile().then((p) => { if (p?.looking_for) setLookingFor(p.looking_for); });
     }
     setActiveTab(tab);
@@ -433,7 +476,7 @@ function AppShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden relative bg-background">
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
-        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} lookingFor={lookingFor} blockedIds={blockedIds} swipedIds={swipedIds} onSwiped={(id) => { setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]); db.addSwiped(id); }} onGoToProfile={() => setActiveTab("profile")} />}
+        {activeTab === "swipe" && <SwipePage onMatch={handleMatch} onMaybe={handleMaybe} isBoostActive={isBoostActive} boostTimeLeft={boostTimeLeft} boostRadius={boostRadius} boostCredits={boostCredits} onActivateBoost={handleActivateBoost} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} onSwiped={(id, liked) => { setSwipedIds((prev) => prev.includes(id) ? prev : [...prev, id]); setDiscoverProfiles((prev) => prev.filter(p => p.id !== id)); db.addSwiped(id, liked); }} onGoToProfile={() => setActiveTab("profile")} discoverProfiles={discoverProfiles} isLoadingProfiles={isLoadingProfiles} />}
         {activeTab === "coincidence" && <CoincidencePage onMatch={handleMatch} onMaybe={handleMaybe} onCheckIn={handleCheckIn} onSendMessage={handleOpenChat} checkedInLocations={checkedInLocations} lookingFor={lookingFor} boostCredits={boostCredits} onDoubleStringCredit={handleDoubleStringCredit} blockedIds={blockedIds} />}
         {activeTab === "matches" && (
           <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
