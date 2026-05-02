@@ -46,22 +46,6 @@ function deterministicHash(str: string): number {
   return h >>> 0;
 }
 
-function amenityToIcon(amenity: string): string {
-  if (amenity === "cafe") return "coffee";
-  if (amenity === "bar") return "wine";
-  if (amenity === "pub") return "beer";
-  return "sparkles";
-}
-
-function tagsToIcon(tags: Record<string, string>): string {
-  const a = tags.amenity ?? "";
-  if (a === "cafe") return "coffee";
-  if (a === "bar") return "wine";
-  if (a === "pub") return "beer";
-  if (a === "restaurant" || a === "fast_food" || a === "food_court") return "sparkles";
-  return "sparkles";
-}
-
 function assignUsersToVenue(venueName: string, pool: Profile[]): Profile[] {
   const seed = deterministicHash(venueName);
   const count = 2 + (seed % 3);
@@ -74,6 +58,17 @@ function assignUsersToVenue(venueName: string, pool: Profile[]): Profile[] {
   return Array.from(indices).map((i) => pool[i]);
 }
 
+interface FsqVenueResult {
+  id: string;
+  name: string;
+  lat: number | null;
+  lng: number | null;
+  icon: string;
+  distanceM: number | null;
+}
+
+const API_BASE = "/api";
+
 export async function searchVenuesByName(
   query: string,
   lat: number | null,
@@ -81,51 +76,33 @@ export async function searchVenuesByName(
   allUsers: Profile[],
 ): Promise<LocationData[]> {
   if (!query.trim()) return [];
-  const safeName = query.replace(/"/g, "").replace(/\\/g, "");
-  const nameFilter = `["name"~"${safeName}",i]`;
-  const areaFilter = lat != null && lng != null ? `(around:10000,${lat},${lng})` : "";
-  // Search ANY named place — not restricted to amenity types — so users can find sports clubs, shops, parks, etc.
-  const overpassQuery = `[out:json][timeout:14];(node${nameFilter}${areaFilter};way${nameFilter}${areaFilter};);out center 12;`;
 
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "data=" + encodeURIComponent(overpassQuery),
-    signal: AbortSignal.timeout(14000),
-  });
-  if (!res.ok) return [];
-  const json = await res.json();
+  const params = new URLSearchParams({ q: query.trim() });
+  if (lat != null && lng != null) {
+    params.set("lat", String(lat));
+    params.set("lng", String(lng));
+  }
 
-  const seen = new Set<string>();
-  const venues: (RealVenue & { tags: Record<string, string> })[] = (json.elements as Array<Record<string, unknown>>)
-    .filter((el) => (el.tags as Record<string, string> | undefined)?.name)
-    .map((el) => {
-      const tags = el.tags as Record<string, string>;
-      const elLat = typeof el.lat === "number" ? el.lat : (el.center as Record<string, number> | undefined)?.lat;
-      const elLng = typeof el.lon === "number" ? el.lon : (el.center as Record<string, number> | undefined)?.lon;
-      return { id: String(el.id), name: tags.name, amenity: tags.amenity ?? "", lat: elLat!, lng: elLng!, tags };
-    })
-    .filter((v) => v.lat != null && v.lng != null)
-    // De-duplicate by normalised name (same place can appear as node + way)
-    .filter((v) => {
-      const key = v.name.trim().toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+  try {
+    const res = await fetch(`${API_BASE}/venues/search?${params.toString()}`, {
+      signal: AbortSignal.timeout(12000),
     });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { results: FsqVenueResult[] };
 
-  const sorted = lat != null && lng != null
-    ? venues.map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat, v.lng) })).sort((a, b) => a.distMi - b.distMi)
-    : venues.map((v) => ({ ...v, distMi: 0 }));
-
-  return sorted.slice(0, 12).map((v) => ({
-    id: v.id,
-    name: v.name,
-    icon: tagsToIcon(v.tags),
-    lat: v.lat,
-    lng: v.lng,
-    users: assignUsersToVenue(v.name, allUsers),
-  }));
+    return (json.results ?? [])
+      .filter((v) => v.lat != null && v.lng != null)
+      .map((v) => ({
+        id: v.id,
+        name: v.name,
+        icon: v.icon,
+        lat: v.lat!,
+        lng: v.lng!,
+        users: assignUsersToVenue(v.name, allUsers),
+      }));
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchNearbyVenues(
@@ -133,46 +110,25 @@ export async function fetchNearbyVenues(
   lng: number,
   allUsers: Profile[],
 ): Promise<LocationData[]> {
-  const radius = 2000;
-  const query = `[out:json][timeout:12];(node["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng});way["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng}););out center 12;`;
+  const params = new URLSearchParams({ lat: String(lat), lng: String(lng) });
 
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: "data=" + encodeURIComponent(query),
-    signal: AbortSignal.timeout(14000),
+  const res = await fetch(`${API_BASE}/venues/nearby?${params.toString()}`, {
+    signal: AbortSignal.timeout(12000),
   });
 
-  if (!res.ok) throw new Error("Overpass API error");
+  if (!res.ok) throw new Error("Venue search failed");
 
-  const json = await res.json();
-
-  const venues: RealVenue[] = (json.elements as Array<Record<string, unknown>>)
-    .filter((el) => {
-      const tags = el.tags as Record<string, string> | undefined;
-      return tags?.name;
-    })
-    .map((el) => {
-      const tags = el.tags as Record<string, string>;
-      const elLat = typeof el.lat === "number" ? el.lat : (el.center as Record<string, number> | undefined)?.lat;
-      const elLng = typeof el.lon === "number" ? el.lon : (el.center as Record<string, number> | undefined)?.lon;
-      return { id: String(el.id), name: tags.name, amenity: tags.amenity, lat: elLat!, lng: elLng! };
-    })
-    .filter((v) => v.lat != null && v.lng != null);
+  const json = (await res.json()) as { results: FsqVenueResult[] };
+  const venues = (json.results ?? []).filter((v) => v.lat != null && v.lng != null);
 
   if (venues.length === 0) throw new Error("No venues found");
 
-  const sorted = venues
-    .map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat, v.lng) }))
-    .sort((a, b) => a.distMi - b.distMi)
-    .slice(0, 6);
-
-  return sorted.map((v) => ({
+  return venues.map((v) => ({
     id: v.id,
     name: v.name,
-    icon: amenityToIcon(v.amenity),
-    lat: v.lat,
-    lng: v.lng,
+    icon: v.icon,
+    lat: v.lat!,
+    lng: v.lng!,
     users: assignUsersToVenue(v.name, allUsers),
   }));
 }
