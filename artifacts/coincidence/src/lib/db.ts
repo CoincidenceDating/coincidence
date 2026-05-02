@@ -427,9 +427,11 @@ export async function clearPresence() {
   await supabase.from("user_presence").delete().eq("user_id", user.id);
 }
 
+const PRESENCE_WINDOW_MS = 10 * 60 * 1000;
+
 export async function getVenuePresenceCounts(venueIds: string[]): Promise<Record<string, number>> {
   if (!venueIds.length) return {};
-  const cutoff = Date.now() - 4 * 60 * 60 * 1000;
+  const cutoff = Date.now() - PRESENCE_WINDOW_MS;
   const { data } = await supabase
     .from("user_presence")
     .select("venue_id")
@@ -441,6 +443,32 @@ export async function getVenuePresenceCounts(venueIds: string[]): Promise<Record
     counts[id] = (counts[id] ?? 0) + 1;
   }
   return counts;
+}
+
+export function subscribeToVenuePresence(
+  venueIds: string[],
+  onChange: (venueId: string, delta: 1 | -1) => void,
+) {
+  const channel = supabase
+    .channel("venue-presence-counts")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "user_presence" },
+      (payload) => {
+        const venueId = (payload.new as { venue_id: string }).venue_id;
+        if (venueIds.includes(venueId)) onChange(venueId, 1);
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "DELETE", schema: "public", table: "user_presence" },
+      (payload) => {
+        const venueId = (payload.old as { venue_id: string }).venue_id;
+        if (venueIds.includes(venueId)) onChange(venueId, -1);
+      },
+    )
+    .subscribe();
+  return channel;
 }
 
 export async function getActiveUsersAtVenue(venueId: string): Promise<import("./data").Profile[]> {

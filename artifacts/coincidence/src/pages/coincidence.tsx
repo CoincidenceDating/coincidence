@@ -8,6 +8,7 @@ import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { MapPin, Wine, Beer, Coffee, Sparkles, User, CheckCircle2, LogIn, Heart, Flame, Navigation, LocateFixed, Loader2, Lock } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import * as db from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 const iconMap: Record<string, React.ReactNode> = {
   wine: <Wine className="w-4 h-4" />,
@@ -44,11 +45,15 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isActivating, setIsActivating] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+  const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      if (presenceSubRef.current) {
+        supabase.removeChannel(presenceSubRef.current);
       }
     };
   }, []);
@@ -60,8 +65,18 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     try {
       const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
       setNearbyLocations(fetched);
-      const counts = await db.getVenuePresenceCounts(fetched.map((v) => v.id));
+      const venueIds = fetched.map((v) => v.id);
+      const counts = await db.getVenuePresenceCounts(venueIds);
       setVenueRealCounts(counts);
+
+      if (presenceSubRef.current) supabase.removeChannel(presenceSubRef.current);
+      presenceSubRef.current = db.subscribeToVenuePresence(venueIds, (venueId, delta) => {
+        setVenueRealCounts((prev) => ({
+          ...prev,
+          [venueId]: Math.max(0, (prev[venueId] ?? 0) + delta),
+        }));
+      });
+
       setVenueStatus("ready");
     } catch {
       setVenueStatus("error");
