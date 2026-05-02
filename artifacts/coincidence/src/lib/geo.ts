@@ -53,6 +53,15 @@ function amenityToIcon(amenity: string): string {
   return "sparkles";
 }
 
+function tagsToIcon(tags: Record<string, string>): string {
+  const a = tags.amenity ?? "";
+  if (a === "cafe") return "coffee";
+  if (a === "bar") return "wine";
+  if (a === "pub") return "beer";
+  if (a === "restaurant" || a === "fast_food" || a === "food_court") return "sparkles";
+  return "sparkles";
+}
+
 function assignUsersToVenue(venueName: string, pool: Profile[]): Profile[] {
   const seed = deterministicHash(venueName);
   const count = 2 + (seed % 3);
@@ -72,9 +81,11 @@ export async function searchVenuesByName(
   allUsers: Profile[],
 ): Promise<LocationData[]> {
   if (!query.trim()) return [];
-  const nameFilter = `["name"~"${query.replace(/"/g, "")}",i]`;
-  const areaFilter = lat != null && lng != null ? `(around:5000,${lat},${lng})` : "";
-  const overpassQuery = `[out:json][timeout:12];(node["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]${nameFilter}${areaFilter};way["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]${nameFilter}${areaFilter};);out center 8;`;
+  const safeName = query.replace(/"/g, "").replace(/\\/g, "");
+  const nameFilter = `["name"~"${safeName}",i]`;
+  const areaFilter = lat != null && lng != null ? `(around:10000,${lat},${lng})` : "";
+  // Search ANY named place — not restricted to amenity types — so users can find sports clubs, shops, parks, etc.
+  const overpassQuery = `[out:json][timeout:14];(node${nameFilter}${areaFilter};way${nameFilter}${areaFilter};);out center 12;`;
 
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
@@ -85,24 +96,32 @@ export async function searchVenuesByName(
   if (!res.ok) return [];
   const json = await res.json();
 
-  const venues: RealVenue[] = (json.elements as Array<Record<string, unknown>>)
+  const seen = new Set<string>();
+  const venues: (RealVenue & { tags: Record<string, string> })[] = (json.elements as Array<Record<string, unknown>>)
     .filter((el) => (el.tags as Record<string, string> | undefined)?.name)
     .map((el) => {
       const tags = el.tags as Record<string, string>;
       const elLat = typeof el.lat === "number" ? el.lat : (el.center as Record<string, number> | undefined)?.lat;
       const elLng = typeof el.lon === "number" ? el.lon : (el.center as Record<string, number> | undefined)?.lon;
-      return { id: String(el.id), name: tags.name, amenity: tags.amenity, lat: elLat!, lng: elLng! };
+      return { id: String(el.id), name: tags.name, amenity: tags.amenity ?? "", lat: elLat!, lng: elLng!, tags };
     })
-    .filter((v) => v.lat != null && v.lng != null);
+    .filter((v) => v.lat != null && v.lng != null)
+    // De-duplicate by normalised name (same place can appear as node + way)
+    .filter((v) => {
+      const key = v.name.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
   const sorted = lat != null && lng != null
     ? venues.map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat, v.lng) })).sort((a, b) => a.distMi - b.distMi)
     : venues.map((v) => ({ ...v, distMi: 0 }));
 
-  return sorted.slice(0, 8).map((v) => ({
+  return sorted.slice(0, 12).map((v) => ({
     id: v.id,
     name: v.name,
-    icon: amenityToIcon(v.amenity),
+    icon: tagsToIcon(v.tags),
     lat: v.lat,
     lng: v.lng,
     users: assignUsersToVenue(v.name, allUsers),
