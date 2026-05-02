@@ -416,12 +416,20 @@ function AppShell() {
     setCheckIns((prev) => {
       if (prev.some((c) => c.locationId === checkIn.locationId)) return prev;
       db.addCheckin(checkIn);
-      setBoostCredits((c) => {
-        const next = Math.min(c + 1, MAX_BOOST_CREDITS);
-        db.upsertBoost(next, boostActiveUntil, boostRadius);
-        return next;
-      });
-      return [...prev, checkIn];
+      const next = [...prev, checkIn];
+      const newCount = next.length;
+      if (newCount % 3 === 0) {
+        setBoostCredits((c) => {
+          const updated = Math.min(c + 1, MAX_BOOST_CREDITS);
+          db.upsertBoost(updated, boostActiveUntil, boostRadius);
+          return updated;
+        });
+        toast({
+          title: "You earned a string! 🎉",
+          description: `${newCount} check-ins and counting — a string has been added to your stash.`,
+        });
+      }
+      return next;
     });
   }
 
