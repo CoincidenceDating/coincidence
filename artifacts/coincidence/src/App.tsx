@@ -176,7 +176,7 @@ function AppShell() {
         setShowLanding(false);
         setAccount(acct);
         setIsLoggedOut(false);
-        loadUserData().then(() => requestGpsLocation());
+        loadUserData();
       }
       setSessionChecked(true);
     });

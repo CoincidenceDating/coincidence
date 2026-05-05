@@ -378,6 +378,8 @@ export async function addSwiped(profileId: string, liked = false) {
 
 /* ── discover real profiles ───────────────────────────────── */
 
+const COINCIDENCE_ACTIVE_WINDOW_MS = 4 * 60 * 60 * 1000; // 4 hours
+
 export async function getDiscoverProfiles(
   lookingFor: string,
   ageMin: number,
@@ -387,19 +389,38 @@ export async function getDiscoverProfiles(
   radiusMiles?: number | null,
 ): Promise<import("./data").Profile[]> {
   const radiusKm = radiusMiles != null ? radiusMiles * 1.60934 : null;
-  const { data, error } = await supabase.rpc("get_discover_profiles", {
-    p_looking_for: lookingFor,
-    p_age_min: ageMin,
-    p_age_max: ageMax,
-    p_lat:       lat       ?? null,
-    p_lng:       lng       ?? null,
-    p_radius_km: radiusKm  ?? null,
-  });
-  if (error) return [];
-  return (data ?? []).map((r: {
-    user_id: string; name: string; age: number; bio: string;
-    photos: string[]; gender: string;
-  }) => buildProfileSnapshot(r));
+
+  // Run both queries in parallel — presence query tells us who is currently
+  // active in Coincidence Mode and should be hidden from general Discover.
+  const [profilesResult, presenceResult] = await Promise.all([
+    supabase.rpc("get_discover_profiles", {
+      p_looking_for: lookingFor,
+      p_age_min: ageMin,
+      p_age_max: ageMax,
+      p_lat:       lat       ?? null,
+      p_lng:       lng       ?? null,
+      p_radius_km: radiusKm  ?? null,
+    }),
+    supabase
+      .from("user_presence")
+      .select("user_id")
+      .gt("activated_at", Date.now() - COINCIDENCE_ACTIVE_WINDOW_MS),
+  ]);
+
+  if (profilesResult.error) return [];
+
+  // Users with active presence are in Coincidence Mode at a specific venue —
+  // they should only be discoverable by others at that same venue, not in general Discover.
+  const coincidenceActiveIds = new Set(
+    (presenceResult.data ?? []).map((r) => r.user_id as string)
+  );
+
+  return (profilesResult.data ?? [])
+    .filter((r: { user_id: string }) => !coincidenceActiveIds.has(r.user_id))
+    .map((r: {
+      user_id: string; name: string; age: number; bio: string;
+      photos: string[]; gender: string;
+    }) => buildProfileSnapshot(r));
 }
 
 export async function updateUserLocation(lat: number, lng: number) {
