@@ -46,6 +46,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const [isActivating, setIsActivating] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastVenueLoadRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -86,6 +87,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // How far the user must move (in miles) before the venue list refreshes
+  const VENUE_REFRESH_THRESHOLD_MI = 0.12; // ~200 m
+
   const requestLocation = useCallback(() => {
     if (!("geolocation" in navigator)) {
       setGeoStatus("unavailable");
@@ -100,7 +104,18 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
         if (firstFix) {
           firstFix = false;
           setGeoStatus("granted");
+          lastVenueLoadRef.current = coords;
           loadVenues(coords.lat, coords.lng);
+        } else {
+          // Refresh venue list if user has moved far enough from last load point
+          const last = lastVenueLoadRef.current;
+          if (last) {
+            const moved = haversineDistanceMiles(last.lat, last.lng, coords.lat, coords.lng);
+            if (moved >= VENUE_REFRESH_THRESHOLD_MI) {
+              lastVenueLoadRef.current = coords;
+              loadVenues(coords.lat, coords.lng);
+            }
+          }
         }
       },
       () => setGeoStatus("denied"),
