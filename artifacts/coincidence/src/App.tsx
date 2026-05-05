@@ -616,7 +616,9 @@ function AppShell() {
   function handleUndecidedDecision(match: Match, decision: "yes" | "no") {
     setUndecided((prev) => prev.filter((m) => m.profile.id !== match.profile.id));
     if (decision === "yes") {
-      db.promoteUndecided(match.profile.id);
+      // promote_and_notify: promotes User B's row AND writes the reciprocal
+      // match row for User A so they see it in their matches tab immediately.
+      db.promoteUndecided(match.profile.id, myProfileSnapshot ?? {});
       handleMatch(match);
     } else {
       db.removeMatch(match.profile.id);

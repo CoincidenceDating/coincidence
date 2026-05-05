@@ -162,13 +162,11 @@ export async function removeMatch(profileId: string) {
     .eq("profile_id", profileId);
 }
 
-export async function promoteUndecided(profileId: string) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase.from("user_matches")
-    .update({ is_undecided: false })
-    .eq("user_id", user.id)
-    .eq("profile_id", profileId);
+export async function promoteUndecided(profileId: string, myProfileData: object) {
+  await supabase.rpc("promote_and_notify", {
+    p_profile_id:      profileId,
+    p_my_profile_data: myProfileData,
+  });
 }
 
 /* ── mutual match RPC ─────────────────────────────────────── */
