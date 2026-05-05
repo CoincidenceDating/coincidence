@@ -48,15 +48,32 @@ function deterministicHash(str: string): number {
   return h >>> 0;
 }
 
-// HERE Geocoding & Search category IDs for nightlife/food/drink
-const HERE_VENUE_CATEGORIES = "200-2000,200-2100,100-1000-0000,100-1100-0010";
+// HERE Geocoding & Search category IDs — bars, pubs, nightlife, cafés only
+const HERE_VENUE_CATEGORIES = "200-2000,200-2100,100-1100-0010";
+
+// Only keep venues whose PRIMARY category is a real drinking/coffee venue.
+// Filters out event companies, cinemas, boat parties, grocery stores, etc.
+const PRIMARY_CATEGORY_ALLOWLIST = [
+  "200-2000-0011", // Bar or Pub
+  "200-2000-0012", // Disco or Night Club
+  "200-2100",      // Bar/Pub parent
+  "100-1100-0010", // Coffee or Tea House
+  "100-1100-0011", // Juice Bar
+  "100-1100",      // Coffee/Tea parent
+];
+
+function isPrimaryVenueCategory(categories?: Array<{ id: string }>): boolean {
+  if (!categories?.length) return false;
+  const primary = categories[0].id;
+  return PRIMARY_CATEGORY_ALLOWLIST.some((allowed) => primary.startsWith(allowed));
+}
 
 function hereCategoryToIcon(categories?: Array<{ id: string; name: string }>): string {
   if (!categories?.length) return "sparkles";
   const id = categories[0].id;
-  if (id.startsWith("100-1100")) return "coffee"; // café/tea
-  if (id.startsWith("200-2100")) return "beer";   // bar/pub
-  if (id.startsWith("200-2000")) return "wine";   // nightlife
+  if (id.startsWith("100-1100")) return "coffee";
+  if (id === "200-2000-0011" || id.startsWith("200-2100")) return "beer";
+  if (id.startsWith("200-2000")) return "wine";
   return "sparkles";
 }
 
@@ -101,7 +118,8 @@ async function fetchVenuesFromHere(
   url.searchParams.set("at", `${lat},${lng}`);
   url.searchParams.set("categories", HERE_VENUE_CATEGORIES);
   url.searchParams.set("radius", "2000");
-  url.searchParams.set("limit", "20");
+  url.searchParams.set("limit", "50");
+  url.searchParams.set("sortBy", "distance");
   url.searchParams.set("apiKey", apiKey);
 
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
@@ -116,6 +134,7 @@ async function fetchVenuesFromHere(
   const seen = new Set<string>();
 
   return (json.items ?? [])
+    .filter((item) => isPrimaryVenueCategory(item.categories))
     .filter((item) => {
       const key = item.title.trim().toLowerCase();
       if (seen.has(key)) return false;
@@ -240,7 +259,7 @@ export async function fetchNearbyVenues(
   return venues
     .map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat ?? 0, v.lng ?? 0) }))
     .sort((a, b) => a.distMi - b.distMi)
-    .slice(0, 10)
+    .slice(0, 20)
     .map(({ distMi: _d, ...v }) => v);
 }
 

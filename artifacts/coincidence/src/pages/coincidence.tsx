@@ -129,7 +129,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     }
   }, [venueStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const PROXIMITY_THRESHOLD_MI = 0.1; // ~160 m
+  const PROXIMITY_THRESHOLD_MI = 0.05; // ~80 m — must be essentially at the venue
 
   function getSelectedVenueDistMi(): number | null {
     if (!userCoords || !location || location.lat == null || location.lng == null) return null;
