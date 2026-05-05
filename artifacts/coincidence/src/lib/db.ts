@@ -458,13 +458,20 @@ export async function getDiscoverProfiles(
     });
 }
 
-export async function updateUserLocation(lat: number, lng: number) {
+export async function updateUserLocation(lat: number, lng: number, radiusKm?: number) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("user_profiles").upsert(
-    { user_id: user.id, lat, lng, updated_at: new Date().toISOString() },
-    { onConflict: "user_id" }
-  );
+  const row: Record<string, unknown> = { user_id: user.id, lat, lng, updated_at: new Date().toISOString() };
+  if (radiusKm != null) row.discover_radius_km = radiusKm;
+  await supabase.from("user_profiles").upsert(row, { onConflict: "user_id" });
+}
+
+export async function updateDiscoverRadius(radiusKm: number) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_profiles")
+    .update({ discover_radius_km: radiusKm })
+    .eq("user_id", user.id);
 }
 
 export async function clearUserLocation() {

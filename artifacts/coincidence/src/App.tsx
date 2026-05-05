@@ -351,7 +351,7 @@ function AppShell() {
         try {
           localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
         } catch {}
-        db.updateUserLocation(latitude, longitude);
+        db.updateUserLocation(latitude, longitude, discoverRadius * 1.60934);
         refreshDiscoverProfiles(overrideLf, overrideAmin, overrideAmax, latitude, longitude, discoverRadius);
       },
       () => {
@@ -376,7 +376,7 @@ function AppShell() {
           try {
             localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
           } catch {}
-          db.updateUserLocation(latitude, longitude);
+          db.updateUserLocation(latitude, longitude, discoverRadius * 1.60934);
           refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
         },
         () => {},
@@ -833,6 +833,7 @@ function AppShell() {
             onRadiusChange={(r) => {
               setDiscoverRadius(r);
               try { localStorage.setItem("coincidence-radius", String(r)); } catch {}
+              db.updateDiscoverRadius(r * 1.60934);
               refreshDiscoverProfiles(undefined, undefined, undefined, userLat, userLng, r);
             }}
           />
