@@ -855,7 +855,7 @@ function AppShell() {
           />
         )}
         {activeTab === "matches" && (
-          <MatchesPage matches={matches} messageCounts={messageCounts} checkIns={checkIns} onOpenChat={handleOpenChat} />
+          <MatchesPage matches={matches} threads={threads} checkIns={checkIns} onOpenChat={handleOpenChat} />
         )}
         {activeTab === "liked" && (
           <LikedPage

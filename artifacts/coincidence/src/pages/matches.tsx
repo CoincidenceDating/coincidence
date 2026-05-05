@@ -1,4 +1,5 @@
 import { type Match, type CheckIn } from "@/lib/data";
+import { type Message } from "@/pages/chat";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Sparkles, Heart, Wine, Beer, Coffee, MessageCircle, MapPin } from "lucide-react";
 
@@ -18,12 +19,12 @@ function starsAlignedOverlap(match: Match, checkIns: CheckIn[]): number {
 
 interface MatchesPageProps {
   matches: Match[];
-  messageCounts: Record<string, number>;
+  threads: Record<string, Message[]>;
   checkIns: CheckIn[];
   onOpenChat: (match: Match) => void;
 }
 
-export default function MatchesPage({ matches, messageCounts, checkIns, onOpenChat }: MatchesPageProps) {
+export default function MatchesPage({ matches, threads = {}, checkIns, onOpenChat }: MatchesPageProps) {
   if (matches.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
@@ -64,11 +65,23 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
   const swipeMatches       = deduped.filter((m) => m.source === "swipe"  && !starsAlignedIds.has(m.profile.id));
 
   function MatchRow({ match }: { match: Match }) {
-    const msgCount  = messageCounts[match.profile.id] ?? 0;
-    const hasMessages = msgCount > 0;
-    const overlap   = starsAlignedOverlap(match, checkIns);
-    const isAligned = overlap >= 2;
+    const msgs        = threads[match.profile.id] ?? [];
+    const lastMsg     = msgs[msgs.length - 1] ?? null;
+    const hasMessages = msgs.length > 0;
+    const overlap     = starsAlignedOverlap(match, checkIns);
+    const isAligned   = overlap >= 2;
     const isCoincidence = match.source !== "swipe";
+    const theyWrote   = lastMsg?.from === "them";
+
+    function subline() {
+      if (lastMsg) {
+        return theyWrote
+          ? <span className="font-semibold text-foreground truncate">{lastMsg.text}</span>
+          : <span className="text-muted-foreground truncate"><span className="text-muted-foreground/60">You: </span>{lastMsg.text}</span>;
+      }
+      if (isAligned) return <span className="text-muted-foreground">{overlap} places in common</span>;
+      return null;
+    }
 
     return (
       <button
@@ -77,7 +90,7 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
       >
         <div className="relative shrink-0">
           <ProfileAvatar profile={match.profile} size={44} />
-          {hasMessages && (
+          {theyWrote && (
             <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-background" />
           )}
         </div>
@@ -100,9 +113,9 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+          <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
             {isCoincidence && match.locationName && (
-              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0">
                 {match.locationIcon && locationIconMap[match.locationIcon]
                   ? locationIconMap[match.locationIcon]
                   : <MapPin className="w-3 h-3" />}
@@ -110,13 +123,7 @@ export default function MatchesPage({ matches, messageCounts, checkIns, onOpenCh
                 <span className="mx-1 text-muted-foreground/30">·</span>
               </span>
             )}
-            <p className="text-xs text-muted-foreground truncate">
-              {hasMessages
-                ? `${msgCount} message${msgCount > 1 ? "s" : ""}`
-                : isAligned
-                ? `${overlap} places in common`
-                : match.profile.bio}
-            </p>
+            <p className="text-xs truncate min-w-0">{subline()}</p>
           </div>
         </div>
 
