@@ -34,7 +34,7 @@ interface SwipePageProps {
   onRadiusChange: (miles: number) => void;
 }
 
-const RADIUS_STEPS = [1, 5, 10, 15, 25, 50, 75, 100];
+const RADIUS_STEPS = [1, 5, 10, 15, 25, 50, 75, 100, 150, 200, 300];
 
 export default function SwipePage({
   onMatch,
@@ -250,7 +250,7 @@ export default function SwipePage({
                           onClick={() => handleRadiusCommit(s)}
                           className={`text-[9px] cursor-pointer transition-colors ${i === sliderIdx ? "text-primary font-bold" : "text-muted-foreground/50"}`}
                         >
-                          {s >= 100 ? "100" : s}
+                          {s >= 100 ? `${s}` : s}
                         </span>
                       ))}
                     </div>
