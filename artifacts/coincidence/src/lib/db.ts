@@ -376,6 +376,25 @@ export async function addSwiped(profileId: string, liked = false) {
   );
 }
 
+/* ── distance helpers ─────────────────────────────────────── */
+
+function calcDistanceMi(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3958.8;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function fmtDistanceMi(mi: number): string {
+  if (mi < 0.1) return "< 0.1 mi away";
+  if (mi < 10)  return `${mi.toFixed(1)} mi away`;
+  return `${Math.round(mi)} mi away`;
+}
+
 /* ── discover real profiles ───────────────────────────────── */
 
 const COINCIDENCE_ACTIVE_WINDOW_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -419,8 +438,14 @@ export async function getDiscoverProfiles(
     .filter((r: { user_id: string }) => !coincidenceActiveIds.has(r.user_id))
     .map((r: {
       user_id: string; name: string; age: number; bio: string;
-      photos: string[]; gender: string;
-    }) => buildProfileSnapshot(r));
+      photos: string[]; gender: string; lat: number | null; lng: number | null;
+    }) => {
+      const profile = buildProfileSnapshot(r);
+      if (lat != null && lng != null && r.lat != null && r.lng != null) {
+        profile.distance = fmtDistanceMi(calcDistanceMi(lat, lng, r.lat, r.lng));
+      }
+      return profile;
+    });
 }
 
 export async function updateUserLocation(lat: number, lng: number) {
