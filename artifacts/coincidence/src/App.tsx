@@ -656,6 +656,31 @@ function AppShell() {
     }
   }
 
+  // Used by CoincidencePage for real-user right-swipes: checks mutuality before
+  // creating a match. Returns the Match object if mutual, null if pending.
+  // Does NOT call setPendingMatch — CoincidencePage shows its own overlay.
+  async function handleCoincidenceRealLike(
+    profile: Profile,
+    locationId: string,
+    locationName: string,
+    locationIcon: string,
+  ): Promise<Match | null> {
+    if (!myProfileSnapshot) return null;
+    await db.addSwiped(profile.id, true);
+    const mutual = await db.createMutualMatch(profile.id, profile, myProfileSnapshot);
+    if (!mutual) return null;
+    const match: Match = { profile, source: locationId, locationName, locationIcon, matchedAt: Date.now() };
+    // Record in state + DB without triggering the App-level overlay
+    setMatches((prev) => {
+      const exists = prev.some((m) => m.profile.id === match.profile.id && m.source === match.source);
+      if (exists) return prev;
+      db.addMatch(match, false);
+      return [...prev, match];
+    });
+    if (activeTab !== "matches") setNewMatchCount((c) => c + 1);
+    return match;
+  }
+
   function handleUndecidedDecision(match: Match, decision: "yes" | "no") {
     setUndecided((prev) => prev.filter((m) => m.profile.id !== match.profile.id));
     if (decision === "yes") {
@@ -884,6 +909,7 @@ function AppShell() {
           <CoincidencePage
             onMatch={handleMatch}
             onMaybe={handleMaybe}
+            onRealLike={handleCoincidenceRealLike}
             onCheckIn={handleCheckIn}
             onSendMessage={handleOpenChat}
             checkedInLocations={checkedInLocations}

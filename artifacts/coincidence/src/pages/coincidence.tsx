@@ -20,6 +20,7 @@ const iconMap: Record<string, React.ReactNode> = {
 interface CoincidencePageProps {
   onMatch: (match: Match) => void;
   onMaybe: (match: Match) => void;
+  onRealLike: (profile: Profile, locationId: string, locationName: string, locationIcon: string) => Promise<Match | null>;
   onCheckIn: (checkIn: CheckIn) => void;
   onSendMessage: (match: Match) => void;
   checkedInLocations: Set<string>;
@@ -29,7 +30,7 @@ interface CoincidencePageProps {
   blockedIds: string[];
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -246,37 +247,58 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
     setJustCheckedIn(true);
   }
 
-  function handleSwipe(dir: "left" | "right" | "maybe") {
-    if (currentUser && location) {
+  async function handleSwipe(dir: "left" | "right" | "maybe") {
+    // Advance the card immediately so the UI feels responsive
+    const next = currentIndex + 1;
+    if (next >= users.length) setDone(true);
+    else setCurrentIndex(next);
+
+    if (!currentUser || !location) return;
+
+    if (dir === "right") {
+      if (db.isRealUserId(currentUser.id)) {
+        // Real user — require mutual like before creating a match
+        const match = await onRealLike(currentUser, location.id, location.name, location.icon);
+        if (match) setCoincidenceMatch(match);
+      } else {
+        // Mock profile — immediate match for demo purposes
+        const matchData: Match = {
+          profile: currentUser, source: location.id,
+          locationName: location.name, locationIcon: location.icon, matchedAt: Date.now(),
+        };
+        onMatch(matchData);
+        setCoincidenceMatch(matchData);
+      }
+    } else if (dir === "maybe") {
       const matchData: Match = {
         profile: currentUser, source: location.id,
         locationName: location.name, locationIcon: location.icon, matchedAt: Date.now(),
       };
-      if (dir === "right") {
-        onMatch(matchData);
-        setCoincidenceMatch(matchData);
-      } else if (dir === "maybe") {
-        onMaybe(matchData);
-      }
+      onMaybe(matchData);
     }
-    const next = currentIndex + 1;
-    if (next >= users.length) setDone(true);
-    else setCurrentIndex(next);
   }
 
-  function handleDoubleString() {
+  async function handleDoubleString() {
     if (!currentUser || !location || boostCredits < 2) return;
-    const matchData: Match = {
-      profile: currentUser, source: location.id,
-      locationName: location.name, locationIcon: location.icon,
-      matchedAt: Date.now(), superLike: true,
-    };
-    onMatch(matchData);
-    onDoubleStringCredit();
-    setCoincidenceMatch(matchData);
+    // Advance immediately
     const next = currentIndex + 1;
     if (next >= users.length) setDone(true);
     else setCurrentIndex(next);
+    onDoubleStringCredit();
+
+    if (db.isRealUserId(currentUser.id)) {
+      // Real user — still requires mutuality (premium signal, not instant match)
+      const match = await onRealLike(currentUser, location.id, location.name, location.icon);
+      if (match) setCoincidenceMatch({ ...match, superLike: true });
+    } else {
+      const matchData: Match = {
+        profile: currentUser, source: location.id,
+        locationName: location.name, locationIcon: location.icon,
+        matchedAt: Date.now(), superLike: true,
+      };
+      onMatch(matchData);
+      setCoincidenceMatch(matchData);
+    }
   }
 
   const showCheckedIn = alreadyCheckedIn || justCheckedIn;
