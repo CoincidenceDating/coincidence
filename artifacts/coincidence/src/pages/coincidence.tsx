@@ -602,23 +602,32 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                           const inRange = distMi !== null && distMi <= PROXIMITY_THRESHOLD_MI;
                           const count = venueRealCounts[loc.id] ?? 0;
                           const isSelected = selectedLocation === loc.id;
-                          const heat = count >= 4 ? "bg-red-400" : count >= 3 ? "bg-orange-400" : "bg-yellow-400";
                           return (
                             <button
                               key={loc.id}
                               onClick={() => handleHotSpotTap(loc.id)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-accent/40 transition-colors text-left border-b border-border/50 last:border-0"
+                              className="w-full flex items-center gap-3 px-3 py-3 hover:bg-accent/40 transition-colors text-left border-b border-border/50 last:border-0"
                             >
-                              <span className="text-muted-foreground shrink-0">{iconMap[loc.icon]}</span>
+                              <span className="text-muted-foreground shrink-0">{iconMap[loc.icon] ?? <MapPin className="w-4 h-4" />}</span>
                               <div className="flex-1 min-w-0">
                                 <span className="text-sm font-medium block truncate">{loc.name}</span>
-                                <span className={`text-[10px] ${inRange ? "text-green-400" : "text-muted-foreground"}`}>
-                                  {distMi !== null ? (inRange ? "You're here" : `${formatDistance(distMi)} away`) : ""}
-                                  {count > 0 ? ` · ${count} ${count === 1 ? "person" : "people"}` : ""}
-                                </span>
+                                {distMi !== null && (
+                                  <span className={`text-[10px] ${inRange ? "text-green-400" : "text-muted-foreground"}`}>
+                                    {inRange ? "You're here ✓" : `${formatDistance(distMi)} away`}
+                                  </span>
+                                )}
                               </div>
-                              <div className="flex items-center gap-1.5 shrink-0">
-                                {count > 0 && <span className={`w-1.5 h-1.5 rounded-full ${heat}`} />}
+                              <div className="flex items-center gap-2 shrink-0">
+                                {/* activated count badge */}
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold leading-none
+                                  ${count > 0
+                                    ? "bg-primary/20 text-primary border border-primary/30"
+                                    : "bg-muted/40 text-muted-foreground border border-border"
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${count > 0 ? "bg-primary animate-pulse" : "bg-muted-foreground/40"}`} />
+                                  {count} activated
+                                </span>
                                 {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
                               </div>
                             </button>
