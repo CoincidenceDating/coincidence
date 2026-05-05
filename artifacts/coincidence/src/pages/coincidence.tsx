@@ -47,6 +47,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const [isActivating, setIsActivating] = useState(false);
   const watchIdRef = useRef<number | null>(null);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const venueUsersSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastVenueLoadRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
@@ -60,6 +61,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       }
       if (presenceSubRef.current) {
         supabase.removeChannel(presenceSubRef.current);
+      }
+      if (venueUsersSubRef.current) {
+        supabase.removeChannel(venueUsersSubRef.current);
       }
       // Clear presence so the user becomes visible in Discover immediately
       // when they navigate away from this tab, even without pressing "Leave".
@@ -201,6 +205,22 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
           photos: ownProfile.photos ?? [],
         };
         await db.upsertPresence(location.id, location.name, snapshot);
+
+        // Subscribe to live join/leave events for this venue so the swipe deck
+        // updates in real time when other users activate or leave.
+        if (venueUsersSubRef.current) supabase.removeChannel(venueUsersSubRef.current);
+        venueUsersSubRef.current = db.subscribeToVenueUsers(
+          location.id,
+          ownProfile.user_id,
+          (profile) => {
+            setRealUsers((prev) =>
+              prev.some((p) => p.id === profile.id) ? prev : [...prev, profile]
+            );
+          },
+          (userId) => {
+            setRealUsers((prev) => prev.filter((p) => p.id !== userId));
+          },
+        );
       }
       const real = await db.getActiveUsersAtVenue(location.id);
       setRealUsers(real);
@@ -221,6 +241,10 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
   function handleDeactivate() {
     db.clearPresence();
+    if (venueUsersSubRef.current) {
+      supabase.removeChannel(venueUsersSubRef.current);
+      venueUsersSubRef.current = null;
+    }
     setRealUsers([]);
     setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false); setJustCheckedIn(false);
   }
@@ -231,6 +255,10 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       watchIdRef.current = null;
     }
     db.clearPresence();
+    if (venueUsersSubRef.current) {
+      supabase.removeChannel(venueUsersSubRef.current);
+      venueUsersSubRef.current = null;
+    }
     setRealUsers([]);
     setGeoStatus("idle");
     setUserCoords(null);

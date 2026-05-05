@@ -464,33 +464,19 @@ export async function getDiscoverProfiles(
 ): Promise<import("./data").Profile[]> {
   const radiusKm = radiusMiles != null ? radiusMiles * 1.60934 : null;
 
-  // Run both queries in parallel — presence query tells us who is currently
-  // active in Coincidence Mode and should be hidden from general Discover.
-  const [profilesResult, presenceResult] = await Promise.all([
-    supabase.rpc("get_discover_profiles", {
-      p_looking_for: lookingFor,
-      p_age_min: ageMin,
-      p_age_max: ageMax,
-      p_lat:       lat       ?? null,
-      p_lng:       lng       ?? null,
-      p_radius_km: radiusKm  ?? null,
-    }),
-    supabase
-      .from("user_presence")
-      .select("user_id")
-      .gt("activated_at", Date.now() - COINCIDENCE_ACTIVE_WINDOW_MS),
-  ]);
+  const profilesResult = await supabase.rpc("get_discover_profiles", {
+    p_looking_for: lookingFor,
+    p_age_min: ageMin,
+    p_age_max: ageMax,
+    p_lat:       lat       ?? null,
+    p_lng:       lng       ?? null,
+    p_radius_km: radiusKm  ?? null,
+  });
 
   if (profilesResult.error) {
     console.warn("[discover] RPC error:", profilesResult.error);
     return [];
   }
-
-  // Users with active presence are in Coincidence Mode at a specific venue —
-  // they should only be discoverable by others at that same venue, not in general Discover.
-  const coincidenceActiveIds = new Set(
-    (presenceResult.data ?? []).map((r) => r.user_id as string)
-  );
 
   type RpcRow = {
     user_id: string; name: string; age: number; bio: string;
@@ -501,7 +487,6 @@ export async function getDiscoverProfiles(
   const callerHasRadius = lat != null && lng != null && radiusMiles != null;
 
   const filtered: RpcRow[] = (profilesResult.data ?? [])
-    .filter((r: { user_id: string }) => !coincidenceActiveIds.has(r.user_id))
     .filter((r: RpcRow) => {
       if (!callerHasRadius) return true;
       if (r.lat == null || r.lng == null) return false;
@@ -544,7 +529,6 @@ export async function getDiscoverProfiles(
     for (const r of (noGpsResult.data ?? []) as RpcRow[]) {
       if (swipedIds.has(r.user_id))   continue;   // already swiped
       if (filteredIds.has(r.user_id)) continue;   // already in results
-      if (coincidenceActiveIds.has(r.user_id)) continue;
 
       // Caller's gender preference
       if (lookingFor !== "Everyone") {
@@ -669,6 +653,49 @@ export function subscribeToVenuePresence(
     )
     .subscribe();
   return channel;
+}
+
+// Subscribes to live user join/leave events for a specific active venue.
+// Used by the coincidence swipe deck to add/remove cards in real time.
+export function subscribeToVenueUsers(
+  venueId: string,
+  myId: string,
+  onJoin: (profile: import("./data").Profile) => void,
+  onLeave: (userId: string) => void,
+) {
+  return supabase
+    .channel(`venue-users:${venueId}:${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "user_presence",
+        filter: `venue_id=eq.${venueId}`,
+      },
+      (payload) => {
+        const row = payload.new as { user_id: string; profile_data: object };
+        if (row.user_id !== myId) {
+          onJoin(row.profile_data as import("./data").Profile);
+        }
+      },
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "user_presence",
+        filter: `venue_id=eq.${venueId}`,
+      },
+      (payload) => {
+        const row = payload.old as { user_id: string };
+        if (row.user_id !== myId) {
+          onLeave(row.user_id);
+        }
+      },
+    )
+    .subscribe();
 }
 
 export async function getActiveUsersAtVenue(venueId: string): Promise<import("./data").Profile[]> {
