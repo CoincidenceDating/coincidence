@@ -18,6 +18,7 @@ import AuthPage, { type AccountData } from "@/pages/auth";
 import ReloginPage from "@/pages/relogin";
 import { Heart, Sparkles, HelpCircle, User, Loader2, Eye } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
+import MatchOverlay from "@/components/MatchOverlay";
 import type { Match, CheckIn, Profile } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import * as db from "@/lib/db";
@@ -136,6 +137,7 @@ function AppShell() {
   const [undecided, setUndecided]       = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount]       = useState(0);
   const [newUndecidedCount, setNewUndecidedCount] = useState(0);
+  const [pendingMatch, setPendingMatch]         = useState<Match | null>(null);
   const [activeChat, setActiveChat]     = useState<Match | null>(null);
   const [threads, setThreads]           = useState<Record<string, Message[]>>({});
   const [checkIns, setCheckIns]         = useState<CheckIn[]>([]);
@@ -219,10 +221,8 @@ function AppShell() {
         return [...prev, match];
       });
       setNewMatchCount((c) => c + 1);
-      toast({
-        title: "It's a match!",
-        description: `You and ${profile.name.split(" ")[0]} both liked each other`,
-      });
+      // Show the rich overlay instead of a plain toast
+      setPendingMatch(match);
     });
   }
 
@@ -589,6 +589,8 @@ function AppShell() {
       return [...prev, match];
     });
     if (activeTab !== "matches") setNewMatchCount((c) => c + 1);
+    // Show the rich match overlay
+    setPendingMatch(match);
   }
 
   function handleMaybe(match: Match) {
@@ -905,6 +907,22 @@ function AppShell() {
           </div>
         </nav>
       </div>
+
+      {/* ── Match overlay ── */}
+      <AnimatePresence>
+        {pendingMatch && myProfileSnapshot && (
+          <MatchOverlay
+            key={pendingMatch.profile.id + pendingMatch.matchedAt}
+            match={pendingMatch}
+            myProfile={myProfileSnapshot}
+            onMessage={(m) => {
+              setPendingMatch(null);
+              handleOpenChat(m);
+            }}
+            onDismiss={() => setPendingMatch(null)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {activeChat && (

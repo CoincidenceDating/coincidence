@@ -251,8 +251,10 @@ export function subscribeToNewMatches(
   myId: string,
   onMatch: (profileId: string, profileData: object) => void,
 ) {
+  // Append a timestamp so each call gets a brand-new channel object;
+  // Supabase caches channels by name and rejects .on() after .subscribe().
   return supabase
-    .channel(`new-matches:${myId}`)
+    .channel(`new-matches:${myId}:${Date.now()}`)
     .on(
       "postgres_changes",
       {
