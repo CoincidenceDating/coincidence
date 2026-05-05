@@ -108,14 +108,14 @@ function assignUsersToVenue(venueName: string, pool: Profile[]): Profile[] {
   return Array.from(indices).map((i) => pool[i]);
 }
 
+/* ── HERE Places API ──────────────────────────────────────── */
+
 interface HereItem {
   id: string;
   title: string;
   position: { lat: number; lng: number };
   categories?: Array<{ id: string; name: string }>;
 }
-
-/* ── HERE Places API ──────────────────────────────────────── */
 
 async function fetchVenuesFromHere(
   lat: number,
@@ -215,7 +215,9 @@ async function fetchVenuesFromOSM(
   allUsers: Profile[],
 ): Promise<LocationData[]> {
   const radius = 2000;
-  const query = `[out:json][timeout:12];(node["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng});way["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng}););out center 12;`;
+  const amenityFilter = "^(bar|pub|cafe|restaurant|nightclub|wine_bar|cocktail_bar)$";
+  // Note: OSM uses disused:amenity for permanently closed places — they never match this query
+  const query = `[out:json][timeout:15];(node["amenity"~"${amenityFilter}"]["name"](around:${radius},${lat},${lng});way["amenity"~"${amenityFilter}"]["name"](around:${radius},${lat},${lng}););out center;`;
 
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
@@ -256,14 +258,50 @@ export async function fetchNearbyVenues(
 ): Promise<LocationData[]> {
   let venues: LocationData[] = [];
 
-  // Try HERE first; fall back to OSM if it fails
-  try {
-    venues = await fetchVenuesFromHere(lat, lng, allUsers);
-    console.info(`[venues] HERE returned ${venues.length} results`);
-  } catch (hereErr) {
-    console.warn("[venues] HERE failed, falling back to OSM:", hereErr);
-    venues = await fetchVenuesFromOSM(lat, lng, allUsers);
-    console.info(`[venues] OSM returned ${venues.length} results`);
+  // Run HERE and OSM in parallel.
+  // OSM is the source of truth for closure: permanently closed venues are
+  // retagged as disused:amenity in OSM and never appear in its results.
+  // Strategy: include all OSM venues + HERE venues whose names also appear in
+  // OSM (cross-validated as open). If OSM is empty/fails, fall back to HERE alone.
+  const [hereResult, osmResult] = await Promise.allSettled([
+    fetchVenuesFromHere(lat, lng, allUsers),
+    fetchVenuesFromOSM(lat, lng, allUsers),
+  ]);
+
+  const hereVenues = hereResult.status === "fulfilled" ? hereResult.value : [];
+  const osmVenues  = osmResult.status  === "fulfilled" ? osmResult.value  : [];
+
+  if (hereResult.status === "rejected") console.warn("[venues] HERE failed:", hereResult.reason);
+  if (osmResult.status  === "rejected") console.warn("[venues] OSM failed:",  osmResult.reason);
+
+  console.info(`[venues] HERE=${hereVenues.length} OSM=${osmVenues.length}`);
+
+  if (osmVenues.length > 0) {
+    // Normalise names for comparison: lowercase, strip non-alphanumeric
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const osmNames = new Set(osmVenues.map((v) => norm(v.name)));
+
+    // OSM venues first (closure-accurate), then HERE venues confirmed by OSM
+    const osmById = new Map(osmVenues.map((v) => [v.id, v]));
+    const merged  = [...osmVenues];
+
+    for (const hv of hereVenues) {
+      const key = norm(hv.name);
+      // Add HERE venue only if OSM also lists it (confirms it's still open)
+      // AND it's not a duplicate of an OSM venue we already have
+      if (osmNames.has(key) && !osmById.has(hv.id)) {
+        // Replace matching OSM entry with the HERE version (better icon/category)
+        const osmMatch = osmVenues.find((v) => norm(v.name) === key);
+        if (osmMatch) {
+          const idx = merged.findIndex((v) => v.id === osmMatch.id);
+          if (idx !== -1) merged[idx] = { ...hv, id: osmMatch.id };
+        }
+      }
+    }
+    venues = merged;
+  } else {
+    // OSM unavailable — use HERE on its own
+    venues = hereVenues;
   }
 
   if (venues.length === 0) throw new Error("No venues found nearby");
