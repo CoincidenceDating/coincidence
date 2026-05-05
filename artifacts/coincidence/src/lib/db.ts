@@ -426,17 +426,7 @@ export async function getDiscoverProfiles(
       .gt("activated_at", Date.now() - COINCIDENCE_ACTIVE_WINDOW_MS),
   ]);
 
-  if (profilesResult.error) {
-    console.warn("[discover] RPC error:", profilesResult.error);
-    return [];
-  }
-
-  const raw = profilesResult.data ?? [];
-  console.log(`[discover] RPC returned ${raw.length} profile(s):`,
-    raw.map((r: { user_id: string; name: string; lat: unknown; lng: unknown }) =>
-      `${r.name} (${r.user_id.slice(0,8)}) lat=${r.lat} lng=${r.lng}`
-    )
-  );
+  if (profilesResult.error) return [];
 
   // Users with active presence are in Coincidence Mode at a specific venue —
   // they should only be discoverable by others at that same venue, not in general Discover.
@@ -451,22 +441,12 @@ export async function getDiscoverProfiles(
 
   const callerHasRadius = lat != null && lng != null && radiusMiles != null;
 
-  return raw
-    .filter((r: { user_id: string; name: string }) => {
-      const blocked = coincidenceActiveIds.has(r.user_id);
-      if (blocked) console.log(`[discover] ${r.name} hidden — coincidence mode active`);
-      return !blocked;
-    })
+  return (profilesResult.data ?? [])
+    .filter((r: { user_id: string }) => !coincidenceActiveIds.has(r.user_id))
     .filter((r: RpcRow) => {
       if (!callerHasRadius) return true;
-      if (r.lat == null || r.lng == null) {
-        console.log(`[discover] ${r.name} hidden — no stored GPS coords`);
-        return false;
-      }
-      const dist = calcDistanceMi(lat!, lng!, r.lat, r.lng);
-      const ok = dist <= radiusMiles!;
-      if (!ok) console.log(`[discover] ${r.name} hidden — client distance ${dist.toFixed(1)}mi > radius ${radiusMiles}mi`);
-      return ok;
+      if (r.lat == null || r.lng == null) return false;
+      return calcDistanceMi(lat!, lng!, r.lat, r.lng) <= radiusMiles!;
     })
     .map((r: RpcRow) => {
       const profile = buildProfileSnapshot(r);
