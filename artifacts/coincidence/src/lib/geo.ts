@@ -175,9 +175,10 @@ async function searchVenuesFromHere(
   // Discover API: https://discover.search.hereapi.com/v1/discover
   const url = new URL("https://discover.search.hereapi.com/v1/discover");
   url.searchParams.set("q", query);
+  // Use in=circle to constrain to 10 km and sort by distance from centre.
+  // HERE Discover does not allow 'at' and 'in' together — use only 'in'.
   if (lat != null && lng != null) {
-    url.searchParams.set("at", `${lat},${lng}`);
-    url.searchParams.set("in", `circle:${lat},${lng};r=10000`); // 10 km search radius
+    url.searchParams.set("in", `circle:${lat},${lng};r=10000`);
   }
   url.searchParams.set("limit", "20");
   url.searchParams.set("apiKey", apiKey);
