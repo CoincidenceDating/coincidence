@@ -180,6 +180,8 @@ async function searchVenuesFromHere(
   if (lat != null && lng != null) {
     url.searchParams.set("in", `circle:${lat},${lng};r=10000`);
   }
+  // Restrict to bars, pubs, nightclubs, cafés and restaurants
+  url.searchParams.set("categories", HERE_VENUE_CATEGORIES);
   url.searchParams.set("limit", "20");
   url.searchParams.set("apiKey", apiKey);
 
@@ -194,13 +196,13 @@ async function searchVenuesFromHere(
   const seen = new Set<string>();
 
   return (json.items ?? [])
+    .filter((item) => isPrimaryVenueCategory(item.categories))
     .filter((item) => {
       const key = item.title.trim().toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
     })
-    .slice(0, 12)
     .map((item) => ({
       id: item.id,
       name: item.title,
