@@ -271,6 +271,9 @@ function AppShell() {
         setShowSetup(!profile.setup_complete);
         if (profile.setup_complete) {
           setMyProfileSnapshot(db.buildProfileSnapshot(profile));
+          // Persist current radius to DB on every load so mutual-radius SQL
+          // always reflects the user's real preference (not the column default).
+          db.updateDiscoverRadius(discoverRadius * 1.60934).catch(() => {});
           // Never fetch profiles before GPS — pass preferences through so the
           // first GPS-gated fetch uses them even before React state settles.
           requestGpsLocation(lf, amin, amax);
