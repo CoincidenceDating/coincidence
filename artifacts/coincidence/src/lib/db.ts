@@ -467,6 +467,14 @@ export async function updateUserLocation(lat: number, lng: number) {
   );
 }
 
+export async function clearUserLocation() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_profiles")
+    .update({ lat: null, lng: null, updated_at: new Date().toISOString() })
+    .eq("user_id", user.id);
+}
+
 export async function checkMutualLike(targetUserId: string): Promise<boolean> {
   const { data } = await supabase.rpc("check_mutual_like", { target_user_id: targetUserId });
   return data === true;

@@ -146,6 +146,7 @@ function AppShell() {
   const [discoverRadius, setDiscoverRadius]     = useState(25);
   const [userLat, setUserLat]   = useState<number | null>(null);
   const [userLng, setUserLng]   = useState<number | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
   const [blockedIds, setBlockedIds]     = useState<string[]>([]);
   const [swipedIds, setSwipedIds]       = useState<string[]>([]);
   const [whoLikedMeCount, setWhoLikedMeCount]         = useState(0);
@@ -315,7 +316,11 @@ function AppShell() {
   const GPS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
   function requestGpsLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setGpsStatus("denied");
+      db.clearUserLocation().catch(() => {});
+      return;
+    }
 
     // Use cached coords if they're fresh enough — no browser prompt
     try {
@@ -325,25 +330,32 @@ function AppShell() {
         if (Date.now() - ts < GPS_CACHE_TTL) {
           setUserLat(lat);
           setUserLng(lng);
+          setGpsStatus("granted");
           refreshDiscoverProfiles(undefined, undefined, undefined, lat, lng, discoverRadius);
           return;
         }
       }
     } catch {}
 
-    // Cache is stale or missing — ask the browser once
+    // Cache is stale or missing — ask the browser
+    setGpsStatus("requesting");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLat(latitude);
         setUserLng(longitude);
+        setGpsStatus("granted");
         try {
           localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
         } catch {}
         db.updateUserLocation(latitude, longitude);
         refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
       },
-      () => {},
+      () => {
+        // GPS denied — mark denied and wipe stored coords so user is hidden
+        setGpsStatus("denied");
+        db.clearUserLocation().catch(() => {});
+      },
       { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
     );
   }
@@ -785,7 +797,7 @@ function AppShell() {
             discoverProfiles={discoverProfiles}
             isLoadingProfiles={isLoadingProfiles}
             discoverRadius={discoverRadius}
-            hasGps={userLat !== null}
+            gpsStatus={gpsStatus}
             onRequestGps={requestGpsLocation}
             onRadiusChange={(r) => {
               setDiscoverRadius(r);

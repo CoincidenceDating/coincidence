@@ -4,7 +4,7 @@ import { type Match, type Profile } from "@/lib/data";
 import { isRealUserId } from "@/lib/db";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
-import { MapPin, User, Sparkles, Loader2, Navigation } from "lucide-react";
+import { MapPin, User, Sparkles, Loader2, Navigation, LocateFixed, LockKeyhole } from "lucide-react";
 
 function formatBoostTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -29,7 +29,7 @@ interface SwipePageProps {
   discoverProfiles: Profile[];
   isLoadingProfiles: boolean;
   discoverRadius: number;
-  hasGps: boolean;
+  gpsStatus: "idle" | "requesting" | "granted" | "denied";
   onRequestGps: () => void;
   onRadiusChange: (miles: number) => void;
 }
@@ -52,7 +52,7 @@ export default function SwipePage({
   discoverProfiles,
   isLoadingProfiles,
   discoverRadius,
-  hasGps,
+  gpsStatus,
   onRequestGps,
   onRadiusChange,
 }: SwipePageProps) {
@@ -61,9 +61,11 @@ export default function SwipePage({
   const [showRadiusPanel, setShowRadiusPanel] = useState(false);
   const [localRadius, setLocalRadius] = useState(discoverRadius);
 
+  const hasGps = gpsStatus === "granted";
+
   // Auto-request GPS on mount so radius filter is always active
   useEffect(() => {
-    if (!hasGps) onRequestGps();
+    if (gpsStatus === "idle") onRequestGps();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -268,7 +270,69 @@ export default function SwipePage({
       </div>
 
       <AnimatePresence mode="wait">
-        {isLoadingProfiles ? (
+        {/* ── GPS gate — blocks the deck until location is known ── */}
+        {(gpsStatus === "idle" || gpsStatus === "requesting") ? (
+          <motion.div
+            key="gps-requesting"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex flex-col items-center gap-5 text-center px-8 pt-16"
+          >
+            <motion.div
+              className="w-20 h-20 rounded-full flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, rgba(155,93,229,0.15) 0%, rgba(232,56,125,0.15) 100%)" }}
+              animate={{ scale: [1, 1.07, 1] }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <LocateFixed className="w-9 h-9 text-primary" />
+            </motion.div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                Getting your location…
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Allow location access when your browser asks to start discovering people nearby.
+              </p>
+            </div>
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </motion.div>
+        ) : gpsStatus === "denied" ? (
+          <motion.div
+            key="gps-denied"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="flex flex-col items-center gap-5 text-center px-8 pt-12"
+          >
+            <div
+              className="w-20 h-20 rounded-full flex items-center justify-center"
+              style={{ background: "rgba(255,255,255,0.05)" }}
+            >
+              <LockKeyhole className="w-9 h-9 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-semibold" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                Location required
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Discover uses your GPS to show only real people within your set radius. You must enable location to view or be visible to others.
+              </p>
+            </div>
+            <button
+              onClick={onRequestGps}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold text-white transition-opacity active:opacity-80"
+              style={{ background: "linear-gradient(135deg, #9B5DE5 0%, #E8387D 100%)" }}
+            >
+              <LocateFixed className="w-4 h-4" />
+              Enable Location
+            </button>
+            <p className="text-[11px] text-muted-foreground/50 max-w-[220px] leading-relaxed">
+              You can also enable it in your browser's site settings, then tap the button above.
+            </p>
+          </motion.div>
+        ) : isLoadingProfiles ? (
           <motion.div
             key="loading"
             initial={{ opacity: 0 }}
