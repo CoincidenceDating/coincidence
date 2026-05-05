@@ -224,11 +224,17 @@ function AppShell() {
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
     }
-    matchesSubRef.current = db.subscribeToNewMatches(userId, (profileId, profileData) => {
-      const profile = profileData as Match["profile"];
-      const match: Match = { profile, source: "swipe", matchedAt: Date.now() };
+    matchesSubRef.current = db.subscribeToNewMatches(userId, (row) => {
+      const profile = row.profileData as Match["profile"];
+      const match: Match = {
+        profile,
+        source: row.source,
+        locationName: row.locationName ?? undefined,
+        locationIcon: row.locationIcon ?? undefined,
+        matchedAt: row.matchedAt,
+      };
       setMatches((prev) => {
-        const exists = prev.some((m) => m.profile.id === profileId);
+        const exists = prev.some((m) => m.profile.id === row.profileId);
         if (exists) return prev;
         return [...prev, match];
       });
@@ -667,7 +673,10 @@ function AppShell() {
   ): Promise<Match | null> {
     if (!myProfileSnapshot) return null;
     await db.addSwiped(profile.id, true);
-    const mutual = await db.createMutualMatch(profile.id, profile, myProfileSnapshot);
+    const mutual = await db.createMutualMatch(
+      profile.id, profile, myProfileSnapshot,
+      locationId, locationName, locationIcon,
+    );
     if (!mutual) return null;
     const match: Match = { profile, source: locationId, locationName, locationIcon, matchedAt: Date.now() };
     // Record in state + DB without triggering the App-level overlay

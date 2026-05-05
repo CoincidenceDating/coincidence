@@ -175,11 +175,17 @@ export async function createMutualMatch(
   targetUserId: string,
   targetProfileData: object,
   myProfileData: object,
+  locationId?: string,
+  locationName?: string,
+  locationIcon?: string,
 ): Promise<boolean> {
   const { data, error } = await supabase.rpc("create_mutual_match", {
-    target_user_id: targetUserId,
-    p_profile_data: targetProfileData,
+    target_user_id:   targetUserId,
+    p_profile_data:   targetProfileData,
     p_my_profile_data: myProfileData,
+    p_source:         locationId ?? "swipe",
+    p_location_name:  locationName ?? null,
+    p_location_icon:  locationIcon ?? null,
   });
   if (error) return false;
   return data === true;
@@ -276,9 +282,18 @@ export function subscribeToAllIncomingMessages(
     .subscribe();
 }
 
+export interface NewMatchRow {
+  profileId: string;
+  profileData: object;
+  source: string;
+  locationName: string | null;
+  locationIcon: string | null;
+  matchedAt: number;
+}
+
 export function subscribeToNewMatches(
   myId: string,
-  onMatch: (profileId: string, profileData: object) => void,
+  onMatch: (row: NewMatchRow) => void,
 ) {
   // Append a timestamp so each call gets a brand-new channel object;
   // Supabase caches channels by name and rejects .on() after .subscribe().
@@ -296,10 +311,21 @@ export function subscribeToNewMatches(
         const row = payload.new as {
           profile_id: string;
           profile_data: object;
+          source: string;
+          location_name: string | null;
+          location_icon: string | null;
+          matched_at: number;
           is_undecided: boolean;
         };
         if (!row.is_undecided) {
-          onMatch(row.profile_id, row.profile_data);
+          onMatch({
+            profileId:    row.profile_id,
+            profileData:  row.profile_data,
+            source:       row.source ?? "swipe",
+            locationName: row.location_name ?? null,
+            locationIcon: row.location_icon ?? null,
+            matchedAt:    row.matched_at ?? Date.now(),
+          });
         }
       },
     )
