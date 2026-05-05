@@ -16,7 +16,7 @@ import ChatPage, { type Message } from "@/pages/chat";
 import SetupPage, { type SetupData } from "@/pages/setup";
 import AuthPage, { type AccountData } from "@/pages/auth";
 import ReloginPage from "@/pages/relogin";
-import { Heart, Sparkles, HelpCircle, User, Loader2, Eye } from "lucide-react";
+import { Heart, Sparkles, HelpCircle, User, Loader2, Eye, MessageCircle } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import MatchOverlay from "@/components/MatchOverlay";
 import type { Match, CheckIn, Profile } from "@/lib/data";
@@ -137,6 +137,7 @@ function AppShell() {
   const [undecided, setUndecided]       = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount]       = useState(0);
   const [newUndecidedCount, setNewUndecidedCount] = useState(0);
+  const [unreadMsgCount, setUnreadMsgCount]     = useState(0);
   const [pendingMatch, setPendingMatch]         = useState<Match | null>(null);
   const [activeChat, setActiveChat]     = useState<Match | null>(null);
   const [threads, setThreads]           = useState<Record<string, Message[]>>({});
@@ -162,12 +163,19 @@ function AppShell() {
   const matchesSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inboxSubRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inRecoveryRef  = useRef(false);
+  const activeTabRef   = useRef<Tab>("swipe");
+  const activeChatRef  = useRef<Match | null>(null);
+  const matchesRef     = useRef<Match[]>([]);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
   const isBoostActive = boostActiveUntil !== null && boostTimeLeft > 0;
 
   const checkedInLocations = new Set(checkIns.map((c) => c.locationId));
+
+  // Keep refs in sync so subscription callbacks always see current values
+  useEffect(() => { matchesRef.current = matches; }, [matches]);
+  useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
   // ── Session management ──────────────────────────────────────────────────
   useEffect(() => {
@@ -236,6 +244,20 @@ function AppShell() {
         ...prev,
         [senderId]: [...(prev[senderId] ?? []), msg],
       }));
+      // Only count as unread / show toast when not already viewing this chat
+      const onMatchesTab   = activeTabRef.current === "matches";
+      const chatIsOpen     = activeChatRef.current?.profile.id === senderId;
+      if (!onMatchesTab || !chatIsOpen) {
+        setUnreadMsgCount((c) => c + 1);
+      }
+      if (!chatIsOpen) {
+        const senderName = matchesRef.current.find((m) => m.profile.id === senderId)?.profile.name ?? "Someone";
+        toast({
+          title: senderName,
+          description: msg.text,
+          duration: 4000,
+        });
+      }
     });
   }
 
@@ -498,7 +520,9 @@ function AppShell() {
     setMatches([]);
     setNewMatchCount(0);
     setNewUndecidedCount(0);
+    setUnreadMsgCount(0);
     setActiveChat(null);
+    activeChatRef.current = null;
     setThreads({});
     setCheckIns([]);
     setBoostCredits(3);
@@ -524,6 +548,7 @@ function AppShell() {
     setUndecided([]);
     setNewMatchCount(0);
     setNewUndecidedCount(0);
+    setUnreadMsgCount(0);
     setThreads({});
     setCheckIns([]);
     setBoostCredits(3);
@@ -644,8 +669,9 @@ function AppShell() {
   }
 
   function handleTabChange(tab: Tab) {
-    if (tab === "matches") setNewMatchCount(0);
+    if (tab === "matches") { setNewMatchCount(0); setUnreadMsgCount(0); }
     if (tab === "undecided") setNewUndecidedCount(0);
+    activeTabRef.current = tab;
     if (tab === "swipe") {
       db.getProfile().then((p) => {
         if (p?.looking_for) {
@@ -679,6 +705,9 @@ function AppShell() {
       });
     }
     setActiveChat(match);
+    activeChatRef.current = match;
+    // Clear this match's unread contribution when opening the chat
+    setUnreadMsgCount(0);
   }
 
   function handleSend(profileId: string, text: string) {
@@ -773,9 +802,9 @@ function AppShell() {
       icon: (a) => (
         <div className="relative">
           <Heart className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />
-          {newMatchCount > 0 && (
+          {(newMatchCount > 0 || unreadMsgCount > 0) && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full gradient-btn text-white text-[10px] font-bold flex items-center justify-center leading-none">
-              {newMatchCount > 9 ? "9+" : newMatchCount}
+              {(newMatchCount + unreadMsgCount) > 9 ? "9+" : newMatchCount + unreadMsgCount}
             </span>
           )}
         </div>
@@ -949,17 +978,17 @@ function AppShell() {
             match={activeChat}
             messages={threads[activeChat.profile.id] ?? []}
             onSend={handleSend}
-            onBack={() => setActiveChat(null)}
+            onBack={() => { setActiveChat(null); activeChatRef.current = null; }}
             onUnmatch={() => {
               const id = activeChat.profile.id;
-              setActiveChat(null);
+              setActiveChat(null); activeChatRef.current = null;
               setMatches((prev) => prev.filter((m) => m.profile.id !== id));
               setBlockedIds((prev) => { if (prev.includes(id)) return prev; db.addBlocked(id); return [...prev, id]; });
               db.removeMatch(id);
             }}
             onReport={() => {
               const id = activeChat.profile.id;
-              setActiveChat(null);
+              setActiveChat(null); activeChatRef.current = null;
               setMatches((prev) => prev.filter((m) => m.profile.id !== id));
               setBlockedIds((prev) => { if (prev.includes(id)) return prev; db.addBlocked(id); return [...prev, id]; });
               db.removeMatch(id);
