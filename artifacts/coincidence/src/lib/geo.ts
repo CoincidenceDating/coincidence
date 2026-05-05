@@ -175,8 +175,11 @@ async function searchVenuesFromHere(
   // Discover API: https://discover.search.hereapi.com/v1/discover
   const url = new URL("https://discover.search.hereapi.com/v1/discover");
   url.searchParams.set("q", query);
-  if (lat != null && lng != null) url.searchParams.set("at", `${lat},${lng}`);
-  url.searchParams.set("limit", "15");
+  if (lat != null && lng != null) {
+    url.searchParams.set("at", `${lat},${lng}`);
+    url.searchParams.set("in", `circle:${lat},${lng};r=10000`); // 10 km search radius
+  }
+  url.searchParams.set("limit", "20");
   url.searchParams.set("apiKey", apiKey);
 
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
