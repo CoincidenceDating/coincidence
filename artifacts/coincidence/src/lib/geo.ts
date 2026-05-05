@@ -48,17 +48,22 @@ function deterministicHash(str: string): number {
   return h >>> 0;
 }
 
-// HERE category IDs for nightlife/food/drink venues
-// 200-2000 = Nightlife, 200-2100 = Bar/Pub, 100-1000-0000 = Restaurant,
-// 100-1100-0010 = Coffee/Tea, 200-2200 = Adult Entertainment (excluded)
+// HERE Geocoding & Search category IDs for nightlife/food/drink
 const HERE_VENUE_CATEGORIES = "200-2000,200-2100,100-1000-0000,100-1100-0010";
 
-function hereCategoryToIcon(categories: Array<{ id: string; name: string }> | undefined): string {
+function hereCategoryToIcon(categories?: Array<{ id: string; name: string }>): string {
   if (!categories?.length) return "sparkles";
   const id = categories[0].id;
   if (id.startsWith("100-1100")) return "coffee"; // café/tea
   if (id.startsWith("200-2100")) return "beer";   // bar/pub
   if (id.startsWith("200-2000")) return "wine";   // nightlife
+  return "sparkles";
+}
+
+function osmAmenityToIcon(amenity: string): string {
+  if (amenity === "cafe") return "coffee";
+  if (amenity === "bar") return "wine";
+  if (amenity === "pub") return "beer";
   return "sparkles";
 }
 
@@ -79,25 +84,80 @@ interface HereItem {
   title: string;
   position: { lat: number; lng: number };
   categories?: Array<{ id: string; name: string }>;
-  distance?: number;
 }
 
-async function hereDiscover(
-  endpoint: string,
-  params: Record<string, string>,
+/* ── HERE Places API ──────────────────────────────────────── */
+
+async function fetchVenuesFromHere(
+  lat: number,
+  lng: number,
   allUsers: Profile[],
 ): Promise<LocationData[]> {
   const apiKey = __HERE_API_KEY__;
-  const url = new URL(`https://discover.search.hereapi.com/v1/${endpoint}`);
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  url.searchParams.set("apiKey", apiKey);
+  if (!apiKey) throw new Error("HERE_API_KEY not configured");
+
+  // Browse API: https://browse.search.hereapi.com/v1/browse
+  const url = new URL("https://browse.search.hereapi.com/v1/browse");
+  url.searchParams.set("at", `${lat},${lng}`);
+  url.searchParams.set("categories", HERE_VENUE_CATEGORIES);
+  url.searchParams.set("radius", "2000");
   url.searchParams.set("limit", "20");
+  url.searchParams.set("apiKey", apiKey);
 
   const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
-  if (!res.ok) throw new Error(`HERE API error ${res.status}`);
-  const json = await res.json() as { items: HereItem[] };
 
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("[HERE] Browse API error", res.status, body);
+    throw new Error(`HERE API ${res.status}: ${body}`);
+  }
+
+  const json = await res.json() as { items: HereItem[] };
   const seen = new Set<string>();
+
+  return (json.items ?? [])
+    .filter((item) => {
+      const key = item.title.trim().toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((item) => ({
+      id: item.id,
+      name: item.title,
+      icon: hereCategoryToIcon(item.categories),
+      lat: item.position.lat,
+      lng: item.position.lng,
+      users: assignUsersToVenue(item.title, allUsers),
+    }));
+}
+
+async function searchVenuesFromHere(
+  query: string,
+  lat: number | null,
+  lng: number | null,
+  allUsers: Profile[],
+): Promise<LocationData[]> {
+  const apiKey = __HERE_API_KEY__;
+  if (!apiKey) throw new Error("HERE_API_KEY not configured");
+
+  // Discover API: https://discover.search.hereapi.com/v1/discover
+  const url = new URL("https://discover.search.hereapi.com/v1/discover");
+  url.searchParams.set("q", query);
+  if (lat != null && lng != null) url.searchParams.set("at", `${lat},${lng}`);
+  url.searchParams.set("limit", "15");
+  url.searchParams.set("apiKey", apiKey);
+
+  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error("[HERE] Discover API error", res.status, body);
+    throw new Error(`HERE API ${res.status}: ${body}`);
+  }
+
+  const json = await res.json() as { items: HereItem[] };
+  const seen = new Set<string>();
+
   return (json.items ?? [])
     .filter((item) => {
       const key = item.title.trim().toLowerCase();
@@ -116,21 +176,68 @@ async function hereDiscover(
     }));
 }
 
+/* ── OpenStreetMap fallback ───────────────────────────────── */
+
+async function fetchVenuesFromOSM(
+  lat: number,
+  lng: number,
+  allUsers: Profile[],
+): Promise<LocationData[]> {
+  const radius = 2000;
+  const query = `[out:json][timeout:12];(node["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng});way["amenity"~"^(bar|pub|cafe|restaurant|nightclub)$"]["name"](around:${radius},${lat},${lng}););out center 12;`;
+
+  const res = await fetch("https://overpass-api.de/api/interpreter", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: "data=" + encodeURIComponent(query),
+    signal: AbortSignal.timeout(14000),
+  });
+
+  if (!res.ok) throw new Error("OSM Overpass error");
+  const json = await res.json();
+
+  const venues: RealVenue[] = (json.elements as Array<Record<string, unknown>>)
+    .filter((el) => (el.tags as Record<string, string> | undefined)?.name)
+    .map((el) => {
+      const tags = el.tags as Record<string, string>;
+      const elLat = typeof el.lat === "number" ? el.lat : (el.center as Record<string, number> | undefined)?.lat;
+      const elLng = typeof el.lon === "number" ? el.lon : (el.center as Record<string, number> | undefined)?.lon;
+      return { id: String(el.id), name: tags.name, amenity: tags.amenity, lat: elLat!, lng: elLng! };
+    })
+    .filter((v) => v.lat != null && v.lng != null);
+
+  return venues.map((v) => ({
+    id: v.id,
+    name: v.name,
+    icon: osmAmenityToIcon(v.amenity),
+    lat: v.lat,
+    lng: v.lng,
+    users: assignUsersToVenue(v.name, allUsers),
+  }));
+}
+
+/* ── Public API ───────────────────────────────────────────── */
+
 export async function fetchNearbyVenues(
   lat: number,
   lng: number,
   allUsers: Profile[],
 ): Promise<LocationData[]> {
-  const results = await hereDiscover("browse", {
-    at: `${lat},${lng}`,
-    categories: HERE_VENUE_CATEGORIES,
-    circle: `${lat},${lng};r=2000`,
-  }, allUsers);
+  let venues: LocationData[] = [];
 
-  if (results.length === 0) throw new Error("No venues found");
+  // Try HERE first; fall back to OSM if it fails
+  try {
+    venues = await fetchVenuesFromHere(lat, lng, allUsers);
+    console.info(`[venues] HERE returned ${venues.length} results`);
+  } catch (hereErr) {
+    console.warn("[venues] HERE failed, falling back to OSM:", hereErr);
+    venues = await fetchVenuesFromOSM(lat, lng, allUsers);
+    console.info(`[venues] OSM returned ${venues.length} results`);
+  }
 
-  // Sort by distance from user
-  return results
+  if (venues.length === 0) throw new Error("No venues found nearby");
+
+  return venues
     .map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat ?? 0, v.lng ?? 0) }))
     .sort((a, b) => a.distMi - b.distMi)
     .slice(0, 10)
@@ -144,14 +251,8 @@ export async function searchVenuesByName(
   allUsers: Profile[],
 ): Promise<LocationData[]> {
   if (!query.trim()) return [];
-
-  const params: Record<string, string> = { q: query };
-  if (lat != null && lng != null) {
-    params.at = `${lat},${lng}`;
-  }
-
   try {
-    return await hereDiscover("discover", params, allUsers);
+    return await searchVenuesFromHere(query, lat, lng, allUsers);
   } catch {
     return [];
   }
