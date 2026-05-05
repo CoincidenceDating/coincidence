@@ -159,8 +159,9 @@ function AppShell() {
   const [hasWhoLikedMeAccess, setHasWhoLikedMeAccess] = useState(false);
   const [whoLikedMeExpiresAt, setWhoLikedMeExpiresAt] = useState<number | null>(null);
 
-  const matchesSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const inRecoveryRef = useRef(false);
+  const matchesSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const inboxSubRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const inRecoveryRef  = useRef(false);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -224,8 +225,17 @@ function AppShell() {
         return [...prev, match];
       });
       setNewMatchCount((c) => c + 1);
-      // Show the rich overlay instead of a plain toast
       setPendingMatch(match);
+    });
+
+    if (inboxSubRef.current) {
+      supabase.removeChannel(inboxSubRef.current);
+    }
+    inboxSubRef.current = db.subscribeToAllIncomingMessages(userId, (senderId, msg) => {
+      setThreads((prev) => ({
+        ...prev,
+        [senderId]: [...(prev[senderId] ?? []), msg],
+      }));
     });
   }
 

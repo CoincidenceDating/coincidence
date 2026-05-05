@@ -247,6 +247,35 @@ export function subscribeToMessages(
     .subscribe();
 }
 
+export function subscribeToAllIncomingMessages(
+  myId: string,
+  onMessage: (senderId: string, msg: Message) => void,
+) {
+  return supabase
+    .channel(`inbox:${myId}:${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+        filter: `receiver_id=eq.${myId}`,
+      },
+      (payload) => {
+        const row = payload.new as {
+          id: string; text: string; sender_id: string; created_at: string;
+        };
+        onMessage(row.sender_id, {
+          id: row.id,
+          text: row.text,
+          from: "them",
+          timestamp: new Date(row.created_at).getTime(),
+        });
+      },
+    )
+    .subscribe();
+}
+
 export function subscribeToNewMatches(
   myId: string,
   onMatch: (profileId: string, profileData: object) => void,
