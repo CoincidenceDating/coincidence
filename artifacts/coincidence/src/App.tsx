@@ -227,6 +227,8 @@ function AppShell() {
 
   async function loadUserData() {
     setDataLoading(true);
+    // Fire-and-forget: remove matches pointing to deleted accounts before loading
+    db.cleanStaleMatches().catch(() => {});
     try {
       const [m, u, t, c, boost, blocked, swiped, profile, likedMeCount, access, expiry] = await Promise.all([
         db.getMatches(false),

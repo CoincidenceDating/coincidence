@@ -590,6 +590,43 @@ export async function getWhoLikedMeExpiry(): Promise<number | null> {
   return ms > Date.now() ? ms : null;
 }
 
+/* ── clean up stale matches from deleted accounts ─────────── */
+
+export async function cleanStaleMatches(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Fetch all match profile_ids for real users (UUID format)
+  const { data: rows } = await supabase
+    .from("user_matches")
+    .select("profile_id")
+    .eq("user_id", user.id);
+
+  if (!rows?.length) return;
+
+  const realIds = [...new Set(
+    rows.map((r) => r.profile_id as string).filter((id) => UUID_RE.test(id))
+  )];
+  if (!realIds.length) return;
+
+  // Check which of those UUIDs still have a profile row
+  const { data: existing } = await supabase
+    .from("user_profiles")
+    .select("user_id")
+    .in("user_id", realIds);
+
+  const existingSet = new Set((existing ?? []).map((p) => p.user_id as string));
+  const staleIds = realIds.filter((id) => !existingSet.has(id));
+  if (!staleIds.length) return;
+
+  // Delete matches and undecided rows referencing deleted accounts
+  await supabase
+    .from("user_matches")
+    .delete()
+    .eq("user_id", user.id)
+    .in("profile_id", staleIds);
+}
+
 /* ── nuke all user data ───────────────────────────────────── */
 
 export async function deleteAllUserData() {
