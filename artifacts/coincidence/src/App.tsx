@@ -313,7 +313,7 @@ function AppShell() {
   }
 
   const GPS_CACHE_KEY = "coincidence-gps";
-  const GPS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+  const GPS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
   function requestGpsLocation(overrideLf?: string, overrideAmin?: number, overrideAmax?: number) {
     if (!navigator.geolocation) {
@@ -356,9 +356,33 @@ function AppShell() {
         setGpsStatus("denied");
         db.clearUserLocation().catch(() => {});
       },
-      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60 * 1000 }
     );
   }
+
+  // Periodic GPS refresh — keeps stored location current for accurate distances
+  useEffect(() => {
+    if (gpsStatus !== "granted" || !navigator.geolocation) return;
+    const REFRESH_MS = 15 * 60 * 1000; // 15 minutes
+    const id = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setUserLat(latitude);
+          setUserLng(longitude);
+          try {
+            localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
+          } catch {}
+          db.updateUserLocation(latitude, longitude);
+          refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
+        },
+        () => {},
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60 * 1000 }
+      );
+    }, REFRESH_MS);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gpsStatus]);
 
   // Countdown tick
   useEffect(() => {
