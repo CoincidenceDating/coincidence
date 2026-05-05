@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { type Match, type Profile } from "@/lib/data";
 import { isRealUserId } from "@/lib/db";
@@ -30,6 +30,7 @@ interface SwipePageProps {
   isLoadingProfiles: boolean;
   discoverRadius: number;
   hasGps: boolean;
+  onRequestGps: () => void;
   onRadiusChange: (miles: number) => void;
 }
 
@@ -52,12 +53,19 @@ export default function SwipePage({
   isLoadingProfiles,
   discoverRadius,
   hasGps,
+  onRequestGps,
   onRadiusChange,
 }: SwipePageProps) {
   const [pulse, setPulse] = useState(false);
   const [stringSentName, setStringSentName] = useState<string | null>(null);
   const [showRadiusPanel, setShowRadiusPanel] = useState(false);
   const [localRadius, setLocalRadius] = useState(discoverRadius);
+
+  // Auto-request GPS on mount so radius filter is always active
+  useEffect(() => {
+    if (!hasGps) onRequestGps();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredProfiles = (discoverProfiles ?? []).filter((p) => !blockedIds.includes(p.id));
   const profile = filteredProfiles[0];
@@ -197,9 +205,12 @@ export default function SwipePage({
             >
               <div className="px-3 pt-4 pb-3 bg-card/60 border border-t-0 border-white/8 rounded-b-xl">
                 {!hasGps && (
-                  <p className="text-[11px] text-amber-400/80 mb-3 leading-snug">
-                    Location access not granted — radius filter will apply once GPS is enabled.
-                  </p>
+                  <button
+                    onClick={onRequestGps}
+                    className="w-full text-left text-[11px] text-amber-400/80 mb-3 leading-snug underline underline-offset-2 hover:text-amber-300 transition-colors"
+                  >
+                    Tap to enable location — required for radius filtering
+                  </button>
                 )}
 
                 {/* Slider */}

@@ -268,6 +268,8 @@ function AppShell() {
         if (profile.setup_complete) {
           setMyProfileSnapshot(db.buildProfileSnapshot(profile));
           refreshDiscoverProfiles(lf, amin, amax);
+          // Request GPS immediately so radius filter applies from first load
+          requestGpsLocation();
         }
       } else {
         setShowSetup(true);
@@ -784,6 +786,7 @@ function AppShell() {
             isLoadingProfiles={isLoadingProfiles}
             discoverRadius={discoverRadius}
             hasGps={userLat !== null}
+            onRequestGps={requestGpsLocation}
             onRadiusChange={(r) => {
               setDiscoverRadius(r);
               refreshDiscoverProfiles(undefined, undefined, undefined, userLat, userLng, r);
