@@ -28,9 +28,11 @@ interface CoincidencePageProps {
   boostCredits: number;
   onDoubleStringCredit: () => void;
   blockedIds: string[];
+  incomingCoincidenceMatch?: Match | null;
+  onClearIncomingCoincidenceMatch?: () => void;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -337,9 +339,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   return (
     <div className="flex flex-col items-center min-h-[calc(100vh-80px)] px-4 py-8">
 
-      {/* ── Coincidence match overlay ── */}
+      {/* ── Coincidence match overlay (own swipe OR incoming mutual from other user) ── */}
       <AnimatePresence>
-        {coincidenceMatch && (
+        {(coincidenceMatch ?? incomingCoincidenceMatch) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -400,7 +402,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
               transition={{ type: "spring", stiffness: 320, damping: 22, delay: 1.1 }}
               className="flex items-center gap-3 mb-8"
             >
-              <ProfileAvatar profile={coincidenceMatch.profile} size={80} className="shadow-lg ring-2 ring-background" />
+              <ProfileAvatar profile={(coincidenceMatch ?? incomingCoincidenceMatch)!.profile} size={80} className="shadow-lg ring-2 ring-background" />
               <div className="flex flex-col items-center">
                 <svg viewBox="0 0 80 28" className="w-20 text-background" fill="none">
                   {/* Main rope strand */}
@@ -464,8 +466,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                 You matched<br />by coincidence
               </h2>
               <p className="text-background/60 text-sm mt-2">
-                with <span className="text-background font-semibold">{coincidenceMatch.profile.name}</span>
-                {" "}at {coincidenceMatch.locationName}
+                with <span className="text-background font-semibold">{(coincidenceMatch ?? incomingCoincidenceMatch)!.profile.name}</span>
+                {" "}at {(coincidenceMatch ?? incomingCoincidenceMatch)!.locationName}
               </p>
             </motion.div>
 
@@ -491,15 +493,20 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
             >
               <button
                 onClick={() => {
-                  onSendMessage(coincidenceMatch);
+                  const m = (coincidenceMatch ?? incomingCoincidenceMatch)!;
+                  onSendMessage(m);
                   setCoincidenceMatch(null);
+                  onClearIncomingCoincidenceMatch?.();
                 }}
                 className="w-full py-3.5 rounded-2xl bg-background text-foreground font-semibold text-sm hover:bg-background/90 active:scale-[0.98] transition-all"
               >
                 Send a message
               </button>
               <button
-                onClick={() => setCoincidenceMatch(null)}
+                onClick={() => {
+                  setCoincidenceMatch(null);
+                  onClearIncomingCoincidenceMatch?.();
+                }}
                 className="w-full py-3 rounded-2xl border border-background/30 text-background/70 text-sm hover:text-background hover:border-background/60 transition-all"
               >
                 Keep swiping

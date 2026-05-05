@@ -138,7 +138,8 @@ function AppShell() {
   const [newMatchCount, setNewMatchCount]       = useState(0);
   const [newUndecidedCount, setNewUndecidedCount] = useState(0);
   const [unreadMsgCount, setUnreadMsgCount]     = useState(0);
-  const [pendingMatch, setPendingMatch]         = useState<Match | null>(null);
+  const [pendingMatch, setPendingMatch]               = useState<Match | null>(null);
+  const [coincidenceIncomingMatch, setCoincidenceIncomingMatch] = useState<Match | null>(null);
   const [activeChat, setActiveChat]     = useState<Match | null>(null);
   const [threads, setThreads]           = useState<Record<string, Message[]>>({});
   const [checkIns, setCheckIns]         = useState<CheckIn[]>([]);
@@ -239,7 +240,13 @@ function AppShell() {
         return [...prev, match];
       });
       setNewMatchCount((c) => c + 1);
-      setPendingMatch(match);
+      // If the match came from a venue (coincidence) and the user is currently
+      // on the Places tab, show the coincidence overlay instead of the generic one.
+      if (row.source !== "swipe" && activeTabRef.current === "coincidence") {
+        setCoincidenceIncomingMatch(match);
+      } else {
+        setPendingMatch(match);
+      }
     });
 
     if (inboxSubRef.current) {
@@ -926,6 +933,8 @@ function AppShell() {
             boostCredits={boostCredits}
             onDoubleStringCredit={handleDoubleStringCredit}
             blockedIds={blockedIds}
+            incomingCoincidenceMatch={coincidenceIncomingMatch}
+            onClearIncomingCoincidenceMatch={() => setCoincidenceIncomingMatch(null)}
           />
         )}
         {activeTab === "matches" && (
