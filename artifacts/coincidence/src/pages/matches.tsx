@@ -76,7 +76,7 @@ export default function MatchesPage({ matches, threads = {}, checkIns, onOpenCha
     function subline() {
       if (lastMsg) {
         return theyWrote
-          ? <span className="font-semibold text-foreground truncate">{lastMsg.text}</span>
+          ? <span className="text-foreground truncate">{lastMsg.text}</span>
           : <span className="text-muted-foreground truncate"><span className="text-muted-foreground/60">You: </span>{lastMsg.text}</span>;
       }
       if (isAligned) return <span className="text-muted-foreground">{overlap} places in common</span>;
@@ -97,9 +97,9 @@ export default function MatchesPage({ matches, threads = {}, checkIns, onOpenCha
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="font-medium text-sm">
+            <p className="text-sm">
               {match.profile.name},{" "}
-              <span className="text-muted-foreground font-normal">{match.profile.age}</span>
+              <span className="text-muted-foreground">{match.profile.age}</span>
             </p>
             {match.superLike && (
               <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[9px] font-semibold tracking-wide shrink-0" style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}>
