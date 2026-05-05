@@ -145,7 +145,10 @@ function AppShell() {
   const [boostActiveUntil, setBoostActiveUntil] = useState<number | null>(null);
   const [boostTimeLeft, setBoostTimeLeft]       = useState(0);
   const [boostRadius, setBoostRadius]           = useState(5);
-  const [discoverRadius, setDiscoverRadius]     = useState(25);
+  const [discoverRadius, setDiscoverRadius]     = useState(() => {
+    try { const v = localStorage.getItem("coincidence-radius"); if (v) return Number(v); } catch {}
+    return 25;
+  });
   const [userLat, setUserLat]   = useState<number | null>(null);
   const [userLng, setUserLng]   = useState<number | null>(null);
   const [gpsStatus, setGpsStatus] = useState<"idle" | "requesting" | "granted" | "denied">("idle");
@@ -829,6 +832,7 @@ function AppShell() {
             onRequestGps={requestGpsLocation}
             onRadiusChange={(r) => {
               setDiscoverRadius(r);
+              try { localStorage.setItem("coincidence-radius", String(r)); } catch {}
               refreshDiscoverProfiles(undefined, undefined, undefined, userLat, userLng, r);
             }}
           />
