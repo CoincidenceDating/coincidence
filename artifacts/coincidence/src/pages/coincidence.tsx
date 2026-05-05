@@ -48,8 +48,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
-  const [customVenueInput, setCustomVenueInput] = useState("");
-  const [showCustomInput, setShowCustomInput] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -124,8 +122,39 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
 
+  // Auto-open the dropdown the moment venues finish loading (if nothing is selected yet)
+  useEffect(() => {
+    if (venueStatus === "ready" && !selectedLocation && activeLocations.length > 0) {
+      setShowVenueDropdown(true);
+    }
+  }, [venueStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const PROXIMITY_THRESHOLD_MI = 0.1; // ~160 m
+
+  function getSelectedVenueDistMi(): number | null {
+    if (!userCoords || !location || location.lat == null || location.lng == null) return null;
+    return haversineDistanceMiles(userCoords.lat, userCoords.lng, location.lat, location.lng);
+  }
+
   async function handleActivate() {
-    if (!selectedLocation || !location) return;
+    // Phase 1 — GPS not yet requested: trigger it now
+    if (geoStatus === "idle") {
+      requestLocation();
+      return;
+    }
+    // Phase 2 — still waiting for GPS or venues
+    if (geoStatus === "requesting" || venueStatus === "loading") return;
+
+    // Phase 3 — venues ready but no venue chosen: open the dropdown
+    if (!selectedLocation || !location) {
+      setShowVenueDropdown(true);
+      return;
+    }
+
+    // Phase 4 — proximity check: must be within ~160 m of the venue
+    const distMi = getSelectedVenueDistMi();
+    if (distMi !== null && distMi > PROXIMITY_THRESHOLD_MI) return; // button is visually disabled in this state
+
     setIsActivating(true);
     try {
       const ownProfile = await db.getProfile();
@@ -166,32 +195,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
   function handleHotSpotTap(locId: string) {
     setSelectedLocation(locId);
     setShowVenueDropdown(false);
-  }
-
-  function handlePickVenueFromDropdown(venue: LocationData) {
-    setNearbyLocations((prev) => {
-      if (!prev) return [venue];
-      if (prev.some((l) => l.id === venue.id)) return prev;
-      return [venue, ...prev];
-    });
-    setSelectedLocation(venue.id);
-    setShowVenueDropdown(false);
-    setShowCustomInput(false);
-    setCustomVenueInput("");
-  }
-
-  function handleAddCustomVenue() {
-    const name = customVenueInput.trim();
-    if (!name) return;
-    const venue: LocationData = {
-      id: `custom-${name.toLowerCase().replace(/\s+/g, "-")}`,
-      name,
-      icon: "sparkles",
-      lat: userCoords?.lat,
-      lng: userCoords?.lng,
-      users: [],
-    };
-    handlePickVenueFromDropdown(venue);
   }
 
   function handleDeactivate() {
@@ -445,24 +448,23 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               <p className="text-muted-foreground text-sm mt-1">Pick a spot and see who is around</p>
             </div>
 
-            {/* ── Hot Spots ── */}
+            {/* ── Nearby Places ── */}
             <div className="mb-6">
               <div className="flex items-center gap-1.5 mb-3">
                 <Flame className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Hot Spots</span>
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nearby Places</span>
                 {venueStatus === "ready" && (
-                  <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">nearest first</span>
-                )}
-                {venueStatus === "ready" && (
-                  <button
-                    onClick={handleStopLocation}
-                    className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors group"
-                    title="Stop using location"
-                  >
-                    <LocateFixed className="w-3 h-3 group-hover:hidden" />
-                    <span className="group-hover:hidden">Near you</span>
-                    <span className="hidden group-hover:inline text-[10px]">Stop using location</span>
-                  </button>
+                  <>
+                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">within 2 km</span>
+                    <button
+                      onClick={handleStopLocation}
+                      className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors group"
+                    >
+                      <LocateFixed className="w-3 h-3 group-hover:hidden" />
+                      <span className="group-hover:hidden">GPS on</span>
+                      <span className="hidden group-hover:inline">Stop GPS</span>
+                    </button>
+                  </>
                 )}
                 {venueStatus === "error" && (
                   <button onClick={() => userCoords && loadVenues(userCoords.lat, userCoords.lng)} className="ml-auto text-[10px] text-muted-foreground hover:text-foreground underline">
@@ -471,36 +473,28 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                 )}
               </div>
 
-              {/* Idle — prompt to share location */}
-              {geoStatus === "idle" && (
-                <button
-                  onClick={requestLocation}
-                  className="w-full flex flex-col items-center gap-3 py-8 rounded-2xl border border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all group"
-                >
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-muted group-hover:bg-primary/10 transition-colors">
-                    <Navigation className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-foreground">Use my location</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Find real hotspots near you</p>
-                  </div>
-                </button>
-              )}
-
-              {/* Denied / unavailable */}
+              {/* GPS denied / unavailable */}
               {(geoStatus === "denied" || geoStatus === "unavailable") && (
-                <div className="w-full flex flex-col items-center gap-2 py-8 rounded-2xl border border-dashed border-border text-center">
+                <div className="w-full flex flex-col items-center gap-2 py-6 rounded-2xl border border-dashed border-border text-center">
                   <Navigation className="w-5 h-5 text-muted-foreground/50" />
                   <p className="text-sm text-muted-foreground">
                     {geoStatus === "denied" ? "Location access was denied" : "GPS unavailable on this device"}
                   </p>
                   {geoStatus === "denied" && (
-                    <p className="text-xs text-muted-foreground/60">Enable location in your browser settings and refresh</p>
+                    <p className="text-xs text-muted-foreground/60">Enable location in your browser settings, then refresh</p>
                   )}
                 </div>
               )}
 
-              {/* Requesting / loading skeleton */}
+              {/* Idle — Activate button will trigger GPS */}
+              {geoStatus === "idle" && (
+                <div className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border border-dashed border-border bg-card/50">
+                  <Navigation className="w-4 h-4 text-muted-foreground/60 shrink-0" />
+                  <p className="text-sm text-muted-foreground/70">Tap <span className="text-foreground/80 font-medium">Activate</span> below — we'll find real places near you</p>
+                </div>
+              )}
+
+              {/* Requesting GPS / loading venues skeleton */}
               {(geoStatus === "requesting" || venueStatus === "loading") && (
                 <div className="space-y-2">
                   {[1, 2, 3, 4].map((i) => (
@@ -510,21 +504,21 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                         <div className="h-3 rounded bg-muted w-3/4" />
                         <div className="h-2 rounded bg-muted w-1/3" />
                       </div>
-                      <div className="w-16 h-2 rounded bg-muted shrink-0" />
+                      <div className="w-12 h-2 rounded bg-muted shrink-0" />
                     </div>
                   ))}
                   <p className="text-center text-xs text-muted-foreground pt-1">
-                    {geoStatus === "requesting" ? "Getting your location…" : "Finding nearby spots…"}
+                    {geoStatus === "requesting" ? "Getting your location…" : "Scanning nearby places…"}
                   </p>
                 </div>
               )}
 
-              {/* Venue dropdown — shown once venues are loaded OR GPS denied (allow custom) */}
-              {(venueStatus === "ready" || geoStatus === "denied" || geoStatus === "unavailable") && (
+              {/* Venue dropdown — only shown once real GPS venues are loaded */}
+              {venueStatus === "ready" && (
                 <div className="relative" ref={dropdownRef}>
-                  {/* Trigger button */}
+                  {/* Trigger */}
                   <button
-                    onClick={() => { setShowVenueDropdown((v) => !v); setShowCustomInput(false); }}
+                    onClick={() => setShowVenueDropdown((v) => !v)}
                     className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl border transition-all text-left
                       ${selectedLocation
                         ? "border-primary/50 bg-primary/5"
@@ -533,18 +527,30 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                   >
                     {(() => {
                       const sel = activeLocations.find((l) => l.id === selectedLocation);
-                      return sel ? (
-                        <>
-                          <span className="text-primary shrink-0">{iconMap[sel.icon]}</span>
-                          <span className="flex-1 text-sm font-medium truncate">{sel.name}</span>
-                        </>
-                      ) : (
+                      if (sel) {
+                        const dMi = userCoords && sel.lat != null && sel.lng != null
+                          ? haversineDistanceMiles(userCoords.lat, userCoords.lng, sel.lat, sel.lng)
+                          : null;
+                        const inRange = dMi !== null && dMi <= PROXIMITY_THRESHOLD_MI;
+                        return (
+                          <>
+                            <span className="text-primary shrink-0">{iconMap[sel.icon]}</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium block truncate">{sel.name}</span>
+                              {dMi !== null && (
+                                <span className={`text-[10px] ${inRange ? "text-green-400" : "text-amber-400"}`}>
+                                  {inRange ? "You're here ✓" : `${formatDistance(dMi)} away — go here to activate`}
+                                </span>
+                              )}
+                            </div>
+                          </>
+                        );
+                      }
+                      return (
                         <>
                           <MapPin className="w-4 h-4 text-muted-foreground shrink-0" />
                           <span className="flex-1 text-sm text-muted-foreground">
-                            {venueStatus === "ready" && activeLocations.length > 0
-                              ? "Choose a nearby place…"
-                              : "Choose or enter a place…"}
+                            {activeLocations.length > 0 ? "Choose a nearby place…" : "No places found nearby"}
                           </span>
                         </>
                       );
@@ -561,16 +567,23 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                         exit={{ opacity: 0, y: -6, scaleY: 0.95 }}
                         transition={{ duration: 0.15 }}
                         style={{ transformOrigin: "top" }}
-                        className="absolute z-30 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-64 overflow-y-auto"
+                        className="absolute z-30 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto"
                       >
-                        {/* Venue list */}
+                        {activeLocations.length === 0 && (
+                          <div className="px-4 py-6 text-center">
+                            <MapPin className="w-5 h-5 text-muted-foreground/40 mx-auto mb-2" />
+                            <p className="text-sm text-muted-foreground">No places found within 2 km</p>
+                            <p className="text-xs text-muted-foreground/60 mt-1">Try moving to a busier area</p>
+                          </div>
+                        )}
                         {activeLocations.map((loc) => {
                           const distMi = userCoords && loc.lat != null && loc.lng != null
                             ? haversineDistanceMiles(userCoords.lat, userCoords.lng, loc.lat, loc.lng)
                             : null;
+                          const inRange = distMi !== null && distMi <= PROXIMITY_THRESHOLD_MI;
                           const count = venueRealCounts[loc.id] ?? 0;
                           const isSelected = selectedLocation === loc.id;
-                          const heat = count >= 4 ? "bg-red-400" : count === 3 ? "bg-orange-400" : "bg-yellow-400";
+                          const heat = count >= 4 ? "bg-red-400" : count >= 3 ? "bg-orange-400" : "bg-yellow-400";
                           return (
                             <button
                               key={loc.id}
@@ -580,54 +593,18 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
                               <span className="text-muted-foreground shrink-0">{iconMap[loc.icon]}</span>
                               <div className="flex-1 min-w-0">
                                 <span className="text-sm font-medium block truncate">{loc.name}</span>
-                                {distMi !== null && (
-                                  <span className="text-[10px] text-muted-foreground">{formatDistance(distMi)} away · {count} {count === 1 ? "person" : "people"}</span>
-                                )}
+                                <span className={`text-[10px] ${inRange ? "text-green-400" : "text-muted-foreground"}`}>
+                                  {distMi !== null ? (inRange ? "You're here" : `${formatDistance(distMi)} away`) : ""}
+                                  {count > 0 ? ` · ${count} ${count === 1 ? "person" : "people"}` : ""}
+                                </span>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
-                                <span className={`w-1.5 h-1.5 rounded-full ${heat}`} />
+                                {count > 0 && <span className={`w-1.5 h-1.5 rounded-full ${heat}`} />}
                                 {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
                               </div>
                             </button>
                           );
                         })}
-
-                        {/* Empty state when no venues found */}
-                        {venueStatus === "ready" && activeLocations.length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-4 px-3">No places found nearby</p>
-                        )}
-
-                        {/* Divider + custom venue option */}
-                        <div className="border-t border-border/60">
-                          {!showCustomInput ? (
-                            <button
-                              onClick={() => setShowCustomInput(true)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-primary/10 transition-colors text-left"
-                            >
-                              <MapPin className="w-4 h-4 text-primary shrink-0" />
-                              <span className="text-sm text-primary font-medium">Not here? Enter a name…</span>
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2 px-3 py-2">
-                              <input
-                                autoFocus
-                                type="text"
-                                value={customVenueInput}
-                                onChange={(e) => setCustomVenueInput(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleAddCustomVenue()}
-                                placeholder="e.g. Oro, The Anchor…"
-                                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none py-1"
-                              />
-                              <button
-                                onClick={handleAddCustomVenue}
-                                disabled={!customVenueInput.trim()}
-                                className="text-xs font-semibold text-primary disabled:text-muted-foreground transition-colors px-1"
-                              >
-                                Add
-                              </button>
-                            </div>
-                          )}
-                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -635,12 +612,38 @@ export default function CoincidencePage({ onMatch, onMaybe, onCheckIn, onSendMes
               )}
             </div>
 
-            <Button className="w-full" size="lg" disabled={!selectedLocation || isActivating} onClick={handleActivate}>
-              {isActivating
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>
-                : <><StringIcon className="w-4 h-4 mr-2" />Activate Coincidence Mode</>
+            {/* Activate button — adapts through each phase */}
+            {(() => {
+              const distMi = getSelectedVenueDistMi();
+              const tooFar = distMi !== null && distMi > PROXIMITY_THRESHOLD_MI;
+              const isLoading = geoStatus === "requesting" || venueStatus === "loading";
+              const needsVenue = venueStatus === "ready" && !selectedLocation;
+
+              let label: React.ReactNode;
+              let disabled = false;
+
+              if (isActivating) {
+                label = <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>;
+                disabled = true;
+              } else if (isLoading) {
+                label = <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{geoStatus === "requesting" ? "Getting location…" : "Finding places…"}</>;
+                disabled = true;
+              } else if (needsVenue) {
+                label = <><MapPin className="w-4 h-4 mr-2" />Choose a place above</>;
+                disabled = true;
+              } else if (tooFar && location) {
+                label = <><Navigation className="w-4 h-4 mr-2" />Go to {location.name} to activate</>;
+                disabled = true;
+              } else {
+                label = <><StringIcon className="w-4 h-4 mr-2" />{geoStatus === "idle" ? "Activate Coincidence Mode" : `Activate at ${location?.name ?? "…"}`}</>;
               }
-            </Button>
+
+              return (
+                <Button className="w-full" size="lg" disabled={disabled} onClick={handleActivate}>
+                  {label}
+                </Button>
+              );
+            })()}
 
             {/* ── String Theory explanation ── */}
             <div className="mt-10 pt-8 border-t border-foreground/8">
