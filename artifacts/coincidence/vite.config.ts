@@ -28,6 +28,9 @@ if (!basePath) {
 
 export default defineConfig({
   base: basePath,
+  define: {
+    __HERE_API_KEY__: JSON.stringify(process.env.HERE_API_KEY ?? ""),
+  },
   plugins: [
     react(),
     tailwindcss(),
