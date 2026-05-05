@@ -163,56 +163,6 @@ async function fetchVenuesFromHere(
     }));
 }
 
-async function searchVenuesFromHere(
-  query: string,
-  lat: number | null,
-  lng: number | null,
-  allUsers: Profile[],
-): Promise<LocationData[]> {
-  const apiKey = __HERE_API_KEY__;
-  if (!apiKey) throw new Error("HERE_API_KEY not configured");
-
-  // Discover API: https://discover.search.hereapi.com/v1/discover
-  const url = new URL("https://discover.search.hereapi.com/v1/discover");
-  url.searchParams.set("q", query);
-  // Use in=circle to constrain to 10 km and sort by distance from centre.
-  // HERE Discover does not allow 'at' and 'in' together — use only 'in'.
-  if (lat != null && lng != null) {
-    url.searchParams.set("in", `circle:${lat},${lng};r=10000`);
-  }
-  // Restrict to bars, pubs, nightclubs, cafés and restaurants
-  url.searchParams.set("categories", HERE_VENUE_CATEGORIES);
-  url.searchParams.set("limit", "20");
-  url.searchParams.set("apiKey", apiKey);
-
-  const res = await fetch(url.toString(), { signal: AbortSignal.timeout(10000) });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error("[HERE] Discover API error", res.status, body);
-    throw new Error(`HERE API ${res.status}: ${body}`);
-  }
-
-  const json = await res.json() as { items: HereItem[] };
-  const seen = new Set<string>();
-
-  return (json.items ?? [])
-    .filter((item) => isPrimaryVenueCategory(item.categories))
-    .filter((item) => {
-      const key = item.title.trim().toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .map((item) => ({
-      id: item.id,
-      name: item.title,
-      icon: hereCategoryToIcon(item.categories),
-      lat: item.position.lat,
-      lng: item.position.lng,
-      users: assignUsersToVenue(item.title, allUsers),
-    }));
-}
-
 /* ── OpenStreetMap fallback ───────────────────────────────── */
 
 async function fetchVenuesFromOSM(
@@ -319,16 +269,3 @@ export async function fetchNearbyVenues(
     .map(({ distMi: _d, ...v }) => v);
 }
 
-export async function searchVenuesByName(
-  query: string,
-  lat: number | null,
-  lng: number | null,
-  allUsers: Profile[],
-): Promise<LocationData[]> {
-  if (!query.trim()) return [];
-  try {
-    return await searchVenuesFromHere(query, lat, lng, allUsers);
-  } catch {
-    return [];
-  }
-}
