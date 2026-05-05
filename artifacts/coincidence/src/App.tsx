@@ -268,9 +268,9 @@ function AppShell() {
         setShowSetup(!profile.setup_complete);
         if (profile.setup_complete) {
           setMyProfileSnapshot(db.buildProfileSnapshot(profile));
-          refreshDiscoverProfiles(lf, amin, amax);
-          // Request GPS immediately so radius filter applies from first load
-          requestGpsLocation();
+          // Never fetch profiles before GPS — pass preferences through so the
+          // first GPS-gated fetch uses them even before React state settles.
+          requestGpsLocation(lf, amin, amax);
         }
       } else {
         setShowSetup(true);
@@ -315,7 +315,7 @@ function AppShell() {
   const GPS_CACHE_KEY = "coincidence-gps";
   const GPS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
-  function requestGpsLocation() {
+  function requestGpsLocation(overrideLf?: string, overrideAmin?: number, overrideAmax?: number) {
     if (!navigator.geolocation) {
       setGpsStatus("denied");
       db.clearUserLocation().catch(() => {});
@@ -331,7 +331,7 @@ function AppShell() {
           setUserLat(lat);
           setUserLng(lng);
           setGpsStatus("granted");
-          refreshDiscoverProfiles(undefined, undefined, undefined, lat, lng, discoverRadius);
+          refreshDiscoverProfiles(overrideLf, overrideAmin, overrideAmax, lat, lng, discoverRadius);
           return;
         }
       }
@@ -349,7 +349,7 @@ function AppShell() {
           localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
         } catch {}
         db.updateUserLocation(latitude, longitude);
-        refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
+        refreshDiscoverProfiles(overrideLf, overrideAmin, overrideAmax, latitude, longitude, discoverRadius);
       },
       () => {
         // GPS denied — mark denied and wipe stored coords so user is hidden
