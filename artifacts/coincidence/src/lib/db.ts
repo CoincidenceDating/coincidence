@@ -455,7 +455,17 @@ export async function getDiscoverProfiles(
       .gt("activated_at", Date.now() - COINCIDENCE_ACTIVE_WINDOW_MS),
   ]);
 
-  if (profilesResult.error) return [];
+  if (profilesResult.error) {
+    console.warn("[discover] RPC error:", profilesResult.error);
+    return [];
+  }
+
+  console.log(`[discover] RPC returned ${profilesResult.data?.length ?? 0} row(s)`, {
+    lookingFor, ageMin, ageMax, lat, lng, radiusKm,
+    rows: (profilesResult.data ?? []).map((r: { user_id: string; name: string; lat: number | null; lng: number | null; discover_radius_km?: number }) => ({
+      id: r.user_id, name: r.name, lat: r.lat, lng: r.lng, radius_km: r.discover_radius_km,
+    })),
+  });
 
   // Users with active presence are in Coincidence Mode at a specific venue —
   // they should only be discoverable by others at that same venue, not in general Discover.
@@ -470,14 +480,27 @@ export async function getDiscoverProfiles(
 
   const callerHasRadius = lat != null && lng != null && radiusMiles != null;
 
-  return (profilesResult.data ?? [])
-    .filter((r: { user_id: string }) => !coincidenceActiveIds.has(r.user_id))
+  const filtered = (profilesResult.data ?? [])
+    .filter((r: { user_id: string }) => {
+      const kept = !coincidenceActiveIds.has(r.user_id);
+      if (!kept) console.log(`[discover] filtered out (coincidence active): ${r.user_id}`);
+      return kept;
+    })
     .filter((r: RpcRow) => {
       if (!callerHasRadius) return true;
-      if (r.lat == null || r.lng == null) return false;
-      return calcDistanceMi(lat!, lng!, r.lat, r.lng) <= radiusMiles!;
-    })
-    .map((r: RpcRow) => {
+      if (r.lat == null || r.lng == null) {
+        console.log(`[discover] filtered out (no coords): ${r.user_id}`);
+        return false;
+      }
+      const dist = calcDistanceMi(lat!, lng!, r.lat, r.lng);
+      const kept = dist <= radiusMiles!;
+      if (!kept) console.log(`[discover] filtered out (dist ${dist.toFixed(1)}mi > ${radiusMiles}mi): ${r.user_id}`);
+      return kept;
+    });
+
+  console.log(`[discover] after client filter: ${filtered.length} profile(s)`);
+
+  return filtered.map((r: RpcRow) => {
       const profile = buildProfileSnapshot(r);
       if (lat != null && lng != null && r.lat != null && r.lng != null) {
         profile.distance = fmtDistanceMi(calcDistanceMi(lat, lng, r.lat, r.lng));
