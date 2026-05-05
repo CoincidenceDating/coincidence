@@ -455,6 +455,16 @@ export async function getDiscoverProfiles(
       .gt("activated_at", Date.now() - COINCIDENCE_ACTIVE_WINDOW_MS),
   ]);
 
+  // ── DEBUG: fetch raw profiles to see what filters are blocking ──────────
+  {
+    const { data: raw } = await supabase
+      .from("user_profiles")
+      .select("user_id,name,age,gender,looking_for,setup_complete,lat,lng,discover_radius_km")
+      .neq("user_id", (await supabase.auth.getUser()).data.user?.id ?? "");
+    console.log("[discover] raw candidate profiles:", raw);
+  }
+  // ────────────────────────────────────────────────────────────────────────
+
   if (profilesResult.error) {
     console.warn("[discover] RPC error:", profilesResult.error);
     return [];
