@@ -434,12 +434,22 @@ export async function getDiscoverProfiles(
     (presenceResult.data ?? []).map((r) => r.user_id as string)
   );
 
+  type RpcRow = {
+    user_id: string; name: string; age: number; bio: string;
+    photos: string[]; gender: string; lat: number | null; lng: number | null;
+  };
+
+  const callerHasRadius = lat != null && lng != null && radiusMiles != null;
+
   return (profilesResult.data ?? [])
     .filter((r: { user_id: string }) => !coincidenceActiveIds.has(r.user_id))
-    .map((r: {
-      user_id: string; name: string; age: number; bio: string;
-      photos: string[]; gender: string; lat: number | null; lng: number | null;
-    }) => {
+    .filter((r: RpcRow) => {
+      if (!callerHasRadius) return true;
+      // Profile must have coordinates AND be within the set radius
+      if (r.lat == null || r.lng == null) return false;
+      return calcDistanceMi(lat!, lng!, r.lat, r.lng) <= radiusMiles!;
+    })
+    .map((r: RpcRow) => {
       const profile = buildProfileSnapshot(r);
       if (lat != null && lng != null && r.lat != null && r.lng != null) {
         profile.distance = fmtDistanceMi(calcDistanceMi(lat, lng, r.lat, r.lng));
