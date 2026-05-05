@@ -61,6 +61,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       if (presenceSubRef.current) {
         supabase.removeChannel(presenceSubRef.current);
       }
+      // Clear presence so the user becomes visible in Discover immediately
+      // when they navigate away from this tab, even without pressing "Leave".
+      db.clearPresence();
     };
   }, []);
 
@@ -147,7 +150,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     }
   }, [venueStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const PROXIMITY_THRESHOLD_MI = 0.05; // ~80 m — must be essentially at the venue
+  const PROXIMITY_THRESHOLD_MI = 0.25; // ~400 m — generous enough for GPS + venue-coord inaccuracy
 
   function getSelectedVenueDistMi(): number | null {
     if (!userCoords || !location || location.lat == null || location.lng == null) return null;
