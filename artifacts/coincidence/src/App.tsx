@@ -162,6 +162,7 @@ function AppShell() {
   const [whoLikedMeExpiresAt, setWhoLikedMeExpiresAt] = useState<number | null>(null);
 
   const matchesSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const unmatchSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inboxSubRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inRecoveryRef  = useRef(false);
   const activeTabRef   = useRef<Tab>("swipe");
@@ -247,6 +248,29 @@ function AppShell() {
       } else {
         setPendingMatch(match);
       }
+    });
+
+    // Subscribe to DELETE events so this user's UI updates instantly when
+    // the other person unmatches them (requires REPLICA IDENTITY FULL — mig 029).
+    if (unmatchSubRef.current) {
+      supabase.removeChannel(unmatchSubRef.current);
+    }
+    unmatchSubRef.current = db.subscribeToUnmatches(userId, (profileId) => {
+      // Close chat if open with this person
+      setActiveChat((prev) => {
+        if (prev?.profile.id === profileId) {
+          activeChatRef.current = null;
+          return null;
+        }
+        return prev;
+      });
+      // Remove from matches and undecided
+      setMatches((prev) => prev.filter((m) => m.profile.id !== profileId));
+      setUndecided((prev) => prev.filter((m) => m.profile.id !== profileId));
+      // Remove from who-liked-me (in case they were visible there)
+      setWhoLikedMeProfiles((prev) => prev.filter((p) => p.id !== profileId));
+      // Add to local blocked so Discover/Coincidence filter them out immediately
+      setBlockedIds((prev) => prev.includes(profileId) ? prev : [...prev, profileId]);
     });
 
     if (inboxSubRef.current) {
@@ -549,6 +573,10 @@ function AppShell() {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
     }
+    if (unmatchSubRef.current) {
+      supabase.removeChannel(unmatchSubRef.current);
+      unmatchSubRef.current = null;
+    }
     await supabase.auth.signOut();
     setUndecided([]);
     setMatches([]);
@@ -574,6 +602,10 @@ function AppShell() {
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
+    }
+    if (unmatchSubRef.current) {
+      supabase.removeChannel(unmatchSubRef.current);
+      unmatchSubRef.current = null;
     }
     await db.deleteAllUserData();
     await supabase.auth.signOut();

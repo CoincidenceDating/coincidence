@@ -354,6 +354,38 @@ export function subscribeToNewMatches(
     .subscribe();
 }
 
+/**
+ * Listens for DELETE events on the caller's user_matches rows.
+ * Fires onUnmatch(profileId) whenever another user removes the match
+ * (e.g. via unmatch_user RPC), so the UI can update instantly.
+ *
+ * Requires REPLICA IDENTITY FULL on user_matches (migration 029) so that
+ * payload.old contains profile_id, not just the primary key.
+ */
+export function subscribeToUnmatches(
+  myId: string,
+  onUnmatch: (profileId: string) => void,
+) {
+  return supabase
+    .channel(`unmatches:${myId}:${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "DELETE",
+        schema: "public",
+        table: "user_matches",
+        filter: `user_id=eq.${myId}`,
+      },
+      (payload) => {
+        const old = payload.old as { profile_id?: string };
+        if (old.profile_id) {
+          onUnmatch(old.profile_id);
+        }
+      },
+    )
+    .subscribe();
+}
+
 /* ── threads (messages for fake profiles) ────────────────── */
 
 export async function getThreads(): Promise<Record<string, Message[]>> {
