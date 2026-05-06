@@ -18,7 +18,7 @@ BEGIN
     CREATE POLICY "users can view likes targeting them"
     ON public.user_swiped
     FOR SELECT
-    USING (profile_id = auth.uid());
+    USING (profile_id = auth.uid()::text);
   END IF;
 END $$;
 
