@@ -486,9 +486,14 @@ export async function getDiscoverProfiles(
   });
 
   if (profilesResult.error) {
-    console.warn("[discover] RPC error:", profilesResult.error);
+    console.warn("[discover] RPC error:", profilesResult.error.message, profilesResult.error);
     return [];
   }
+
+  console.info(
+    `[discover] RPC returned ${(profilesResult.data ?? []).length} rows`,
+    { lookingFor, ageMin, ageMax, lat, lng, radiusMiles },
+  );
 
   type RpcRow = {
     user_id: string; name: string; age: number; bio: string;
