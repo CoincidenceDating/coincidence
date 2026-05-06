@@ -252,11 +252,26 @@ function AppShell() {
     if (inboxSubRef.current) {
       supabase.removeChannel(inboxSubRef.current);
     }
-    inboxSubRef.current = db.subscribeToAllIncomingMessages(userId, (senderId, msg) => {
+    inboxSubRef.current = db.subscribeToAllIncomingMessages(userId, async (senderId, msg) => {
       setThreads((prev) => ({
         ...prev,
         [senderId]: [...(prev[senderId] ?? []), msg],
       }));
+
+      // If sender is a real user not yet in our matches list, the match row was
+      // likely inserted by create_mutual_match but the INSERT event was missed.
+      // Refresh matches from DB so the user can navigate to the conversation.
+      const inCurrentMatches = matchesRef.current.some((m) => m.profile.id === senderId);
+      if (!inCurrentMatches && db.isRealUserId(senderId)) {
+        const freshMatches = await db.getMatches(false);
+        setMatches((prev) => {
+          // Merge: add any matches from DB that aren't already in state
+          const existingIds = new Set(prev.map((m) => m.profile.id));
+          const toAdd = freshMatches.filter((m) => !existingIds.has(m.profile.id));
+          return toAdd.length ? [...prev, ...toAdd] : prev;
+        });
+      }
+
       // Only count as unread / show toast when not already viewing this chat
       const onMatchesTab   = activeTabRef.current === "matches";
       const chatIsOpen     = activeChatRef.current?.profile.id === senderId;
