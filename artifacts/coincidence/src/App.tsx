@@ -168,6 +168,10 @@ function AppShell() {
   const activeTabRef   = useRef<Tab>("swipe");
   const activeChatRef  = useRef<Match | null>(null);
   const matchesRef     = useRef<Match[]>([]);
+  // GPS watch
+  const gpsWatchRef       = useRef<number | null>(null);
+  const lastWrittenLatRef = useRef<number | null>(null);
+  const lastWrittenLngRef = useRef<number | null>(null);
 
   const BOOST_DURATION_MS = 30 * 60 * 1000;
   const MAX_BOOST_CREDITS = 5;
@@ -403,7 +407,80 @@ function AppShell() {
   }
 
   const GPS_CACHE_KEY = "coincidence-gps";
-  const GPS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+  const GPS_CACHE_TTL = 3 * 60 * 1000; // 3 minutes — short so stale coords expire quickly
+
+  // How far the device must move before we bother writing to DB again (~100 m)
+  const GPS_WRITE_THRESHOLD_KM = 0.1;
+
+  function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function stopGpsWatch() {
+    if (gpsWatchRef.current !== null) {
+      navigator.geolocation.clearWatch(gpsWatchRef.current);
+      gpsWatchRef.current = null;
+    }
+  }
+
+  function startGpsWatch(overrideLf?: string, overrideAmin?: number, overrideAmax?: number) {
+    if (!navigator.geolocation) {
+      setGpsStatus("denied");
+      db.clearUserLocation().catch(() => {});
+      return;
+    }
+    // Clear any existing watch before starting a new one
+    stopGpsWatch();
+
+    let firstFix = true;
+
+    gpsWatchRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+
+        // Always update React state so UI coords stay current
+        setUserLat(lat);
+        setUserLng(lng);
+        setGpsStatus("granted");
+
+        // Cache the latest fix
+        try {
+          localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat, lng, ts: Date.now() }));
+        } catch {}
+
+        // Throttle DB writes — only push when we've moved meaningfully or it's the first fix
+        const movedEnough = lastWrittenLatRef.current === null ||
+          haversineKm(lastWrittenLatRef.current, lastWrittenLngRef.current!, lat, lng) >= GPS_WRITE_THRESHOLD_KM;
+
+        if (firstFix || movedEnough) {
+          lastWrittenLatRef.current = lat;
+          lastWrittenLngRef.current = lng;
+          db.updateUserLocation(lat, lng, discoverRadius * 1.60934);
+          // On the very first fix, also refresh the discover list
+          if (firstFix) {
+            refreshDiscoverProfiles(overrideLf, overrideAmin, overrideAmax, lat, lng, discoverRadius);
+          } else {
+            // Subsequent fixes: refresh discover silently so stale profiles drop off
+            refreshDiscoverProfiles(undefined, undefined, undefined, lat, lng, discoverRadius);
+          }
+          firstFix = false;
+        }
+      },
+      () => {
+        // GPS denied — mark denied and wipe stored coords so user is invisible
+        setGpsStatus("denied");
+        db.clearUserLocation().catch(() => {});
+        stopGpsWatch();
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
 
   function requestGpsLocation(overrideLf?: string, overrideAmin?: number, overrideAmax?: number) {
     if (!navigator.geolocation) {
@@ -412,7 +489,7 @@ function AppShell() {
       return;
     }
 
-    // Use cached coords if they're fresh enough — no browser prompt
+    // Seed UI with a recent cached fix instantly (avoids blank state while watch fires first fix)
     try {
       const raw = localStorage.getItem(GPS_CACHE_KEY);
       if (raw) {
@@ -421,56 +498,26 @@ function AppShell() {
           setUserLat(lat);
           setUserLng(lng);
           setGpsStatus("granted");
-          refreshDiscoverProfiles(overrideLf, overrideAmin, overrideAmax, lat, lng, discoverRadius);
-          return;
+          // Don't return — still start the watch so live updates flow in
         }
       }
     } catch {}
 
-    // Cache is stale or missing — ask the browser
-    setGpsStatus("requesting");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserLat(latitude);
-        setUserLng(longitude);
-        setGpsStatus("granted");
-        try {
-          localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
-        } catch {}
-        db.updateUserLocation(latitude, longitude, discoverRadius * 1.60934);
-        refreshDiscoverProfiles(overrideLf, overrideAmin, overrideAmax, latitude, longitude, discoverRadius);
-      },
-      () => {
-        // GPS denied — mark denied and wipe stored coords so user is hidden
-        setGpsStatus("denied");
-        db.clearUserLocation().catch(() => {});
-      },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60 * 1000 }
-    );
+    setGpsStatus((s) => s === "idle" ? "requesting" : s);
+    startGpsWatch(overrideLf, overrideAmin, overrideAmax);
   }
 
-  // Periodic GPS refresh — keeps stored location current for accurate distances
+  // Pause the GPS watch when the tab is hidden, resume when visible again
   useEffect(() => {
-    if (gpsStatus !== "granted" || !navigator.geolocation) return;
-    const REFRESH_MS = 15 * 60 * 1000; // 15 minutes
-    const id = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setUserLat(latitude);
-          setUserLng(longitude);
-          try {
-            localStorage.setItem(GPS_CACHE_KEY, JSON.stringify({ lat: latitude, lng: longitude, ts: Date.now() }));
-          } catch {}
-          db.updateUserLocation(latitude, longitude, discoverRadius * 1.60934);
-          refreshDiscoverProfiles(undefined, undefined, undefined, latitude, longitude, discoverRadius);
-        },
-        () => {},
-        { enableHighAccuracy: true, timeout: 12000, maximumAge: 60 * 1000 }
-      );
-    }, REFRESH_MS);
-    return () => clearInterval(id);
+    function handleVisibilityChange() {
+      if (document.visibilityState === "hidden") {
+        stopGpsWatch();
+      } else if (document.visibilityState === "visible" && gpsStatus === "granted") {
+        startGpsWatch();
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gpsStatus]);
 
@@ -569,6 +616,9 @@ function AppShell() {
 
   async function handleLogout() {
     try { localStorage.removeItem(GPS_CACHE_KEY); } catch {}
+    stopGpsWatch();
+    lastWrittenLatRef.current = null;
+    lastWrittenLngRef.current = null;
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
@@ -599,6 +649,9 @@ function AppShell() {
   }
 
   async function handleDeleteAccount() {
+    stopGpsWatch();
+    lastWrittenLatRef.current = null;
+    lastWrittenLngRef.current = null;
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
       matchesSubRef.current = null;
