@@ -187,7 +187,11 @@ export async function createMutualMatch(
     p_location_name:  locationName ?? null,
     p_location_icon:  locationIcon ?? null,
   });
-  if (error) return false;
+  if (error) {
+    console.warn("[createMutualMatch] RPC error:", error.message, error);
+    return false;
+  }
+  console.info("[createMutualMatch] result:", data, "for target:", targetUserId);
   return data === true;
 }
 
