@@ -415,6 +415,18 @@ export async function addBlocked(profileId: string) {
   );
 }
 
+export async function reportUser(profileId: string, reason: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_reports").insert({
+    reporter_id: user.id,
+    reported_profile_id: profileId,
+    reason,
+  });
+  // Always block the reported user so they never appear again
+  await addBlocked(profileId);
+}
+
 /* ── swiped ───────────────────────────────────────────────── */
 
 export async function getSwiped(): Promise<string[]> {

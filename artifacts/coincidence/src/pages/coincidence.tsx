@@ -30,9 +30,10 @@ interface CoincidencePageProps {
   blockedIds: string[];
   incomingCoincidenceMatch?: Match | null;
   onClearIncomingCoincidenceMatch?: () => void;
+  onReport: (profile: Profile, reason: string) => void;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -843,6 +844,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                 blurName
                 onDoubleString={handleDoubleString}
                 boostCredits={boostCredits}
+                onReport={(reason) => onReport(currentUser, reason)}
               />
             ) : null}
           </>

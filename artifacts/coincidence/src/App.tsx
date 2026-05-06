@@ -462,6 +462,12 @@ function AppShell() {
     db.upsertBoost(newCredits, until, boostRadius);
   }
 
+  async function handleReport(profile: import("./lib/data").Profile, reason: string) {
+    await db.reportUser(profile.id, reason);
+    setBlockedIds((prev) => prev.includes(profile.id) ? prev : [...prev, profile.id]);
+    setDiscoverProfiles((prev) => prev.filter(p => db.baseProfileId(p.id) !== db.baseProfileId(profile.id)));
+  }
+
   function handleCreateAccount(data: AccountData) {
     localStorage.setItem("coincidence-has-account", "1");
     setAccount(data);
@@ -919,6 +925,7 @@ function AppShell() {
               db.updateDiscoverRadius(r * 1.60934);
               refreshDiscoverProfiles(undefined, undefined, undefined, userLat, userLng, r);
             }}
+            onReport={handleReport}
           />
         )}
         {activeTab === "coincidence" && (
@@ -935,6 +942,7 @@ function AppShell() {
             blockedIds={blockedIds}
             incomingCoincidenceMatch={coincidenceIncomingMatch}
             onClearIncomingCoincidenceMatch={() => setCoincidenceIncomingMatch(null)}
+            onReport={handleReport}
           />
         )}
         {activeTab === "matches" && (

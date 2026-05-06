@@ -8,7 +8,7 @@ import {
   type PanInfo,
   type MotionValue,
 } from "framer-motion";
-import { Heart, X, HelpCircle, MapPin } from "lucide-react";
+import { Heart, X, HelpCircle, MapPin, MoreVertical } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Profile } from "@/lib/data";
 
@@ -338,6 +338,68 @@ function resolvePhoto(url: string | undefined): string | undefined {
   return /^(https?:|blob:|data:)/.test(url) ? url : `${import.meta.env.BASE_URL}${url}`;
 }
 
+const REPORT_REASONS = [
+  "Inappropriate photos",
+  "Fake profile",
+  "Harassment or spam",
+  "Under 18",
+  "Other",
+];
+
+function ReportSheet({
+  profileName,
+  onSelect,
+  onCancel,
+}: {
+  profileName: string;
+  onSelect: (reason: string) => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[9999]">
+      <motion.div
+        className="absolute inset-0 bg-black/60"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onCancel}
+      />
+      <motion.div
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", stiffness: 400, damping: 36 }}
+        className="absolute bottom-0 left-0 right-0 bg-card rounded-t-3xl px-5 pb-10 pt-4 shadow-2xl"
+      >
+        <div className="w-10 h-1 rounded-full bg-muted mx-auto mb-5" />
+        <h3 className="text-base font-semibold text-foreground mb-1">
+          Report {profileName}
+        </h3>
+        <p className="text-sm text-muted-foreground mb-5">
+          They'll be blocked and won't appear again. Your report is anonymous.
+        </p>
+        <div className="space-y-2">
+          {REPORT_REASONS.map((reason) => (
+            <button
+              key={reason}
+              onClick={() => onSelect(reason)}
+              className="w-full text-left px-4 py-3 rounded-xl border border-border hover:border-destructive/50 hover:bg-destructive/5 text-sm text-foreground transition-all active:scale-[0.98]"
+            >
+              {reason}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onCancel}
+          className="w-full mt-4 py-3 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Cancel
+        </button>
+      </motion.div>
+    </div>
+  );
+}
+
 interface SwipeCardProps {
   profile: Profile;
   onSwipe: (direction: "left" | "right" | "maybe") => void;
@@ -348,11 +410,13 @@ interface SwipeCardProps {
   blurName?: boolean;
   onDoubleString?: () => void;
   boostCredits?: number;
+  onReport?: (reason: string) => void;
 }
 
-export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false, onDoubleString, boostCredits = 0 }: SwipeCardProps) {
+export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false, onDoubleString, boostCredits = 0, onReport }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showReport, setShowReport] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const isDragging = useRef(false);
 
@@ -437,6 +501,16 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
   return (
     <>
       {showConfetti && <ConfettiBurst />}
+
+      <AnimatePresence>
+        {showReport && (
+          <ReportSheet
+            profileName={blurName ? "this person" : profile.name.split(" ")[0]}
+            onSelect={(reason) => { setShowReport(false); onReport?.(reason); }}
+            onCancel={() => setShowReport(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <div className="w-full max-w-sm mx-auto">
         <div className="flex items-center justify-center" style={{ overflow: "visible" }}>
@@ -548,6 +622,18 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     {locationIcon}
                     <span>{locationName}</span>
                   </div>
+                )}
+
+                {/* Report button — top-right of photo */}
+                {onReport && (
+                  <button
+                    className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-white/80 hover:text-white hover:bg-black/60 transition-all active:scale-90"
+                    onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShowReport(true); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    aria-label="Report profile"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-5 pt-16 pb-5 text-white">
                   <h2 className="text-2xl font-bold leading-tight">

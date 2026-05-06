@@ -32,6 +32,7 @@ interface SwipePageProps {
   gpsStatus: "idle" | "requesting" | "granted" | "denied";
   onRequestGps: () => void;
   onRadiusChange: (miles: number) => void;
+  onReport: (profile: Profile, reason: string) => void;
 }
 
 const RADIUS_STEPS = [1, 5, 10, 15, 25, 50, 75, 100, 150, 200, 300];
@@ -55,6 +56,7 @@ export default function SwipePage({
   gpsStatus,
   onRequestGps,
   onRadiusChange,
+  onReport,
 }: SwipePageProps) {
   const [pulse, setPulse] = useState(false);
   const [stringSentName, setStringSentName] = useState<string | null>(null);
@@ -351,6 +353,7 @@ export default function SwipePage({
               peekProfiles={filteredProfiles.slice(1, 3)}
               onDoubleString={handleDoubleString}
               boostCredits={boostCredits}
+              onReport={(reason) => onReport(profile, reason)}
             />
           </motion.div>
         ) : (
