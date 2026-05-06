@@ -15,6 +15,8 @@
 -- but including them here is harmless and doesn't break anything.
 -- ─────────────────────────────────────────────────────────────────────────────
 
+DROP FUNCTION IF EXISTS public.get_discover_profiles(TEXT, INT, INT, FLOAT8, FLOAT8, FLOAT8);
+
 CREATE OR REPLACE FUNCTION public.get_discover_profiles(
   p_looking_for TEXT,
   p_age_min     INT,
