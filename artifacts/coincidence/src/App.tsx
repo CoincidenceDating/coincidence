@@ -438,7 +438,7 @@ function AppShell() {
   function startGpsWatch(overrideLf?: string, overrideAmin?: number, overrideAmax?: number) {
     if (!navigator.geolocation) {
       setGpsStatus("denied");
-      db.clearUserLocation().catch(() => {});
+      // Last known fix stays in DB — user remains visible at their last location
       return;
     }
     // Clear any existing watch before starting a new one
@@ -479,9 +479,9 @@ function AppShell() {
         }
       },
       () => {
-        // GPS denied — mark denied and wipe stored coords so user is invisible
+        // GPS denied/unavailable — mark denied but keep last known fix in DB
+        // so the user remains visible at their last stored location.
         setGpsStatus("denied");
-        db.clearUserLocation().catch(() => {});
         stopGpsWatch();
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -491,7 +491,7 @@ function AppShell() {
   function requestGpsLocation(overrideLf?: string, overrideAmin?: number, overrideAmax?: number) {
     if (!navigator.geolocation) {
       setGpsStatus("denied");
-      db.clearUserLocation().catch(() => {});
+      // Last known fix stays in DB — user remains visible at their last location
       return;
     }
 
