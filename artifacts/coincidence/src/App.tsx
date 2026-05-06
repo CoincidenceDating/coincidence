@@ -1049,15 +1049,26 @@ function AppShell() {
             onUnmatch={() => {
               const id = activeChat.profile.id;
               setActiveChat(null); activeChatRef.current = null;
+              // Remove from all local lists immediately
               setMatches((prev) => prev.filter((m) => m.profile.id !== id));
-              setBlockedIds((prev) => { if (prev.includes(id)) return prev; db.addBlocked(id); return [...prev, id]; });
-              db.removeMatch(id);
+              setUndecided((prev) => prev.filter((m) => m.profile.id !== id));
+              setWhoLikedMeProfiles((prev) => prev.filter((p) => p.id !== id));
+              setWhoLikedMeCount((c) => Math.max(0, c - 1));
+              // Add to local blocked state so Discover/Coincidence filter them out
+              setBlockedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
+              // Single RPC: deletes both match rows, mutual block, cleans swiped rows
+              db.unmatch(id);
             }}
             onReport={() => {
               const id = activeChat.profile.id;
               setActiveChat(null); activeChatRef.current = null;
               setMatches((prev) => prev.filter((m) => m.profile.id !== id));
-              setBlockedIds((prev) => { if (prev.includes(id)) return prev; db.addBlocked(id); return [...prev, id]; });
+              setUndecided((prev) => prev.filter((m) => m.profile.id !== id));
+              setWhoLikedMeProfiles((prev) => prev.filter((p) => p.id !== id));
+              setWhoLikedMeCount((c) => Math.max(0, c - 1));
+              setBlockedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
+              // Report still uses the separate report + block path (no mutual block needed)
+              db.reportUser(id, "reported");
               db.removeMatch(id);
             }}
           />

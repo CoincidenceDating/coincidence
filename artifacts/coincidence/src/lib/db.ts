@@ -162,6 +162,24 @@ export async function removeMatch(profileId: string) {
     .eq("profile_id", profileId);
 }
 
+/**
+ * Fully unmatches two users:
+ *  - Deletes BOTH users' match rows (all sources)
+ *  - Adds a MUTUAL block so neither sees the other anywhere
+ *  - Cleans up swiped rows so no ghost likes remain
+ * Returns true on success.
+ */
+export async function unmatch(targetProfileId: string): Promise<boolean> {
+  const { error } = await supabase.rpc("unmatch_user", {
+    p_target_id: targetProfileId,
+  });
+  if (error) {
+    console.warn("[unmatch] RPC error:", error.message, error);
+    return false;
+  }
+  return true;
+}
+
 export async function promoteUndecided(profileId: string, myProfileData: object) {
   await supabase.rpc("promote_and_notify", {
     p_profile_id:      profileId,
