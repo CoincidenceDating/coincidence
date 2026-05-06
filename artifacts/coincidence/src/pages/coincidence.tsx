@@ -56,6 +56,15 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Nudge banner — fires when someone at this venue likes the current user
+  const [venueLikeNudge, setVenueLikeNudge] = useState(false);
+  const venueLikeSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const realUsersRef = useRef<Profile[]>([]);
+  const nudgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+
+  // Keep realUsersRef current so the subscription callback can check it
+  useEffect(() => { realUsersRef.current = realUsers; }, [realUsers]);
 
   useEffect(() => {
     return () => {
@@ -68,8 +77,10 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       if (venueUsersSubRef.current) {
         supabase.removeChannel(venueUsersSubRef.current);
       }
-      // Clear presence so the user becomes visible in Discover immediately
-      // when they navigate away from this tab, even without pressing "Leave".
+      if (venueLikeSubRef.current) {
+        supabase.removeChannel(venueLikeSubRef.current);
+      }
+      if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
       db.clearPresence();
     };
   }, []);
@@ -224,6 +235,19 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
             setRealUsers((prev) => prev.filter((p) => p.id !== userId));
           },
         );
+
+        // Subscribe to incoming likes from other users at this venue.
+        // Fires a nudge banner so the user knows to keep swiping.
+        if (venueLikeSubRef.current) supabase.removeChannel(venueLikeSubRef.current);
+        venueLikeSubRef.current = db.subscribeToIncomingVenueLikes(
+          ownProfile.user_id,
+          (fromUserId) => realUsersRef.current.some((p) => p.id === fromUserId),
+          () => {
+            setVenueLikeNudge(true);
+            if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
+            nudgeTimerRef.current = setTimeout(() => setVenueLikeNudge(false), 6000);
+          },
+        );
       }
       const real = await db.getActiveUsersAtVenue(location.id);
       setRealUsers(real);
@@ -248,7 +272,13 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       supabase.removeChannel(venueUsersSubRef.current);
       venueUsersSubRef.current = null;
     }
+    if (venueLikeSubRef.current) {
+      supabase.removeChannel(venueLikeSubRef.current);
+      venueLikeSubRef.current = null;
+    }
+    if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
     setRealUsers([]);
+    setVenueLikeNudge(false);
     setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false); setJustCheckedIn(false);
   }
 
@@ -816,6 +846,25 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                 )}
               </AnimatePresence>
             </div>
+
+            {/* ── Nudge banner: someone at this venue just liked you ── */}
+            <AnimatePresence>
+              {venueLikeNudge && (
+                <motion.button
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{ type: "spring", stiffness: 340, damping: 26 }}
+                  onClick={() => setVenueLikeNudge(false)}
+                  className="w-full mb-4 flex items-center gap-3 px-4 py-3 rounded-2xl text-white text-sm font-medium shadow-lg active:scale-[0.98] transition-transform"
+                  style={{ background: "linear-gradient(135deg,#E8387D 0%,#9B5DE5 100%)" }}
+                >
+                  <Heart className="w-4 h-4 fill-white shrink-0" />
+                  <span className="flex-1 text-left">Someone here just liked you — keep swiping!</span>
+                  <span className="text-white/60 text-xs shrink-0">✕</span>
+                </motion.button>
+              )}
+            </AnimatePresence>
 
             {/* Swipe content */}
             {users.length === 0 ? (

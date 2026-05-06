@@ -723,6 +723,35 @@ export async function getActiveUsersAtVenue(venueId: string): Promise<import("./
   return (data ?? []).map((r) => r.profile_data as import("./data").Profile);
 }
 
+/* ── venue like notifications ─────────────────────────────── */
+
+// Fires whenever someone at the current venue sends the calling user a like.
+// Requires migration 025 (realtime on user_swiped + SELECT policy).
+export function subscribeToIncomingVenueLikes(
+  myId: string,
+  isAtVenue: (userId: string) => boolean,
+  onLike: () => void,
+) {
+  return supabase
+    .channel(`venue-likes:${myId}:${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "user_swiped",
+        filter: `profile_id=eq.${myId}`,
+      },
+      (payload) => {
+        const row = payload.new as { user_id: string; liked: boolean };
+        if (row.liked && isAtVenue(row.user_id)) {
+          onLike();
+        }
+      },
+    )
+    .subscribe();
+}
+
 /* ── who liked me ─────────────────────────────────────────── */
 
 export async function getWhoLikedMeCount(): Promise<number> {
