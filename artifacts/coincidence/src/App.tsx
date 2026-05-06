@@ -365,9 +365,15 @@ function AppShell() {
           // Never fetch profiles before GPS — pass preferences through so the
           // first GPS-gated fetch uses them even before React state settles.
           requestGpsLocation(lf, amin, amax);
+        } else {
+          // Setup not yet complete — start the GPS watch immediately so the
+          // first fix is written to the DB during the wizard, not after.
+          requestGpsLocation();
         }
       } else {
+        // No profile row at all (brand new account) — start GPS straight away
         setShowSetup(true);
+        requestGpsLocation();
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -592,7 +598,10 @@ function AppShell() {
       gender: data.gender ?? "prefer-not-to-say",
     }));
     setShowSetup(false);
-    refreshDiscoverProfiles(lf, amin, amax);
+    // (Re-)start the GPS watch with final prefs so the discover feed loads
+    // correctly. If GPS was already granted during the wizard this is instant;
+    // if not, it prompts the user now.
+    requestGpsLocation(lf, amin, amax);
   }
 
   function handleProfileUpdate(updated: { name: string; age: number; bio: string; hometown: string; height: string; hobbies: string[]; lookingFor?: string }) {
@@ -920,7 +929,7 @@ function AppShell() {
   if (showSetup) return (
     <AnimatePresence>
       <motion.div key="setup" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-        <SetupPage onComplete={handleSetupComplete} />
+        <SetupPage onComplete={handleSetupComplete} onRequestGps={() => requestGpsLocation()} />
       </motion.div>
     </AnimatePresence>
   );

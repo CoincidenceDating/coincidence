@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Home, Ruler, ChevronUp, ChevronDown, Check, Camera, X, Loader2 } from "lucide-react";
 import { uploadPhoto } from "@/lib/db";
@@ -37,6 +37,7 @@ export interface SetupData {
 
 interface SetupPageProps {
   onComplete: (data: SetupData) => void;
+  onRequestGps?: () => void;
 }
 
 const TOTAL_STEPS = 6;
@@ -47,9 +48,13 @@ const slideVariants = {
   exit:  (dir: number) => ({ x: dir > 0 ? "-100%" : "100%", opacity: 0 }),
 };
 
-export default function SetupPage({ onComplete }: SetupPageProps) {
+export default function SetupPage({ onComplete, onRequestGps }: SetupPageProps) {
   const [step, setStep]   = useState(0);
   const [dir, setDir]     = useState(1);
+
+  // Request GPS permission as soon as the wizard opens so the first fix
+  // is written to the DB while the user is filling in their details.
+  useEffect(() => { onRequestGps?.(); }, []);
 
   const [name, setName]         = useState("");
   const [age, setAge]           = useState(25);
