@@ -557,68 +557,16 @@ export async function getDiscoverProfiles(
 
   const callerHasRadius = lat != null && lng != null && radiusMiles != null;
 
+  // Secondary client-side distance guard — ensures floating-point edge cases
+  // from the SQL haversine don't leak profiles just outside the radius.
+  // Profiles without GPS are excluded when the caller has GPS (the RPC already
+  // enforces this, but we keep it here as a safety net).
   const filtered: RpcRow[] = (profilesResult.data ?? [])
     .filter((r: RpcRow) => {
       if (!callerHasRadius) return true;
       if (r.lat == null || r.lng == null) return false;
       return calcDistanceMi(lat!, lng!, r.lat, r.lng) <= radiusMiles!;
     });
-
-  // ── Supplemental query for users with no stored GPS ────────────────────
-  // The SQL RPC requires p.lat IS NOT NULL when the caller has GPS, so users
-  // who haven't granted location are completely invisible. Fetch them
-  // separately using the RLS-accessible user_profiles table and apply all
-  // the same filters in TypeScript.
-  if (callerHasRadius) {
-    const { data: { user } } = await supabase.auth.getUser();
-    const myId = user?.id ?? "";
-
-    const [noGpsResult, swipedResult, myProfileResult] = await Promise.all([
-      supabase
-        .from("user_profiles")
-        .select("user_id,name,age,bio,photos,gender,looking_for,lat,lng")
-        .eq("setup_complete", true)
-        .neq("user_id", myId)
-        .or("lat.is.null,lng.is.null")
-        .gte("age", ageMin)
-        .lte("age", ageMax),
-      supabase
-        .from("user_swiped")
-        .select("profile_id")
-        .eq("user_id", myId),
-      supabase
-        .from("user_profiles")
-        .select("gender")
-        .eq("user_id", myId)
-        .single(),
-    ]);
-
-    const swipedIds    = new Set((swipedResult.data ?? []).map((r) => r.profile_id as string));
-    const filteredIds  = new Set(filtered.map((r) => r.user_id));
-    const myGender     = (myProfileResult.data?.gender as string) ?? "";
-
-    for (const r of (noGpsResult.data ?? []) as RpcRow[]) {
-      if (swipedIds.has(r.user_id))   continue;   // already swiped
-      if (filteredIds.has(r.user_id)) continue;   // already in results
-
-      // Caller's gender preference
-      if (lookingFor !== "Everyone") {
-        if (lookingFor === "Women"      && r.gender !== "woman")      continue;
-        if (lookingFor === "Men"        && r.gender !== "man")        continue;
-        if (lookingFor === "Non-binary" && r.gender !== "non-binary") continue;
-      }
-      // Reciprocal: target's preference vs caller's gender
-      const tgt = r.looking_for ?? "Everyone";
-      if (tgt !== "Everyone" && myGender) {
-        if (tgt === "Women"      && myGender !== "woman")      continue;
-        if (tgt === "Men"        && myGender !== "man")        continue;
-        if (tgt === "Non-binary" && myGender !== "non-binary") continue;
-      }
-
-      filtered.push(r);
-    }
-  }
-  // ───────────────────────────────────────────────────────────────────────
 
   return filtered.map((r: RpcRow) => {
       const profile = buildProfileSnapshot(r);
