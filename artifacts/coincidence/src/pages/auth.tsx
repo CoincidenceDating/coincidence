@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, ChevronLeft, Check, Mail, Lock, ChevronDown, Search, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { upsertProfile } from "@/lib/db";
 
 export interface AccountData {
   id: string;
@@ -300,7 +301,28 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   }
 
   async function handleNextStep() {
-    if (step === 0 && validateStep0()) { goNext(); return; }
+    if (step === 0 && validateStep0()) {
+      // Check phone uniqueness before advancing — fast server-side lookup
+      setIsLoading(true);
+      const phone = phoneCountry.dialCode + phoneLocal.replace(/[\s\-().]/g, "");
+      const { data: phoneAvailable, error: phoneCheckError } = await supabase.rpc(
+        "check_phone_available",
+        { p_phone: phone }
+      );
+      setIsLoading(false);
+      if (phoneCheckError) {
+        // Non-blocking: if the RPC fails for some reason, allow the user through
+        // and let the DB constraint catch it at signup
+        goNext();
+        return;
+      }
+      if (phoneAvailable === false) {
+        setErrors({ phone: "An account already exists with this phone number" });
+        return;
+      }
+      goNext();
+      return;
+    }
     if (step === 1 && validateStep1()) {
       setIsLoading(true);
       const trimEmail = email.trim().toLowerCase();
@@ -318,7 +340,18 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
         return;
       }
 
+      // Supabase returns identities:[] when the email is already registered
+      // (to prevent enumeration attacks it doesn't error, just returns an empty array)
+      if (data.user && (data.user.identities?.length ?? 0) === 0) {
+        setErrors({ confirm: "An account already exists with this email address. Please log in instead." });
+        setIsLoading(false);
+        return;
+      }
+
       if (data.session && data.user) {
+        // Persist the phone immediately so the uniqueness constraint is enforced
+        // and so it's available without re-querying auth metadata later
+        await upsertProfile({ phone });
         onCreateAccount({ id: data.user.id, email: trimEmail, phone });
       } else if (data.user) {
         setErrors({ confirm: "Please check your email to confirm your account, then log in." });
