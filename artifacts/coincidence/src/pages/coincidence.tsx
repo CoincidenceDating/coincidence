@@ -31,9 +31,14 @@ interface CoincidencePageProps {
   incomingCoincidenceMatch?: Match | null;
   onClearIncomingCoincidenceMatch?: () => void;
   onReport: (profile: Profile, reason: string) => void;
+  // GPS state owned by App.tsx — no separate watch needed here
+  gpsStatus: "idle" | "requesting" | "granted" | "denied";
+  userLat: number | null;
+  userLng: number | null;
+  onRequestGps: () => void;
 }
 
-export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -41,14 +46,11 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const [justCheckedIn, setJustCheckedIn] = useState(false);
   const [coincidenceMatch, setCoincidenceMatch] = useState<Match | null>(null);
 
-  const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
-  const [userCoords, setUserCoords] = useState<GeoCoords | null>(null);
   const [venueStatus, setVenueStatus] = useState<VenueStatus>("idle");
   const [nearbyLocations, setNearbyLocations] = useState<LocationData[] | null>(null);
   const [venueRealCounts, setVenueRealCounts] = useState<Record<string, number>>({});
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isActivating, setIsActivating] = useState(false);
-  const watchIdRef = useRef<number | null>(null);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const venueUsersSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastVenueLoadRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -68,9 +70,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
   useEffect(() => {
     return () => {
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
       if (presenceSubRef.current) {
         supabase.removeChannel(presenceSubRef.current);
       }
@@ -111,42 +110,28 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Derive userCoords from App.tsx props — no local watchPosition needed
+  const userCoords = (userLat != null && userLng != null) ? { lat: userLat, lng: userLng } : null;
+
   // How far the user must move (in miles) before the venue list refreshes
   const VENUE_REFRESH_THRESHOLD_MI = 0.12; // ~200 m
 
-  const requestLocation = useCallback(() => {
-    if (!("geolocation" in navigator)) {
-      setGeoStatus("unavailable");
-      return;
+  // Load / refresh venues whenever the GPS position from App.tsx changes
+  useEffect(() => {
+    if (gpsStatus !== "granted" || userLat == null || userLng == null) return;
+    const last = lastVenueLoadRef.current;
+    if (!last) {
+      lastVenueLoadRef.current = { lat: userLat, lng: userLng };
+      loadVenues(userLat, userLng);
+    } else {
+      const moved = haversineDistanceMiles(last.lat, last.lng, userLat, userLng);
+      if (moved >= VENUE_REFRESH_THRESHOLD_MI) {
+        lastVenueLoadRef.current = { lat: userLat, lng: userLng };
+        loadVenues(userLat, userLng);
+      }
     }
-    setGeoStatus("requesting");
-    let firstFix = true;
-    const id = navigator.geolocation.watchPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-        setUserCoords(coords);
-        if (firstFix) {
-          firstFix = false;
-          setGeoStatus("granted");
-          lastVenueLoadRef.current = coords;
-          loadVenues(coords.lat, coords.lng);
-        } else {
-          // Refresh venue list if user has moved far enough from last load point
-          const last = lastVenueLoadRef.current;
-          if (last) {
-            const moved = haversineDistanceMiles(last.lat, last.lng, coords.lat, coords.lng);
-            if (moved >= VENUE_REFRESH_THRESHOLD_MI) {
-              lastVenueLoadRef.current = coords;
-              loadVenues(coords.lat, coords.lng);
-            }
-          }
-        }
-      },
-      () => setGeoStatus("denied"),
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
-    watchIdRef.current = id;
-  }, [loadVenues]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLat, userLng, gpsStatus]);
 
   const activeLocations = [...(nearbyLocations ?? [])].sort((a, b) => (venueRealCounts[b.id] ?? 0) - (venueRealCounts[a.id] ?? 0));
   const location = activeLocations.find((l) => l.id === selectedLocation);
@@ -176,13 +161,13 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   }
 
   async function handleActivate() {
-    // Phase 1 — GPS not yet requested: trigger it now
-    if (geoStatus === "idle") {
-      requestLocation();
+    // Phase 1 — GPS not yet granted: ask App.tsx to start the watch
+    if (gpsStatus === "idle" || gpsStatus === "denied") {
+      onRequestGps();
       return;
     }
     // Phase 2 — still waiting for GPS or venues
-    if (geoStatus === "requesting" || venueStatus === "loading") return;
+    if (gpsStatus === "requesting" || venueStatus === "loading") return;
 
     // Phase 3 — venues ready but no venue chosen: open the dropdown
     if (!selectedLocation || !location) {
@@ -283,21 +268,17 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   }
 
   function handleStopLocation() {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
+    // GPS watch is owned by App.tsx — just reset venue UI state here
     db.clearPresence();
     if (venueUsersSubRef.current) {
       supabase.removeChannel(venueUsersSubRef.current);
       venueUsersSubRef.current = null;
     }
     setRealUsers([]);
-    setGeoStatus("idle");
-    setUserCoords(null);
     setVenueStatus("idle");
     setNearbyLocations(null);
     setSelectedLocation("");
+    lastVenueLoadRef.current = null;
   }
 
   function handleCheckIn() {
@@ -583,20 +564,16 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
               </div>
 
               {/* GPS denied / unavailable */}
-              {(geoStatus === "denied" || geoStatus === "unavailable") && (
+              {gpsStatus === "denied" && (
                 <div className="w-full flex flex-col items-center gap-2 py-6 rounded-2xl border border-dashed border-border text-center">
                   <Navigation className="w-5 h-5 text-muted-foreground/50" />
-                  <p className="text-sm text-muted-foreground">
-                    {geoStatus === "denied" ? "Location access was denied" : "GPS unavailable on this device"}
-                  </p>
-                  {geoStatus === "denied" && (
-                    <p className="text-xs text-muted-foreground/60">Enable location in your browser settings, then refresh</p>
-                  )}
+                  <p className="text-sm text-muted-foreground">Location access was denied</p>
+                  <p className="text-xs text-muted-foreground/60">Enable location in your browser settings, then refresh</p>
                 </div>
               )}
 
               {/* Idle — Activate button will trigger GPS */}
-              {geoStatus === "idle" && (
+              {gpsStatus === "idle" && (
                 <div className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl border border-dashed border-border bg-card/50">
                   <Navigation className="w-4 h-4 text-muted-foreground/60 shrink-0" />
                   <p className="text-sm text-muted-foreground/70">Tap <span className="text-foreground/80 font-medium">Activate</span> below — we'll find real places near you</p>
@@ -604,7 +581,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
               )}
 
               {/* Requesting GPS / loading venues skeleton */}
-              {(geoStatus === "requesting" || venueStatus === "loading") && (
+              {(gpsStatus === "requesting" || venueStatus === "loading") && (
                 <div className="space-y-2">
                   {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card animate-pulse">
@@ -617,7 +594,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                     </div>
                   ))}
                   <p className="text-center text-xs text-muted-foreground pt-1">
-                    {geoStatus === "requesting" ? "Getting your location…" : "Scanning nearby places…"}
+                    {gpsStatus === "requesting" ? "Getting your location…" : "Scanning nearby places…"}
                   </p>
                 </div>
               )}
@@ -735,7 +712,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
             {(() => {
               const distMi = getSelectedVenueDistMi();
               const tooFar = distMi !== null && distMi > PROXIMITY_THRESHOLD_MI;
-              const isLoading = geoStatus === "requesting" || venueStatus === "loading";
+              const isLoading = gpsStatus === "requesting" || venueStatus === "loading";
               const needsVenue = venueStatus === "ready" && !selectedLocation;
 
               let label: React.ReactNode;
@@ -745,7 +722,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                 label = <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Activating…</>;
                 disabled = true;
               } else if (isLoading) {
-                label = <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{geoStatus === "requesting" ? "Getting location…" : "Finding places…"}</>;
+                label = <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{gpsStatus === "requesting" ? "Getting location…" : "Finding places…"}</>;
                 disabled = true;
               } else if (needsVenue) {
                 label = <><MapPin className="w-4 h-4 mr-2" />Choose a place above</>;
@@ -754,7 +731,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                 label = <><Navigation className="w-4 h-4 mr-2" />Go to {location.name} to activate</>;
                 disabled = true;
               } else {
-                label = <><StringIcon className="w-4 h-4 mr-2" />{geoStatus === "idle" ? "Activate Coincidence Mode" : `Activate at ${location?.name ?? "…"}`}</>;
+                label = <><StringIcon className="w-4 h-4 mr-2" />{gpsStatus === "idle" ? "Activate Coincidence Mode" : `Activate at ${location?.name ?? "…"}`}</>;
               }
 
               return (

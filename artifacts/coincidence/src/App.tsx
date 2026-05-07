@@ -1052,6 +1052,10 @@ function AppShell() {
             incomingCoincidenceMatch={coincidenceIncomingMatch}
             onClearIncomingCoincidenceMatch={() => setCoincidenceIncomingMatch(null)}
             onReport={handleReport}
+            gpsStatus={gpsStatus}
+            userLat={userLat}
+            userLng={userLng}
+            onRequestGps={() => requestGpsLocation()}
           />
         )}
         {activeTab === "matches" && (
