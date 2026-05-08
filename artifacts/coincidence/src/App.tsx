@@ -137,7 +137,7 @@ function AppShell() {
   const [undecided, setUndecided]       = useState<Match[]>([]);
   const [newMatchCount, setNewMatchCount]       = useState(0);
   const [newUndecidedCount, setNewUndecidedCount] = useState(0);
-  const [unreadMsgCount, setUnreadMsgCount]     = useState(0);
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
   const [pendingMatch, setPendingMatch]               = useState<Match | null>(null);
   const [coincidenceIncomingMatch, setCoincidenceIncomingMatch] = useState<Match | null>(null);
   const [activeChat, setActiveChat]     = useState<Match | null>(null);
@@ -300,11 +300,15 @@ function AppShell() {
         });
       }
 
-      // Only count as unread / show toast when not already viewing this chat
-      const onMatchesTab   = activeTabRef.current === "matches";
-      const chatIsOpen     = activeChatRef.current?.profile.id === senderId;
-      if (!onMatchesTab || !chatIsOpen) {
-        setUnreadMsgCount((c) => c + 1);
+      // Mark conversation as unread when not currently viewing that chat
+      const chatIsOpen = activeChatRef.current?.profile.id === senderId;
+      if (!chatIsOpen) {
+        setUnreadIds((prev) => {
+          if (prev.has(senderId)) return prev;
+          const next = new Set(prev);
+          next.add(senderId);
+          return next;
+        });
       }
       if (!chatIsOpen) {
         const senderName = matchesRef.current.find((m) => m.profile.id === senderId)?.profile.name ?? "Someone";
@@ -641,7 +645,7 @@ function AppShell() {
     setMatches([]);
     setNewMatchCount(0);
     setNewUndecidedCount(0);
-    setUnreadMsgCount(0);
+    setUnreadIds(new Set());
     setActiveChat(null);
     activeChatRef.current = null;
     setThreads({});
@@ -676,7 +680,7 @@ function AppShell() {
     setUndecided([]);
     setNewMatchCount(0);
     setNewUndecidedCount(0);
-    setUnreadMsgCount(0);
+    setUnreadIds(new Set());
     setThreads({});
     setCheckIns([]);
     setBoostCredits(3);
@@ -825,7 +829,7 @@ function AppShell() {
   }
 
   function handleTabChange(tab: Tab) {
-    if (tab === "matches") { setNewMatchCount(0); setUnreadMsgCount(0); }
+    if (tab === "matches") { setNewMatchCount(0); }
     if (tab === "undecided") setNewUndecidedCount(0);
     activeTabRef.current = tab;
     if (tab === "swipe") {
@@ -862,8 +866,13 @@ function AppShell() {
     }
     setActiveChat(match);
     activeChatRef.current = match;
-    // Clear this match's unread contribution when opening the chat
-    setUnreadMsgCount(0);
+    // Mark this conversation as read
+    setUnreadIds((prev) => {
+      if (!prev.has(match.profile.id)) return prev;
+      const next = new Set(prev);
+      next.delete(match.profile.id);
+      return next;
+    });
   }
 
   function handleSend(profileId: string, text: string) {
@@ -958,9 +967,9 @@ function AppShell() {
       icon: (a) => (
         <div className="relative">
           <Heart className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />
-          {(newMatchCount > 0 || unreadMsgCount > 0) && (
+          {(newMatchCount > 0 || unreadIds.size > 0) && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full gradient-btn text-white text-[10px] font-bold flex items-center justify-center leading-none">
-              {(newMatchCount + unreadMsgCount) > 9 ? "9+" : newMatchCount + unreadMsgCount}
+              {(newMatchCount + unreadIds.size) > 9 ? "9+" : newMatchCount + unreadIds.size}
             </span>
           )}
         </div>
@@ -1063,6 +1072,7 @@ function AppShell() {
             matches={matches}
             threads={threads}
             checkIns={checkIns}
+            unreadIds={unreadIds}
             onOpenChat={handleOpenChat}
             onUnmatch={(id) => {
               setMatches((prev) => prev.filter((m) => m.profile.id !== id));

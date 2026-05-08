@@ -22,11 +22,12 @@ interface MatchesPageProps {
   matches: Match[];
   threads: Record<string, Message[]>;
   checkIns: CheckIn[];
+  unreadIds: Set<string>;
   onOpenChat: (match: Match) => void;
   onUnmatch: (profileId: string) => void;
 }
 
-export default function MatchesPage({ matches, threads = {}, checkIns, onOpenChat, onUnmatch }: MatchesPageProps) {
+export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds, onOpenChat, onUnmatch }: MatchesPageProps) {
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmId, setConfirmId]   = useState<string | null>(null);
 
@@ -82,15 +83,22 @@ export default function MatchesPage({ matches, threads = {}, checkIns, onOpenCha
     const overlap     = starsAlignedOverlap(match, checkIns);
     const isAligned   = overlap >= 2;
     const isCoincidence = match.source !== "swipe";
-    const theyWrote   = lastMsg?.from === "them";
+    const isUnread    = unreadIds.has(match.profile.id);
     const isMenuOpen  = menuOpenId === match.profile.id;
     const firstName   = match.profile.name.split(" ")[0];
 
     function subline() {
       if (lastMsg) {
-        return theyWrote
-          ? <span className="text-foreground truncate">{lastMsg.text}</span>
-          : <span className="text-muted-foreground truncate"><span className="text-muted-foreground/60">You: </span>{lastMsg.text}</span>;
+        if (isUnread) {
+          return (
+            <span className="font-semibold truncate" style={{ color: "var(--foreground)" }}>
+              {lastMsg.text}
+            </span>
+          );
+        }
+        return lastMsg.from === "me"
+          ? <span className="text-muted-foreground truncate"><span className="text-muted-foreground/60">You: </span>{lastMsg.text}</span>
+          : <span className="text-muted-foreground truncate">{lastMsg.text}</span>;
       }
       if (isAligned) return <span className="text-muted-foreground">{overlap} places in common</span>;
       return null;
@@ -98,7 +106,10 @@ export default function MatchesPage({ matches, threads = {}, checkIns, onOpenCha
 
     return (
       <div className="relative">
-        <div className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card transition-all">
+        <div
+          className="w-full flex items-center gap-3 p-3 rounded-xl border bg-card transition-all"
+          style={isUnread ? { borderColor: "rgba(232,56,125,0.35)", background: "rgba(232,56,125,0.05)" } : {}}
+        >
           {/* Main tap area → open chat */}
           <button
             className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70 transition-opacity"
@@ -106,16 +117,19 @@ export default function MatchesPage({ matches, threads = {}, checkIns, onOpenCha
           >
             <div className="relative shrink-0">
               <ProfileAvatar profile={match.profile} size={44} />
-              {theyWrote && (
-                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-400 border-2 border-background" />
+              {isUnread && (
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-background"
+                  style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+                />
               )}
             </div>
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <p className="text-sm">
+                <p className={`text-sm ${isUnread ? "font-semibold" : ""}`}>
                   {match.profile.name},{" "}
-                  <span className="text-muted-foreground">{match.profile.age}</span>
+                  <span className={isUnread ? "text-foreground/70" : "text-muted-foreground"}>{match.profile.age}</span>
                 </p>
                 {match.superLike && (
                   <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-white text-[9px] font-semibold tracking-wide shrink-0" style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}>
@@ -144,7 +158,7 @@ export default function MatchesPage({ matches, threads = {}, checkIns, onOpenCha
             </div>
 
             <MessageCircle
-              className={`w-4 h-4 shrink-0 transition-colors ${hasMessages ? "text-primary" : "text-muted-foreground/40"}`}
+              className={`w-4 h-4 shrink-0 transition-colors ${isUnread ? "text-primary" : hasMessages ? "text-primary/50" : "text-muted-foreground/40"}`}
             />
           </button>
 
