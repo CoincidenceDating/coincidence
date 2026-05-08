@@ -111,6 +111,8 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
         timestamp: Date.now(),
       };
       setLocalMessages((prev) => [...prev, optimistic]);
+      // Notify App.tsx so the Matches preview updates (no DB write for real users)
+      onSend(match.profile.id, text);
       await sendRealMessage(match.profile.id, text);
     } else {
       onSend(match.profile.id, text);

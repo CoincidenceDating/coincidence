@@ -347,7 +347,24 @@ function AppShell() {
       }
       setMatches(m);
       setUndecided(u);
-      setThreads(t);
+
+      // Merge last real-user message into threads so the Matches preview is
+      // populated on first load (real messages live in `messages`, not user_threads).
+      const realPartnerIds = m
+        .map((match) => match.profile.id)
+        .filter((id) => db.isRealUserId(id));
+      const lastReal = realPartnerIds.length > 0
+        ? await db.getLastRealMessagePerPartner(realPartnerIds)
+        : {};
+      const mergedThreads = { ...t };
+      for (const [pid, msg] of Object.entries(lastReal)) {
+        // Only seed threads if there's no existing entry for this partner
+        if (!mergedThreads[pid] || mergedThreads[pid].length === 0) {
+          mergedThreads[pid] = [msg];
+        }
+      }
+      setThreads(mergedThreads);
+
       setCheckIns(c);
       setBoostCredits(boost.credits);
       setBoostActiveUntil(boost.until && boost.until > Date.now() ? boost.until : null);
@@ -878,13 +895,16 @@ function AppShell() {
   function handleSend(profileId: string, text: string) {
     const isTheirReply = profileId.startsWith("__them__");
     const realId = isTheirReply ? profileId.replace("__them__", "") : profileId;
+    const isReal = db.isRealUserId(realId);
     const msg: Message = {
       id: `${realId}-${Date.now()}-${Math.random()}`,
       text, from: isTheirReply ? "them" : "me", timestamp: Date.now(),
     };
     setThreads((prev) => {
       const updated = { ...prev, [realId]: [...(prev[realId] ?? []), msg] };
-      db.upsertThread(realId, updated[realId]);
+      // Real-user messages are stored in the `messages` table by sendRealMessage;
+      // only persist mock-user threads to user_threads.
+      if (!isReal) db.upsertThread(realId, updated[realId]);
       return updated;
     });
   }

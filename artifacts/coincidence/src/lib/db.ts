@@ -386,6 +386,45 @@ export function subscribeToUnmatches(
     .subscribe();
 }
 
+/**
+ * Fetches the single most-recent message for each real-user conversation
+ * so the Matches page preview is accurate on first load.
+ */
+export async function getLastRealMessagePerPartner(
+  partnerIds: string[],
+): Promise<Record<string, Message>> {
+  if (partnerIds.length === 0) return {};
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const myId = user.id;
+  const filter = partnerIds
+    .map((p) => `and(sender_id.eq.${myId},receiver_id.eq.${p}),and(sender_id.eq.${p},receiver_id.eq.${myId})`)
+    .join(",");
+
+  const { data } = await supabase
+    .from("messages")
+    .select("id, sender_id, receiver_id, text, created_at")
+    .or(filter)
+    .order("created_at", { ascending: false });
+
+  const seen = new Set<string>();
+  const out: Record<string, Message> = {};
+  for (const r of data ?? []) {
+    const partnerId = (r.sender_id as string) === myId ? r.receiver_id as string : r.sender_id as string;
+    if (!partnerIds.includes(partnerId)) continue;
+    if (seen.has(partnerId)) continue;
+    seen.add(partnerId);
+    out[partnerId] = {
+      id: r.id as string,
+      text: r.text as string,
+      from: (r.sender_id as string) === myId ? "me" : "them",
+      timestamp: new Date(r.created_at as string).getTime(),
+    };
+  }
+  return out;
+}
+
 /* ── threads (messages for fake profiles) ────────────────── */
 
 export async function getThreads(): Promise<Record<string, Message[]>> {
