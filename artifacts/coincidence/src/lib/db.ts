@@ -176,22 +176,32 @@ export async function removeMatch(profileId: string) {
  *  - Cannot delete their match row or insert the reverse block without the RPC
  */
 export async function unmatch(targetProfileId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  // Always send the broadcast FIRST — this is instant and bypasses RLS,
+  // so the other device updates immediately regardless of DB state.
+  await supabase
+    .channel(`unmatch-notify:${targetProfileId}`)
+    .send({
+      type: "broadcast",
+      event: "unmatched",
+      payload: { by: user.id },
+    });
+
+  // Then persist the DB state. Try the full SECURITY DEFINER RPC first
+  // (cleans both rows + mutual block + swiped). Fall back to partial cleanup
+  // if the function hasn't been deployed yet.
   const { error } = await supabase.rpc("unmatch_user", {
     p_target_id: targetProfileId,
   });
   if (!error) return true;
 
   console.warn("[unmatch] RPC unavailable, using fallback:", error.message);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-
   await Promise.all([
-    // Delete our own match row (RLS allows owner deletes)
     supabase.from("user_matches").delete()
       .eq("user_id", user.id)
       .eq("profile_id", targetProfileId),
-    // Block the other person from our side — this INSERT fires their
-    // subscribeToUnmatches listener so their UI updates immediately
     supabase.from("user_blocked").upsert(
       { user_id: user.id, blocked_profile_id: targetProfileId },
       { onConflict: "user_id,blocked_profile_id" },
@@ -375,32 +385,28 @@ export function subscribeToNewMatches(
 }
 
 /**
- * Listens for INSERT events on user_blocked where blocked_profile_id = myId.
- * Fires onUnmatch(blockerId) whenever another user unmatch/blocks us.
+ * Subscribes to unmatch broadcasts sent directly to this user.
  *
- * Using INSERT on user_blocked (rather than DELETE on user_matches) means:
- *  - No REPLICA IDENTITY FULL required — INSERT payloads always contain payload.new
- *  - Works the moment the unmatch_user RPC (or fallback path) writes the block row
+ * Uses Supabase Realtime Broadcast instead of postgres_changes so that:
+ *  - No RLS policy or REPLICA IDENTITY changes are needed
+ *  - The event fires instantly on the other device the moment unmatch() runs
+ *
+ * Channel name: "unmatch-notify:{myId}"
+ * Event name:   "unmatched"
+ * Payload:      { by: string }  — the UUID of the user who unmatched us
  */
 export function subscribeToUnmatches(
   myId: string,
   onUnmatch: (profileId: string) => void,
 ) {
   return supabase
-    .channel(`unmatches:${myId}:${Date.now()}`)
+    .channel(`unmatch-notify:${myId}`)
     .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "user_blocked",
-        filter: `blocked_profile_id=eq.${myId}`,
-      },
-      (payload) => {
-        const row = payload.new as { user_id?: string };
-        if (row.user_id) {
-          onUnmatch(row.user_id);
-        }
+      "broadcast",
+      { event: "unmatched" },
+      (payload: { payload?: { by?: string } }) => {
+        const by = payload?.payload?.by;
+        if (by) onUnmatch(by);
       },
     )
     .subscribe();

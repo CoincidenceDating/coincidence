@@ -257,11 +257,10 @@ function AppShell() {
       }
     });
 
-    // Subscribe to INSERT events on user_blocked (blocked_profile_id = myId)
-    // so this user's UI updates instantly when someone unmatches / blocks them.
-    // INSERT payloads always carry full column data — no REPLICA IDENTITY FULL needed.
-    // RLS policy "Users can see when they are blocked" (migration 031) is required
-    // so Supabase doesn't silently drop the event before it reaches us.
+    // Subscribe to Supabase Broadcast on channel "unmatch-notify:{myId}".
+    // Broadcast bypasses RLS entirely — no SQL migrations needed.
+    // unmatch() sends to this channel BEFORE touching the DB, so the
+    // other device's UI updates the moment the unmatch button is tapped.
     if (unmatchSubRef.current) {
       supabase.removeChannel(unmatchSubRef.current);
     }
