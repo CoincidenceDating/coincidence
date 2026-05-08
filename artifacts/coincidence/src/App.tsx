@@ -1038,6 +1038,26 @@ function AppShell() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden relative bg-background">
+
+      {/* ── Global profile icon — top-left on every tab except profile ── */}
+      {activeTab !== "profile" && (
+        <button
+          onClick={() => handleTabChange("profile")}
+          style={{
+            position: "fixed",
+            top: "max(env(safe-area-inset-top, 0px) + 12px, 14px)",
+            left: "max(env(safe-area-inset-left, 0px) + 16px, 16px)",
+            zIndex: 50,
+            width: "clamp(2rem, 9vw, 2.75rem)",
+            height: "clamp(2rem, 9vw, 2.75rem)",
+          }}
+          className="rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+          aria-label="Open profile"
+        >
+          <User style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
+        </button>
+      )}
+
       <main className="flex-1 min-h-0 overflow-y-auto relative" style={{ zIndex: 1 }}>
         {activeTab === "swipe" && (
           <SwipePage
@@ -1057,7 +1077,6 @@ function AppShell() {
               db.addSwiped(baseId, liked);
             }}
             onRealRightSwipe={handleRealRightSwipe}
-            onGoToProfile={() => setActiveTab("profile")}
             discoverProfiles={discoverProfiles}
             isLoadingProfiles={isLoadingProfiles}
             discoverRadius={discoverRadius}
