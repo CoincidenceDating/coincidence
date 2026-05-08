@@ -121,33 +121,12 @@ export default function SwipePage({
           <User className="w-4.5 h-4.5" />
         </button>
 
-        <div className="flex flex-col items-start select-none" style={{ gap: 0 }}>
-          <h1
-            className="gradient-text font-bold tracking-tight"
-            style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic", lineHeight: 1.1, marginBottom: 1 }}
-          >
-            Coincidence
-          </h1>
-          <svg
-            width="100%" height="7" viewBox="0 0 130 7"
-            preserveAspectRatio="none"
-            style={{ display: "block", overflow: "visible" }}
-          >
-            <defs>
-              <linearGradient id="c-underline-grad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#E8387D" />
-                <stop offset="100%" stopColor="#9B5DE5" />
-              </linearGradient>
-            </defs>
-            <path
-              d="M 2 2 Q 0 7 6 7 L 129 7"
-              stroke="url(#c-underline-grad)"
-              fill="none"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-            />
-          </svg>
-        </div>
+        <h1
+          className="gradient-text font-bold tracking-tight select-none"
+          style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}
+        >
+          Coincidence
+        </h1>
 
         <AnimatePresence mode="wait">
           {isBoostActive ? (
