@@ -1059,7 +1059,20 @@ function AppShell() {
           />
         )}
         {activeTab === "matches" && (
-          <MatchesPage matches={matches} threads={threads} checkIns={checkIns} onOpenChat={handleOpenChat} />
+          <MatchesPage
+            matches={matches}
+            threads={threads}
+            checkIns={checkIns}
+            onOpenChat={handleOpenChat}
+            onUnmatch={(id) => {
+              setMatches((prev) => prev.filter((m) => m.profile.id !== id));
+              setUndecided((prev) => prev.filter((m) => m.profile.id !== id));
+              setWhoLikedMeProfiles((prev) => prev.filter((p) => p.id !== id));
+              setWhoLikedMeCount((c) => Math.max(0, c - 1));
+              setBlockedIds((prev) => prev.includes(id) ? prev : [...prev, id]);
+              db.unmatch(id);
+            }}
+          />
         )}
         {activeTab === "liked" && (
           <LikedPage
