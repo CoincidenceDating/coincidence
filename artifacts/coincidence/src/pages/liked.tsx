@@ -67,11 +67,13 @@ export default function LikedPage({
     <div className="flex flex-col min-h-[calc(100vh-80px)] px-4 pt-6 pb-6">
 
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6">
-        <Heart className="w-5 h-5 text-foreground" />
-        <h1 className="text-xl font-bold">Liked you</h1>
+      <div className="flex flex-col items-center text-center mb-6">
+        <div className="flex items-center gap-2">
+          <Heart className="w-5 h-5 text-foreground" />
+          <h1 className="text-xl font-bold">Liked you</h1>
+        </div>
         {whoLikedMeCount > 0 && (
-          <span className="ml-auto text-sm text-muted-foreground">
+          <span className="text-sm text-muted-foreground mt-0.5">
             {whoLikedMeCount} {whoLikedMeCount === 1 ? "person" : "people"}
           </span>
         )}
