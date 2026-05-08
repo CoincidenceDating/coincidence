@@ -100,7 +100,6 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
           ? <span className="text-muted-foreground truncate"><span className="text-muted-foreground/60">You: </span>{lastMsg.text}</span>
           : <span className="text-muted-foreground truncate">{lastMsg.text}</span>;
       }
-      if (isAligned) return <span className="text-muted-foreground">{overlap} places in common</span>;
       return null;
     }
 
@@ -136,11 +135,6 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
                     ✦✦ Double String
                   </span>
                 )}
-                {isAligned && !match.superLike && (
-                  <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-foreground/8 border border-foreground/12 text-[9px] font-semibold tracking-wide text-foreground/70 shrink-0">
-                    ✦ Stars Aligned
-                  </span>
-                )}
               </div>
 
               <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
@@ -155,6 +149,24 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
                 )}
                 <p className="text-xs truncate min-w-0">{subline()}</p>
               </div>
+
+              {/* Stars Aligned score — always visible when overlap > 0 */}
+              {overlap > 0 && (
+                <div className="mt-1.5 flex items-center gap-1">
+                  {isAligned ? (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[9px] font-semibold tracking-wide"
+                      style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+                    >
+                      ✦ Stars Aligned · {overlap} {overlap === 1 ? "place" : "places"} in common
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-foreground/6 border border-foreground/10 text-[9px] font-medium text-muted-foreground">
+                      ✦ {overlap} {overlap === 1 ? "place" : "places"} in common
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <MessageCircle
