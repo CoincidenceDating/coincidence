@@ -1034,11 +1034,6 @@ function AppShell() {
         </div>
       ),
     },
-    {
-      id: "profile",
-      label: "Profile",
-      icon: (a) => <User className={`w-5 h-5 ${a ? "fill-primary text-primary" : ""}`} />,
-    },
   ];
 
   return (

@@ -4,7 +4,7 @@ import { type Match, type Profile } from "@/lib/data";
 import { isRealUserId } from "@/lib/db";
 import { SwipeCard } from "@/components/SwipeCard";
 import { StringIcon } from "@/components/StringIcon";
-import { MapPin, User, Sparkles, Loader2, Navigation, LocateFixed, LockKeyhole } from "lucide-react";
+import { MapPin, User, Loader2, Navigation, LocateFixed, LockKeyhole } from "lucide-react";
 
 function formatBoostTime(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -162,7 +162,7 @@ export default function SwipePage({
                   : "bg-card border-white/10 opacity-35 cursor-not-allowed text-muted-foreground"
                 }`}
             >
-              <Sparkles className="w-4 h-4" />
+              <StringIcon className="w-4 h-4" />
               {boostCredits > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
                   style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
