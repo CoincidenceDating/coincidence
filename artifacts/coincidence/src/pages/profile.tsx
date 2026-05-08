@@ -216,6 +216,22 @@ export default function ProfilePage({
     return acc;
   }, {});
 
+  const completionItems = [
+    { label: "Profile photo",  done: photos.length > 0 },
+    { label: "Display name",   done: !!editable.name.trim() },
+    { label: "Age",            done: !!editable.age },
+    { label: "Bio",            done: !!editable.bio.trim() },
+    { label: "Hometown",       done: !!editable.hometown.trim() },
+    { label: "Height",         done: !!editable.height },
+    { label: "Hobbies",        done: editable.hobbies.length > 0 },
+    { label: "Looking for",    done: !!editable.lookingFor },
+    { label: "Gender",         done: !!gender },
+  ];
+  const completionPct = Math.round(
+    (completionItems.filter(i => i.done).length / completionItems.length) * 100
+  );
+  const missingItems = completionItems.filter(i => !i.done);
+
   /* edit helpers */
   function openEdit() { setDraft({ ...editable }); setShowEdit(true); }
   async function saveEdit() {
@@ -426,6 +442,79 @@ export default function ProfilePage({
           <p className="text-xs text-muted-foreground">Check-ins</p>
         </CardContent></Card>
       </div>
+
+      {/* ── Profile completion ── */}
+      {completionPct < 100 && (
+        <div className="mb-6 rounded-2xl overflow-hidden border border-border bg-card">
+          <div className="px-4 pt-4 pb-3">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Profile strength</p>
+                <p className="text-2xl font-bold mt-0.5">
+                  <span className="gradient-text">{completionPct}%</span>
+                  <span className="text-sm font-normal text-muted-foreground ml-1.5">complete</span>
+                </p>
+              </div>
+              <button
+                onClick={openEdit}
+                className="text-xs font-semibold px-3 py-1.5 rounded-full border border-border hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              >
+                Complete
+              </button>
+            </div>
+
+            {/* Gradient progress bar */}
+            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${completionPct}%` }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                style={{ background: "linear-gradient(90deg, #E8387D 0%, #9B5DE5 100%)" }}
+              />
+            </div>
+          </div>
+
+          {/* Missing fields */}
+          {missingItems.length > 0 && (
+            <div className="px-4 pb-4">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+                Add to stand out
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {missingItems.map(({ label }) => (
+                  <button
+                    key={label}
+                    onClick={openEdit}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:border-foreground/40 hover:text-foreground transition-all"
+                  >
+                    <Plus className="w-3 h-3" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {completionPct === 100 && (
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 rounded-2xl border border-border bg-card px-4 py-3.5 flex items-center gap-3"
+        >
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}>
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold">Profile complete</p>
+            <p className="text-xs text-muted-foreground">You're showing up at your best</p>
+          </div>
+          <span className="ml-auto text-lg font-bold gradient-text">100%</span>
+        </motion.div>
+      )}
 
       {/* ── String section ── */}
       <div className="mb-6">
