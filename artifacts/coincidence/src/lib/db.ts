@@ -99,7 +99,7 @@ const GRADIENTS = [
 
 export function buildProfileSnapshot(raw: {
   user_id: string; name: string; age: number; bio: string;
-  photos: string[]; gender?: string;
+  photos: string[]; gender?: string; hobbies?: string[];
 }): import("./data").Profile {
   const initials = raw.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
   const gradientIdx = raw.user_id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GRADIENTS.length;
@@ -114,6 +114,7 @@ export function buildProfileSnapshot(raw: {
     gender: (raw.gender ?? "prefer-not-to-say") as import("./data").Gender,
     photo: raw.photos?.[0],
     photos: raw.photos ?? [],
+    hobbies: raw.hobbies ?? [],
   };
 }
 
@@ -585,17 +586,31 @@ export async function getDiscoverProfiles(
   lat?: number | null,
   lng?: number | null,
   radiusMiles?: number | null,
+  myHobbies?: string[],
 ): Promise<import("./data").Profile[]> {
   const radiusKm = radiusMiles != null ? radiusMiles * 1.60934 : null;
 
-  const profilesResult = await supabase.rpc("get_discover_profiles", {
+  const baseParams = {
     p_looking_for: lookingFor,
-    p_age_min: ageMin,
-    p_age_max: ageMax,
-    p_lat:       lat       ?? null,
-    p_lng:       lng       ?? null,
-    p_radius_km: radiusKm  ?? null,
+    p_age_min:     ageMin,
+    p_age_max:     ageMax,
+    p_lat:         lat       ?? null,
+    p_lng:         lng       ?? null,
+    p_radius_km:   radiusKm  ?? null,
+  };
+
+  // Try the newer function signature (with p_my_hobbies for server-side ordering).
+  // If the migration hasn't been run yet, Supabase returns PGRST202 "function not found"
+  // and we fall back to the old signature — client-side sort handles ordering instead.
+  let profilesResult = await supabase.rpc("get_discover_profiles", {
+    ...baseParams,
+    p_my_hobbies: myHobbies && myHobbies.length > 0 ? myHobbies : null,
   });
+
+  if (profilesResult.error?.code === "PGRST202") {
+    // Migration 032 not yet applied — retry without the new param
+    profilesResult = await supabase.rpc("get_discover_profiles", baseParams);
+  }
 
   if (profilesResult.error) {
     console.warn("[discover] RPC error:", profilesResult.error.message, profilesResult.error);
@@ -610,7 +625,7 @@ export async function getDiscoverProfiles(
   type RpcRow = {
     user_id: string; name: string; age: number; bio: string;
     photos: string[]; gender: string; lat: number | null; lng: number | null;
-    looking_for?: string;
+    looking_for?: string; hobbies?: string[];
   };
 
   const callerHasRadius = lat != null && lng != null && radiusMiles != null;
@@ -626,13 +641,27 @@ export async function getDiscoverProfiles(
       return calcDistanceMi(lat!, lng!, r.lat, r.lng) <= radiusMiles!;
     });
 
-  return filtered.map((r: RpcRow) => {
-      const profile = buildProfileSnapshot(r);
-      if (lat != null && lng != null && r.lat != null && r.lng != null) {
-        profile.distance = fmtDistanceMi(calcDistanceMi(lat, lng, r.lat, r.lng));
-      }
-      return profile;
+  const profiles = filtered.map((r: RpcRow) => {
+    const profile = buildProfileSnapshot(r);
+    if (lat != null && lng != null && r.lat != null && r.lng != null) {
+      profile.distance = fmtDistanceMi(calcDistanceMi(lat, lng, r.lat, r.lng));
+    }
+    return profile;
+  });
+
+  // Client-side interest sort: used as a fallback when the DB function hasn't
+  // been updated to do server-side ordering (migration 032 not yet run), or
+  // when the returned rows already carry hobbies and we want a stable sort.
+  if (myHobbies && myHobbies.length > 0) {
+    const mySet = new Set(myHobbies.map((h) => h.toLowerCase()));
+    profiles.sort((a, b) => {
+      const scoreA = (a.hobbies ?? []).filter((h) => mySet.has(h.toLowerCase())).length;
+      const scoreB = (b.hobbies ?? []).filter((h) => mySet.has(h.toLowerCase())).length;
+      return scoreB - scoreA; // higher shared count first
     });
+  }
+
+  return profiles;
 }
 
 export async function updateUserLocation(lat: number, lng: number, radiusKm?: number) {

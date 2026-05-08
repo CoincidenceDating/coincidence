@@ -11,6 +11,7 @@ export interface Profile {
   gender: Gender;
   photo?: string;
   photos?: string[];
+  hobbies?: string[];
   visitedLocations?: string[];
 }
 

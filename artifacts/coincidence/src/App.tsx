@@ -165,6 +165,9 @@ function AppShell() {
   const unmatchSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inboxSubRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inRecoveryRef  = useRef(false);
+  // Kept as a ref so refreshDiscoverProfiles always has the latest value
+  // without needing to be in the dependency chain.
+  const myHobbiesRef   = useRef<string[]>([]);
   const activeTabRef   = useRef<Tab>("swipe");
   const activeChatRef  = useRef<Match | null>(null);
   const matchesRef     = useRef<Match[]>([]);
@@ -382,6 +385,7 @@ function AppShell() {
         setProfilePrefs({ ageMin: amin, ageMax: amax });
         setShowSetup(!profile.setup_complete);
         if (profile.setup_complete) {
+          myHobbiesRef.current = profile.hobbies ?? [];
           setMyProfileSnapshot(db.buildProfileSnapshot(profile));
           // Persist current radius to DB on every load so mutual-radius SQL
           // always reflects the user's real preference (not the column default).
@@ -427,6 +431,7 @@ function AppShell() {
           lat  !== undefined ? lat  : userLat,
           lng  !== undefined ? lng  : userLng,
           radiusMi !== undefined ? radiusMi : discoverRadius,
+          myHobbiesRef.current,
         ),
         db.getBoostedProfileIds(),
       ]);
@@ -613,6 +618,7 @@ function AppShell() {
     db.upsertProfile(profileFields);
     setLookingFor(lf);
     setProfilePrefs({ ageMin: amin, ageMax: amax });
+    myHobbiesRef.current = data.hobbies ?? [];
     setMyProfileSnapshot(db.buildProfileSnapshot({
       user_id: account?.id ?? "",
       name: data.name,
@@ -620,6 +626,7 @@ function AppShell() {
       bio: data.bio,
       photos: data.photos ?? [],
       gender: data.gender ?? "prefer-not-to-say",
+      hobbies: data.hobbies ?? [],
     }));
     setShowSetup(false);
     // (Re-)start the GPS watch with final prefs so the discover feed loads
@@ -631,6 +638,7 @@ function AppShell() {
   function handleProfileUpdate(updated: { name: string; age: number; bio: string; hometown: string; height: string; hobbies: string[]; lookingFor?: string }) {
     const lf = updated.lookingFor ?? "Everyone";
     setLookingFor(lf);
+    myHobbiesRef.current = updated.hobbies ?? [];
     setMyProfileSnapshot(db.buildProfileSnapshot({
       user_id: account?.id ?? "",
       name: updated.name,
@@ -638,6 +646,7 @@ function AppShell() {
       bio: updated.bio,
       photos: myProfileSnapshot?.photos ?? [],
       gender: myProfileSnapshot?.gender ?? "",
+      hobbies: updated.hobbies ?? [],
     }));
     refreshDiscoverProfiles(lf, profilePrefs.ageMin, profilePrefs.ageMax);
   }
