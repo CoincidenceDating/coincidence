@@ -167,17 +167,36 @@ export async function removeMatch(profileId: string) {
  *  - Deletes BOTH users' match rows (all sources)
  *  - Adds a MUTUAL block so neither sees the other anywhere
  *  - Cleans up swiped rows so no ghost likes remain
- * Returns true on success.
+ * Returns true on full success (RPC available), false on partial fallback.
+ *
+ * Fallback (when unmatch_user RPC is not yet deployed):
+ *  - Deletes our own match row (RLS allows this)
+ *  - Inserts user_blocked row for the other person (triggers their realtime subscription)
+ *  - Cannot delete their match row or insert the reverse block without the RPC
  */
 export async function unmatch(targetProfileId: string): Promise<boolean> {
   const { error } = await supabase.rpc("unmatch_user", {
     p_target_id: targetProfileId,
   });
-  if (error) {
-    console.warn("[unmatch] RPC error:", error.message, error);
-    return false;
-  }
-  return true;
+  if (!error) return true;
+
+  console.warn("[unmatch] RPC unavailable, using fallback:", error.message);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  await Promise.all([
+    // Delete our own match row (RLS allows owner deletes)
+    supabase.from("user_matches").delete()
+      .eq("user_id", user.id)
+      .eq("profile_id", targetProfileId),
+    // Block the other person from our side — this INSERT fires their
+    // subscribeToUnmatches listener so their UI updates immediately
+    supabase.from("user_blocked").upsert(
+      { user_id: user.id, blocked_profile_id: targetProfileId },
+      { onConflict: "user_id,blocked_profile_id" },
+    ),
+  ]);
+  return false;
 }
 
 export async function promoteUndecided(profileId: string, myProfileData: object) {
@@ -355,12 +374,12 @@ export function subscribeToNewMatches(
 }
 
 /**
- * Listens for DELETE events on the caller's user_matches rows.
- * Fires onUnmatch(profileId) whenever another user removes the match
- * (e.g. via unmatch_user RPC), so the UI can update instantly.
+ * Listens for INSERT events on user_blocked where blocked_profile_id = myId.
+ * Fires onUnmatch(blockerId) whenever another user unmatch/blocks us.
  *
- * Requires REPLICA IDENTITY FULL on user_matches (migration 029) so that
- * payload.old contains profile_id, not just the primary key.
+ * Using INSERT on user_blocked (rather than DELETE on user_matches) means:
+ *  - No REPLICA IDENTITY FULL required — INSERT payloads always contain payload.new
+ *  - Works the moment the unmatch_user RPC (or fallback path) writes the block row
  */
 export function subscribeToUnmatches(
   myId: string,
@@ -371,15 +390,15 @@ export function subscribeToUnmatches(
     .on(
       "postgres_changes",
       {
-        event: "DELETE",
+        event: "INSERT",
         schema: "public",
-        table: "user_matches",
-        filter: `user_id=eq.${myId}`,
+        table: "user_blocked",
+        filter: `blocked_profile_id=eq.${myId}`,
       },
       (payload) => {
-        const old = payload.old as { profile_id?: string };
-        if (old.profile_id) {
-          onUnmatch(old.profile_id);
+        const row = payload.new as { user_id?: string };
+        if (row.user_id) {
+          onUnmatch(row.user_id);
         }
       },
     )
