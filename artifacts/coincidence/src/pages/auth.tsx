@@ -270,6 +270,9 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
   const [resendCooldown, setResendCooldown] = useState(0);
   const resendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [tosAccepted, setTosAccepted]       = useState(false);
+  const [showAuthLegal, setShowAuthLegal]   = useState<"terms" | "privacy" | null>(null);
+
   const totalSteps = 2;
 
   function goNext() { setDir(1); setErrors({}); setStep((s) => s + 1); }
@@ -280,7 +283,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     setEmail(""); setPhoneLocal(""); setPassword(""); setConfirmPassword("");
     setLoginIdentifier(""); setLoginPassword("");
     setResetMode(false); setResetEmail(""); setResetSent(false); setResetError("");
-    setResendCooldown(0);
+    setResendCooldown(0); setTosAccepted(false);
     if (resendTimerRef.current) clearInterval(resendTimerRef.current);
     setMode(m);
   }
@@ -296,6 +299,7 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
     const e: Record<string, string> = {};
     if (!validatePassword(password)) e.password = "At least 8 characters";
     if (password !== confirmPassword) e.confirm = "Passwords don't match";
+    if (!tosAccepted) e.tos = "You must accept the Terms of Service and Privacy Policy to continue";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -521,6 +525,46 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
                     <PasswordField label="Confirm password" value={confirmPassword} onChange={setConfirmPassword}
                       show={showConfirm} onToggle={() => setShowConfirm((v) => !v)}
                       error={errors.confirm} autoComplete="new-password" />
+
+                    <label className="flex items-start gap-3 cursor-pointer select-none pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setTosAccepted(v => !v)}
+                        className={`mt-0.5 w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-all ${
+                          tosAccepted
+                            ? "border-transparent"
+                            : errors.tos
+                              ? "border-red-500 bg-transparent"
+                              : "border-border bg-transparent"
+                        }`}
+                        style={tosAccepted ? { background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" } : undefined}
+                      >
+                        {tosAccepted && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </button>
+                      <span className="text-xs text-muted-foreground leading-relaxed">
+                        I have read and agree to the{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowAuthLegal("terms")}
+                          className="underline underline-offset-2 text-foreground font-medium hover:opacity-80 transition-opacity"
+                        >
+                          Terms of Service
+                        </button>
+                        {" "}and{" "}
+                        <button
+                          type="button"
+                          onClick={() => setShowAuthLegal("privacy")}
+                          className="underline underline-offset-2 text-foreground font-medium hover:opacity-80 transition-opacity"
+                        >
+                          Privacy Policy
+                        </button>
+                      </span>
+                    </label>
+                    {errors.tos && (
+                      <p className="text-xs text-red-500 font-medium -mt-1">{errors.tos}</p>
+                    )}
                   </div>
                 )}
               </motion.div>
@@ -674,6 +718,121 @@ export default function AuthPage({ defaultMode = "create", existingAccount, onCr
           <circle cx="100" cy="10" r="2.5" fill="currentColor" />
         </svg>
       </div>
+
+      {/* ── Legal slide-in panel (from auth) ── */}
+      <AnimatePresence>
+        {showAuthLegal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setShowAuthLegal(null); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 340, damping: 34 }}
+              className="w-full max-w-md bg-card rounded-t-3xl overflow-hidden flex flex-col"
+              style={{ maxHeight: "88vh" }}
+            >
+              <div className="px-6 pt-5 pb-4 border-b border-border flex items-center gap-3 shrink-0">
+                <button
+                  onClick={() => setShowAuthLegal(null)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <h2 className="text-lg font-bold flex-1">
+                  {showAuthLegal === "terms" ? "Terms of Service" : "Privacy Policy"}
+                </h2>
+              </div>
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5 text-sm text-foreground/80 leading-relaxed">
+                <p className="text-xs text-muted-foreground">Last updated: May 2026</p>
+
+                {showAuthLegal === "privacy" ? (
+                  <>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">1. Who we are</h3>
+                      <p>Coincidence is a location-based connection app operated by Coincidence Ltd. We are committed to protecting your personal information and your right to privacy.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">2. Information we collect</h3>
+                      <p>We collect information you provide directly, including account data (name, email, phone), profile data (photos, bio, gender, height, hometown, hobbies, preferences), location data you voluntarily share via check-ins, and usage data such as swipes, matches, and messages.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">3. How we use your information</h3>
+                      <p>We use your data to provide and improve Coincidence, show your profile to potential matches, enable location-based coincidence matching when you opt in, send match and message notifications, and detect fraud or abuse.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">4. Sharing your information</h3>
+                      <p>We do not sell your data. We share it only with other users as you configure, with service providers who help operate the app (e.g. Supabase), and when required by law.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">5. Location data</h3>
+                      <p>Location is used only when you actively check in using Coincidence Mode. We do not track your location in the background.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">6. Your rights</h3>
+                      <p>You have the right to access, correct, or delete your personal data at any time via the app or by contacting privacy@coincidenceapp.co.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">7. Data retention</h3>
+                      <p>We retain your data while your account is active. Deleting your account permanently erases your profile, photos, messages, and match history within 30 days.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">8. Contact</h3>
+                      <p>Questions? Email privacy@coincidenceapp.co or write to Coincidence Ltd, London, United Kingdom.</p>
+                    </section>
+                  </>
+                ) : (
+                  <>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">1. Acceptance of terms</h3>
+                      <p>By creating an account or using Coincidence, you agree to these Terms of Service and our Privacy Policy.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">2. Eligibility</h3>
+                      <p>You must be at least 18 years old to use Coincidence. By registering, you confirm you meet this requirement.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">3. Your account</h3>
+                      <p>You are responsible for keeping your credentials secure and providing accurate, truthful information. You may not create accounts for others or maintain multiple accounts.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">4. Acceptable use</h3>
+                      <p>You agree not to harass or harm other users, post false information, upload photos of others as your profile photo, use the app for commercial spam, or attempt to reverse-engineer the platform.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">5. Coincidence Mode</h3>
+                      <p>Coincidence Mode lets you check in to real-world locations to discover nearby matches. You control when and where you check in. We do not share your precise location with other users.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">6. Strings (premium feature)</h3>
+                      <p>Strings are a premium in-app feature. All purchases are final and non-refundable unless required by law. Strings have no cash value and cannot be transferred between accounts.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">7. Safety</h3>
+                      <p>Always meet new people in public places and trust your instincts. Report any concerning behaviour using the in-app block and report features.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">8. Governing law</h3>
+                      <p>These Terms are governed by the laws of England and Wales. Disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.</p>
+                    </section>
+                    <section className="space-y-2">
+                      <h3 className="font-bold text-foreground">9. Contact</h3>
+                      <p>Questions? Contact us at legal@coincidenceapp.co.</p>
+                    </section>
+                  </>
+                )}
+                <div className="pb-6" />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

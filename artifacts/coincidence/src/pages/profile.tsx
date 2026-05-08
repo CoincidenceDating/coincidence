@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, MapPin, Wine, Beer, Coffee, Sparkles,
   ShoppingBag, X, Pencil, Plus, Home, Ruler, ChevronUp, ChevronDown,
-  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus, Star,
+  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus, Star, User, ArrowLeft,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StringIcon } from "@/components/StringIcon";
@@ -87,6 +87,7 @@ interface ProfilePageProps {
   onLogout: () => void;
   onDeleteAccount: () => void;
   onProfileUpdate?: (updated: EditableProfile) => void;
+  account?: { email: string; phone: string } | null;
 }
 
 /* ─── persistence ───────────────────────────── */
@@ -123,7 +124,7 @@ export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost, onAddCredits,
-  onLogout, onDeleteAccount, onProfileUpdate,
+  onLogout, onDeleteAccount, onProfileUpdate, account,
 }: ProfilePageProps) {
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
@@ -133,6 +134,7 @@ export default function ProfilePage({
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError]         = useState<string | null>(null);
   const [deletingPhoto, setDeletingPhoto]   = useState<string | null>(null);
+  const [gender, setGender]                 = useState<string>("");
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -150,6 +152,7 @@ export default function ProfilePage({
       setEditable(p);
       setDraft(p);
       setPhotos(data.photos ?? []);
+      setGender(data.gender ?? "");
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); } catch {}
     });
   }, []);
@@ -193,8 +196,11 @@ export default function ProfilePage({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteStep, setDeleteStep] = useState<"reason" | "confirm">("reason");
   const [deleteReason, setDeleteReason] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings]     = useState(false);
   const [notificationsOn, setNotificationsOn] = useState(true);
+  const [showMyDetails, setShowMyDetails]   = useState(false);
+  const [showPrivacy, setShowPrivacy]       = useState(false);
+  const [showTerms, setShowTerms]           = useState(false);
 
   const initials = editable.name
     .split(" ")
@@ -719,6 +725,19 @@ export default function ProfilePage({
                 {/* ── Account section ── */}
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1 pt-2">Account</p>
 
+                {/* My Details */}
+                <button onClick={() => { setShowSettings(false); setTimeout(() => setShowMyDetails(true), 150); }}
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                    <User className="w-4 h-4 text-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold">My details</p>
+                    <p className="text-xs text-muted-foreground">View your account information</p>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                </button>
+
                 {/* Edit profile */}
                 <button onClick={() => { setShowSettings(false); openEdit(); }}
                   className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
@@ -768,7 +787,8 @@ export default function ProfilePage({
                 {/* ── Legal section ── */}
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground px-2 pb-1 pt-3">About</p>
 
-                <button className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                <button onClick={() => { setShowSettings(false); setTimeout(() => setShowPrivacy(true), 150); }}
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
                   <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
                     <Shield className="w-4 h-4 text-foreground" />
                   </div>
@@ -778,7 +798,8 @@ export default function ProfilePage({
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
 
-                <button className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
+                <button onClick={() => { setShowSettings(false); setTimeout(() => setShowTerms(true), 150); }}
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-2xl hover:bg-muted transition-colors text-left">
                   <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
                     <FileText className="w-4 h-4 text-foreground" />
                   </div>
@@ -804,6 +825,278 @@ export default function ProfilePage({
 
                 {/* Version */}
                 <p className="text-center text-[10px] text-muted-foreground/40 pt-4">Coincidence v1.0.0</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════
+          MY DETAILS OVERLAY
+      ══════════════════════════════════════ */}
+      <AnimatePresence>
+        {showMyDetails && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setShowMyDetails(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 340, damping: 34 }}
+              className="w-full max-w-md bg-card rounded-t-3xl overflow-hidden flex flex-col"
+              style={{ maxHeight: "88vh" }}
+            >
+              <div className="px-6 pt-5 pb-4 border-b border-border flex items-center gap-3 shrink-0">
+                <button onClick={() => setShowMyDetails(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <h2 className="text-lg font-bold flex-1">My details</h2>
+              </div>
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+                {[
+                  { label: "Email", value: account?.email || "—" },
+                  { label: "Phone", value: account?.phone || "—" },
+                  { label: "Name", value: editable.name || "—" },
+                  { label: "Age", value: editable.age ? String(editable.age) : "—" },
+                  { label: "Gender", value: gender || "—" },
+                  { label: "Looking for", value: editable.lookingFor || "—" },
+                  { label: "Hometown", value: editable.hometown || "—" },
+                  { label: "Height", value: editable.height || "—" },
+                  { label: "Bio", value: editable.bio || "—" },
+                  { label: "Hobbies", value: editable.hobbies.length ? editable.hobbies.join(", ") : "—" },
+                ].map(({ label, value }) => (
+                  <div key={label} className="rounded-2xl bg-muted/50 px-4 py-3.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+                    <p className="text-sm font-medium text-foreground break-words">{value}</p>
+                  </div>
+                ))}
+                <p className="text-xs text-muted-foreground text-center pb-4 pt-2">
+                  To update your details, use <span className="font-semibold">Edit profile</span> in Settings.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════
+          PRIVACY POLICY OVERLAY
+      ══════════════════════════════════════ */}
+      <AnimatePresence>
+        {showPrivacy && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setShowPrivacy(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 340, damping: 34 }}
+              className="w-full max-w-md bg-card rounded-t-3xl overflow-hidden flex flex-col"
+              style={{ maxHeight: "88vh" }}
+            >
+              <div className="px-6 pt-5 pb-4 border-b border-border flex items-center gap-3 shrink-0">
+                <button onClick={() => setShowPrivacy(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <h2 className="text-lg font-bold flex-1">Privacy Policy</h2>
+              </div>
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5 text-sm text-foreground/80 leading-relaxed">
+                <p className="text-xs text-muted-foreground">Last updated: May 2026</p>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">1. Who we are</h3>
+                  <p>Coincidence is a location-based connection app operated by Coincidence Ltd. We are committed to protecting your personal information and your right to privacy.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">2. Information we collect</h3>
+                  <p>We collect information you provide directly to us, including:</p>
+                  <ul className="list-disc list-inside space-y-1 pl-2 text-foreground/70">
+                    <li>Account data: name, email address, phone number, date of birth</li>
+                    <li>Profile data: photos, bio, gender, height, hometown, hobbies, preferences</li>
+                    <li>Location data: check-in locations you voluntarily share within the app</li>
+                    <li>Usage data: swipes, matches, messages, and interaction history</li>
+                  </ul>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">3. How we use your information</h3>
+                  <p>We use your information to:</p>
+                  <ul className="list-disc list-inside space-y-1 pl-2 text-foreground/70">
+                    <li>Provide, maintain, and improve the Coincidence service</li>
+                    <li>Show your profile to potential matches based on your preferences</li>
+                    <li>Enable location-based coincidence matching when you opt in</li>
+                    <li>Send notifications about matches and messages</li>
+                    <li>Detect and prevent fraud, abuse, and safety incidents</li>
+                  </ul>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">4. Sharing your information</h3>
+                  <p>We do not sell your personal data. We share information only:</p>
+                  <ul className="list-disc list-inside space-y-1 pl-2 text-foreground/70">
+                    <li>With other users — your profile is visible to potential matches as you configure it</li>
+                    <li>With service providers who assist us in operating the app (e.g. Supabase for database and storage)</li>
+                    <li>When required by law or to protect the safety of users</li>
+                  </ul>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">5. Location data</h3>
+                  <p>Location is used only when you actively check in using Coincidence Mode. We do not track your location in the background. You can disable location access at any time in your device settings.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">6. Your photos</h3>
+                  <p>Photos you upload are stored securely and displayed only to other users of Coincidence. You can delete your photos at any time from your profile page. Deleting your account removes all stored photos.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">7. Data retention</h3>
+                  <p>We retain your data for as long as your account is active. When you delete your account, we permanently erase your profile, photos, messages, and match history within 30 days, unless we are required by law to retain certain records.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">8. Your rights</h3>
+                  <p>You have the right to access, correct, or delete your personal data at any time. You can manage most of this directly in the app. For additional requests, contact us at privacy@coincidenceapp.co.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">9. Security</h3>
+                  <p>We use industry-standard encryption and security practices to protect your data. All data is transmitted over HTTPS and stored with row-level security controls.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">10. Changes to this policy</h3>
+                  <p>We may update this Privacy Policy from time to time. We will notify you of significant changes through the app. Continued use of Coincidence after changes constitutes acceptance of the updated policy.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">11. Contact</h3>
+                  <p>Questions about this policy? Email us at privacy@coincidenceapp.co or write to: Coincidence Ltd, London, United Kingdom.</p>
+                </section>
+
+                <div className="pb-6" />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ══════════════════════════════════════
+          TERMS OF SERVICE OVERLAY
+      ══════════════════════════════════════ */}
+      <AnimatePresence>
+        {showTerms && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+            onClick={e => { if (e.target === e.currentTarget) setShowTerms(false); }}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 340, damping: 34 }}
+              className="w-full max-w-md bg-card rounded-t-3xl overflow-hidden flex flex-col"
+              style={{ maxHeight: "88vh" }}
+            >
+              <div className="px-6 pt-5 pb-4 border-b border-border flex items-center gap-3 shrink-0">
+                <button onClick={() => setShowTerms(false)}
+                  className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
+                  <ArrowLeft className="w-4 h-4" />
+                </button>
+                <h2 className="text-lg font-bold flex-1">Terms of Service</h2>
+              </div>
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5 text-sm text-foreground/80 leading-relaxed">
+                <p className="text-xs text-muted-foreground">Last updated: May 2026</p>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">1. Acceptance of terms</h3>
+                  <p>By creating an account or using Coincidence, you agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, please do not use the app.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">2. Eligibility</h3>
+                  <p>You must be at least 18 years old to use Coincidence. By registering, you confirm that you meet this age requirement. We reserve the right to terminate accounts if we determine a user is under 18.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">3. Your account</h3>
+                  <p>You are responsible for keeping your account credentials secure. You must provide accurate, truthful information when creating your profile. You may not create accounts for others or maintain multiple accounts.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">4. Acceptable use</h3>
+                  <p>You agree not to:</p>
+                  <ul className="list-disc list-inside space-y-1 pl-2 text-foreground/70">
+                    <li>Harass, abuse, or harm other users</li>
+                    <li>Post false, misleading, or fraudulent information</li>
+                    <li>Upload photos of anyone other than yourself as your profile photo</li>
+                    <li>Use the app for commercial solicitation or spam</li>
+                    <li>Attempt to reverse-engineer, scrape, or exploit the platform</li>
+                    <li>Share any illegal, obscene, or harmful content</li>
+                  </ul>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">5. Coincidence Mode and location</h3>
+                  <p>Coincidence Mode lets you check in to real-world locations to discover potential matches nearby. You control when and where you check in. We do not share your precise location with other users — only that you are at the same general venue.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">6. Strings (premium feature)</h3>
+                  <p>Strings are a premium in-app feature that can be purchased. All purchases are final and non-refundable unless required by law. Strings have no cash value and cannot be transferred between accounts.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">7. Content you share</h3>
+                  <p>You retain ownership of content you post. By uploading photos or text, you grant Coincidence a non-exclusive, royalty-free licence to display that content to other users for the purpose of operating the service. We will not sell or use your content for advertising without your consent.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">8. Safety</h3>
+                  <p>While we work hard to create a safe environment, we cannot guarantee the conduct of other users. Always meet new people in public places and trust your instincts. Report any concerning behaviour using the in-app block and report features.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">9. Termination</h3>
+                  <p>We may suspend or terminate your account if you violate these Terms. You may delete your account at any time via Settings. Upon termination, your data will be removed in accordance with our Privacy Policy.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">10. Disclaimers</h3>
+                  <p>Coincidence is provided "as is." We do not guarantee you will find a match or that the service will be uninterrupted. To the fullest extent permitted by law, we disclaim all warranties and liability for damages arising from your use of the app.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">11. Governing law</h3>
+                  <p>These Terms are governed by the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the courts of England and Wales.</p>
+                </section>
+
+                <section className="space-y-2">
+                  <h3 className="font-bold text-foreground">12. Contact</h3>
+                  <p>Questions about these Terms? Contact us at legal@coincidenceapp.co.</p>
+                </section>
+
+                <div className="pb-6" />
               </div>
             </motion.div>
           </motion.div>

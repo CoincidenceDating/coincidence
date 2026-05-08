@@ -1149,6 +1149,7 @@ function AppShell() {
             onLogout={handleLogout}
             onDeleteAccount={handleDeleteAccount}
             onProfileUpdate={handleProfileUpdate}
+            account={account}
           />
         )}
       </main>
