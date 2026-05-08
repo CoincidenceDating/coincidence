@@ -254,8 +254,11 @@ function AppShell() {
       }
     });
 
-    // Subscribe to DELETE events so this user's UI updates instantly when
-    // the other person unmatches them (requires REPLICA IDENTITY FULL — mig 029).
+    // Subscribe to INSERT events on user_blocked (blocked_profile_id = myId)
+    // so this user's UI updates instantly when someone unmatches / blocks them.
+    // INSERT payloads always carry full column data — no REPLICA IDENTITY FULL needed.
+    // RLS policy "Users can see when they are blocked" (migration 031) is required
+    // so Supabase doesn't silently drop the event before it reaches us.
     if (unmatchSubRef.current) {
       supabase.removeChannel(unmatchSubRef.current);
     }
