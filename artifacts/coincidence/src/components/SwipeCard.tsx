@@ -64,7 +64,35 @@ function ConfettiBurst() {
   );
 }
 
-// Renders the rope strands + knots together, driven by a single controlY MotionValue
+// Sub-component so we can call useTransform for the offset cy values
+function BeadGroup({
+  kx, ky, gradId, glowFilter,
+}: {
+  kx: number;
+  ky: MotionValue<number>;
+  gradId: string;
+  glowFilter?: React.CSSProperties;
+}) {
+  const shadowCy    = useTransform(ky, (y) => y + 2.5);
+  const highlightCy = useTransform(ky, (y) => y - 1.1);
+  const bottomCy    = useTransform(ky, (y) => y + 1.0);
+  return (
+    <g>
+      {/* Soft drop shadow */}
+      <motion.ellipse cx={kx + 0.5} cy={shadowCy}    rx={6}   ry={3.5} fill="rgba(0,0,0,0.5)"          style={{ filter: "blur(2px)" }} />
+      {/* Gem body */}
+      <motion.ellipse cx={kx}       cy={ky}           rx={5.5} ry={3.8} fill={`url(#${gradId})`}         style={glowFilter} />
+      {/* Inner depth */}
+      <motion.ellipse cx={kx}       cy={ky}           rx={3.5} ry={2.2} fill="rgba(155,93,229,0.5)" />
+      {/* Specular highlight — top-left glint */}
+      <motion.ellipse cx={kx - 1.6} cy={highlightCy} rx={1.8} ry={1}   fill="rgba(255,255,255,0.82)" />
+      {/* Tiny bottom glint for facet depth */}
+      <motion.ellipse cx={kx + 1.2} cy={bottomCy}    rx={0.9} ry={0.5} fill="rgba(255,255,255,0.35)" />
+    </g>
+  );
+}
+
+// Renders the silk thread strands + gem beads, driven by a single controlY MotionValue
 function RopeWithKnots({
   controlY,
   side,
@@ -80,7 +108,7 @@ function RopeWithKnots({
       : `M 120 40 Q 60 ${y} 0 40`
   );
 
-  // Knot Y at Bezier t=0.25, 0.5, 0.75
+  // Bead Y at Bezier t=0.25, 0.5, 0.75
   const k1y = useTransform(controlY, (y) => 40 + 2 * 0.25 * 0.75 * (y - 40));
   const k2y = useTransform(controlY, (y) => 40 + 0.5 * (y - 40));
   const k3y = useTransform(controlY, (y) => 40 + 2 * 0.75 * 0.25 * (y - 40));
@@ -88,36 +116,28 @@ function RopeWithKnots({
   const kxs = side === "right" ? [30, 60, 90] : [90, 60, 30];
   const kys = [k1y, k2y, k3y];
 
+  const gradId  = `thread-grad-${side}`;
+  const glowId  = `thread-glow-${side}`;
+
   const glowFilter = glow
-    ? { filter: "drop-shadow(0 0 10px rgba(255,255,255,0.95))" }
+    ? { filter: "drop-shadow(0 0 7px rgba(232,56,125,0.95)) drop-shadow(0 0 14px rgba(155,93,229,0.65))" }
     : undefined;
 
   return (
     <>
-      {/* Black outline — thickest layer */}
-      <motion.path d={pathD as unknown as string} stroke="#000000" strokeWidth={12} fill="none" strokeLinecap="round" />
-      {/* White rope body */}
-      <motion.path d={pathD as unknown as string} stroke="#ffffff" strokeWidth={8} fill="none" strokeLinecap="round" style={glowFilter} />
-      {/* Light gray twist strands for texture */}
-      <motion.path d={pathD as unknown as string} stroke="#d0d0d0" strokeWidth={3} strokeDasharray="7 8" fill="none" strokeLinecap="round" style={{ opacity: 0.85 }} />
-      <motion.path d={pathD as unknown as string} stroke="#aaaaaa" strokeWidth={1.5} strokeDasharray="5 9" strokeDashoffset={7} fill="none" strokeLinecap="round" style={{ opacity: 0.6 }} />
-      {/* Bright centre highlight sheen */}
-      <motion.path d={pathD as unknown as string} stroke="#ffffff" strokeWidth={2} strokeDasharray="2 14" strokeDashoffset={2} fill="none" strokeLinecap="round" style={{ opacity: 0.9 }} />
+      {/* Ambient halo behind thread */}
+      <motion.path d={pathD as unknown as string} stroke={`url(#${glowId})`} strokeWidth={13} fill="none" strokeLinecap="round"
+        style={{ opacity: glow ? 0.85 : 0.38 }} />
+      {/* Main silk thread */}
+      <motion.path d={pathD as unknown as string} stroke={`url(#${gradId})`} strokeWidth={3.5} fill="none" strokeLinecap="round"
+        style={glowFilter} />
+      {/* Silk sheen — fine dashed highlight */}
+      <motion.path d={pathD as unknown as string} stroke="rgba(255,255,255,0.42)" strokeWidth={1.2}
+        strokeDasharray="3 11" strokeDashoffset={1} fill="none" strokeLinecap="round" />
 
-      {/* Knots at t=0.25, 0.5, 0.75 */}
+      {/* Gem beads at t=0.25, 0.5, 0.75 */}
       {kxs.map((kx, i) => (
-        <g key={i}>
-          {/* Drop shadow */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={10} ry={7} fill="#000000" opacity={0.75} />
-          {/* White body with black stroke */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={8} ry={5.5} fill="#ffffff" stroke="#000000" strokeWidth={1.5} style={glowFilter} />
-          {/* Inner wrap ring */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={5.5} ry={3.5} fill="#e8e8e8" />
-          {/* Core */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={3} ry={2} fill="#ffffff" />
-          {/* Top glint */}
-          <motion.ellipse cx={kx} cy={kys[i] as unknown as number} rx={1.5} ry={0.8} fill="#ffffff" opacity={0.95} />
-        </g>
+        <BeadGroup key={i} kx={kx} ky={kys[i]} gradId={gradId} glowFilter={glowFilter} />
       ))}
     </>
   );
@@ -218,14 +238,24 @@ function HStringVisual({
   return (
     <div style={{ width: 130, height: 90, flexShrink: 0 }}>
       <svg width="130" height="90" viewBox="0 0 130 90" style={{ overflow: "visible" }}>
+        <defs>
+          <linearGradient id={`thread-grad-${side}`} x1="0" y1="0" x2="130" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#E8387D" />
+            <stop offset="100%" stopColor="#9B5DE5" />
+          </linearGradient>
+          <linearGradient id={`thread-glow-${side}`} x1="0" y1="0" x2="130" y2="0" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#E8387D" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#9B5DE5" stopOpacity="0.55" />
+          </linearGradient>
+        </defs>
         <AnimatePresence mode="sync">
           {(phase === "rope" || phase === "snap-flash") && (
             <motion.g key="intact" initial={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.04 }}>
               <RopeWithKnots controlY={controlY} side={side} glow={isGlowing} />
               {isGlowing && (
-                <motion.circle cx={65} cy={40} r={8} fill="#f43f5e"
+                <motion.circle cx={65} cy={40} r={8} fill="#E8387D"
                   initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: [0, 2.5, 0], opacity: [0, 1, 0] }}
+                  animate={{ scale: [0, 2.5, 0], opacity: [0, 0.85, 0] }}
                   transition={{ duration: 0.5, ease: "easeOut", times: [0, 0.4, 1] }}
                 />
               )}
@@ -234,18 +264,18 @@ function HStringVisual({
 
           {phase === "snap-flash" && (
             <motion.g key="flash">
-              {/* Blinding white core */}
-              <motion.circle cx={bx} cy={by} r={8} fill="white"
+              {/* Bright pink core */}
+              <motion.circle cx={bx} cy={by} r={8} fill="#E8387D"
                 initial={{ scale: 0, opacity: 1 }} animate={{ scale: 3, opacity: 0 }}
                 transition={{ duration: 0.15 }}
               />
-              {/* Orange ring */}
-              <motion.circle cx={bx} cy={by} r={4} fill="#FF8C42"
+              {/* Purple mid ring */}
+              <motion.circle cx={bx} cy={by} r={4} fill="#9B5DE5"
                 initial={{ scale: 0, opacity: 1 }} animate={{ scale: 5, opacity: 0 }}
                 transition={{ duration: 0.2, delay: 0.02 }}
               />
-              {/* Yellow outer ring */}
-              <motion.circle cx={bx} cy={by} r={2} fill="none" stroke="#FFD580" strokeWidth={3}
+              {/* Outer pink ring */}
+              <motion.circle cx={bx} cy={by} r={2} fill="none" stroke="#E8387D" strokeWidth={3}
                 initial={{ scale: 0, opacity: 1 }} animate={{ scale: 8, opacity: 0 }}
                 transition={{ duration: 0.28, delay: 0.04 }}
               />
@@ -254,7 +284,7 @@ function HStringVisual({
 
           {phase === "broken" && (
             <motion.g key="broken">
-              {/* Near-card rope piece flies up */}
+              {/* Near-card thread piece flies up */}
               <motion.g
                 initial={{ x: 0, y: 0, opacity: 1 }}
                 animate={{ x: side === "left" ? 18 : -18, y: -38, opacity: 0 }}
@@ -262,19 +292,19 @@ function HStringVisual({
               >
                 <path
                   d={side === "left" ? `M 130 40 Q 110 30 ${bx} ${by}` : `M 0 40 Q 20 30 ${bx} ${by}`}
-                  stroke="#000000" strokeWidth={12} fill="none" strokeLinecap="round"
+                  stroke={`url(#thread-glow-${side})`} strokeWidth={13} fill="none" strokeLinecap="round" opacity={0.5}
                 />
                 <path
                   d={side === "left" ? `M 130 40 Q 110 30 ${bx} ${by}` : `M 0 40 Q 20 30 ${bx} ${by}`}
-                  stroke="#ffffff" strokeWidth={8} fill="none" strokeLinecap="round"
+                  stroke={`url(#thread-grad-${side})`} strokeWidth={3.5} fill="none" strokeLinecap="round"
                 />
                 <path
                   d={side === "left" ? `M 130 40 Q 110 30 ${bx} ${by}` : `M 0 40 Q 20 30 ${bx} ${by}`}
-                  stroke="#cccccc" strokeWidth={2.5} strokeDasharray="6 7" fill="none" strokeLinecap="round" opacity={0.85}
+                  stroke="rgba(255,255,255,0.4)" strokeWidth={1.2} strokeDasharray="3 11" fill="none" strokeLinecap="round"
                 />
               </motion.g>
 
-              {/* Far rope piece flies down */}
+              {/* Far thread piece flies down */}
               <motion.g
                 initial={{ x: 0, y: 0, opacity: 1 }}
                 animate={{ x: side === "left" ? -18 : 18, y: 38, opacity: 0 }}
@@ -282,26 +312,26 @@ function HStringVisual({
               >
                 <path
                   d={side === "left" ? `M 0 40 Q 45 55 ${bx} ${by}` : `M 130 40 Q 85 55 ${bx} ${by}`}
-                  stroke="#000000" strokeWidth={12} fill="none" strokeLinecap="round"
+                  stroke={`url(#thread-glow-${side})`} strokeWidth={13} fill="none" strokeLinecap="round" opacity={0.5}
                 />
                 <path
                   d={side === "left" ? `M 0 40 Q 45 55 ${bx} ${by}` : `M 130 40 Q 85 55 ${bx} ${by}`}
-                  stroke="#ffffff" strokeWidth={8} fill="none" strokeLinecap="round"
+                  stroke={`url(#thread-grad-${side})`} strokeWidth={3.5} fill="none" strokeLinecap="round"
                 />
                 <path
                   d={side === "left" ? `M 0 40 Q 45 55 ${bx} ${by}` : `M 130 40 Q 85 55 ${bx} ${by}`}
-                  stroke="#cccccc" strokeWidth={2.5} strokeDasharray="6 7" fill="none" strokeLinecap="round" opacity={0.85}
+                  stroke="rgba(255,255,255,0.4)" strokeWidth={1.2} strokeDasharray="3 11" fill="none" strokeLinecap="round"
                 />
               </motion.g>
 
-              {/* 24 fiber shards */}
+              {/* 24 fiber shards — app palette */}
               {FIBERS.map(({ angle, len }, i) => {
                 const rad = (angle * Math.PI) / 180;
                 return (
                   <motion.line key={`f-${i}`}
                     x1={bx} y1={by}
                     x2={bx + Math.cos(rad) * len} y2={by + Math.sin(rad) * len}
-                    stroke={i % 3 === 0 ? "white" : i % 3 === 1 ? "#cccccc" : "#888888"}
+                    stroke={i % 3 === 0 ? "#E8387D" : i % 3 === 1 ? "#9B5DE5" : "#C68FE8"}
                     strokeWidth={i % 3 === 0 ? 2.5 : i % 3 === 1 ? 1.8 : 1.2}
                     strokeLinecap="round"
                     initial={{ scale: 0.05, opacity: 1 }}
@@ -311,11 +341,11 @@ function HStringVisual({
                 );
               })}
 
-              {/* 3 expanding shockwave rings */}
+              {/* 3 expanding shockwave rings — app palette */}
               {[
-                { r: 5, stroke: "white",   sw: 3, dur: 0.28, delay: 0 },
-                { r: 3, stroke: "#FFD580", sw: 2.5, dur: 0.4,  delay: 0.04 },
-                { r: 2, stroke: "#FF8C42", sw: 2,   dur: 0.55, delay: 0.08 },
+                { r: 5, stroke: "#E8387D", sw: 3,   dur: 0.28, delay: 0 },
+                { r: 3, stroke: "#9B5DE5", sw: 2.5, dur: 0.4,  delay: 0.04 },
+                { r: 2, stroke: "#C68FE8", sw: 2,   dur: 0.55, delay: 0.08 },
               ].map((ring, i) => (
                 <motion.circle key={`ring-${i}`}
                   cx={bx} cy={by} r={ring.r}
