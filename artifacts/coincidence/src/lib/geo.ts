@@ -262,9 +262,13 @@ export async function fetchNearbyVenues(
 
   if (venues.length === 0) throw new Error("No venues found nearby");
 
-  // Return every venue within radius, sorted by distance — no arbitrary cap
+  // Hard cap: only return venues within 2 km of the user's position.
+  // Both APIs request a 2 000 m radius but can return outliers beyond it.
+  const MAX_RADIUS_MI = 2000 / 1609.344; // exactly 2 km → ~1.2427 mi
+
   return venues
     .map((v) => ({ ...v, distMi: haversineDistanceMiles(lat, lng, v.lat ?? 0, v.lng ?? 0) }))
+    .filter((v) => v.distMi <= MAX_RADIUS_MI)
     .sort((a, b) => a.distMi - b.distMi)
     .map(({ distMi: _d, ...v }) => v);
 }
