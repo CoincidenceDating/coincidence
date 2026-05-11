@@ -16,7 +16,7 @@ import ChatPage, { type Message } from "@/pages/chat";
 import SetupPage, { type SetupData } from "@/pages/setup";
 import AuthPage, { type AccountData } from "@/pages/auth";
 import ReloginPage from "@/pages/relogin";
-import { Heart, Sparkles, HelpCircle, User, Loader2, Eye, MessageCircle } from "lucide-react";
+import { Heart, Sparkles, HelpCircle, User, Loader2, Eye, MessageCircle, Settings } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import MatchOverlay from "@/components/MatchOverlay";
 import type { Match, CheckIn, Profile } from "@/lib/data";
@@ -123,6 +123,7 @@ function AppShell() {
   const [account, setAccount]           = useState<AccountData | null>(null);
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
+  const [settingsPending, setSettingsPending] = useState(false);
 
   const hasAccount = !!localStorage.getItem("coincidence-has-account");
   const [showLanding, setShowLanding]   = useState(!hasAccount);
@@ -1039,6 +1040,29 @@ function AppShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden relative bg-background">
 
+      {/* ── Global settings icon — top-right on every tab except Discover ── */}
+      {activeTab !== "swipe" && (
+        <button
+          onClick={() => {
+            if (activeTab === "profile") return; // profile page handles its own settings open
+            setSettingsPending(true);
+            handleTabChange("profile");
+          }}
+          style={{
+            position: "fixed",
+            top: "max(env(safe-area-inset-top, 0px) + 12px, 14px)",
+            right: "max(env(safe-area-inset-right, 0px) + 16px, 16px)",
+            zIndex: 50,
+            width: "clamp(2rem, 9vw, 2.75rem)",
+            height: "clamp(2rem, 9vw, 2.75rem)",
+          }}
+          className="rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+          aria-label="Open settings"
+        >
+          <Settings style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
+        </button>
+      )}
+
       {/* ── Global profile icon — top-left on every tab except profile ── */}
       {activeTab !== "profile" && (
         <button
@@ -1164,6 +1188,8 @@ function AppShell() {
             onDeleteAccount={handleDeleteAccount}
             onProfileUpdate={handleProfileUpdate}
             account={account}
+            autoOpenSettings={settingsPending}
+            onSettingsAutoOpened={() => setSettingsPending(false)}
           />
         )}
       </main>

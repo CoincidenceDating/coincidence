@@ -88,6 +88,8 @@ interface ProfilePageProps {
   onDeleteAccount: () => void;
   onProfileUpdate?: (updated: EditableProfile) => void;
   account?: { email: string; phone: string } | null;
+  autoOpenSettings?: boolean;
+  onSettingsAutoOpened?: () => void;
 }
 
 /* ─── persistence ───────────────────────────── */
@@ -125,6 +127,7 @@ export default function ProfilePage({
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost, onAddCredits,
   onLogout, onDeleteAccount, onProfileUpdate, account,
+  autoOpenSettings, onSettingsAutoOpened,
 }: ProfilePageProps) {
 
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
@@ -201,6 +204,14 @@ export default function ProfilePage({
   const [showMyDetails, setShowMyDetails]   = useState(false);
   const [showPrivacy, setShowPrivacy]       = useState(false);
   const [showTerms, setShowTerms]           = useState(false);
+
+  // Auto-open settings when triggered from a global icon on another tab
+  useEffect(() => {
+    if (autoOpenSettings) {
+      setShowSettings(true);
+      onSettingsAutoOpened?.();
+    }
+  }, [autoOpenSettings]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const initials = editable.name
     .split(" ")
