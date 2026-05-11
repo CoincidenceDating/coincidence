@@ -113,67 +113,72 @@ export default function SwipePage({
   return (
     <div className="relative flex flex-col items-center min-h-[calc(100vh-80px)] px-4 pt-0 pb-4">
 
-      {/* ── Header ── */}
-      <div className="w-full max-w-sm relative flex items-center justify-center py-4 mb-1">
-        {/* Left spacer matching the profile icon width so title stays centred */}
-        <div style={{ width: "clamp(2rem, 9vw, 2.75rem)" }} />
+      {/* ── Boost — fixed top-right, mirrors the global profile icon ── */}
+      <AnimatePresence mode="wait">
+        {isBoostActive ? (
+          <motion.div
+            key="active-pill"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            className="fixed flex items-center gap-1 px-2.5 rounded-full text-xs font-semibold text-white shadow-sm z-50"
+            style={{
+              top: "max(env(safe-area-inset-top, 0px) + 12px, 14px)",
+              right: "max(env(safe-area-inset-right, 0px) + 16px, 16px)",
+              height: "clamp(2rem, 9vw, 2.75rem)",
+              background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)",
+            }}
+          >
+            <motion.div
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <StringIcon style={{ width: "clamp(0.7rem, 3vw, 0.85rem)", height: "clamp(0.7rem, 3vw, 0.85rem)" }} />
+            </motion.div>
+            {formatBoostTime(boostTimeLeft)} · {boostRadius}mi
+          </motion.div>
+        ) : (
+          <motion.button
+            key="idle-btn"
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={pulse ? { scale: [1, 1.18, 1] } : { opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={{ type: "spring", stiffness: 380, damping: 28 }}
+            onClick={handleActivate}
+            disabled={boostCredits === 0}
+            className={`fixed rounded-full flex items-center justify-center border shadow-sm z-50 transition-all
+              ${boostCredits > 0
+                ? "bg-card border-white/10 hover:border-primary/60 active:scale-95 text-muted-foreground hover:text-primary"
+                : "bg-card border-white/10 opacity-35 cursor-not-allowed text-muted-foreground"
+              }`}
+            style={{
+              top: "max(env(safe-area-inset-top, 0px) + 12px, 14px)",
+              right: "max(env(safe-area-inset-right, 0px) + 16px, 16px)",
+              width: "clamp(2rem, 9vw, 2.75rem)",
+              height: "clamp(2rem, 9vw, 2.75rem)",
+            }}
+          >
+            <StringIcon style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
+            {boostCredits > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+              >
+                {boostCredits}
+              </span>
+            )}
+          </motion.button>
+        )}
+      </AnimatePresence>
 
+      {/* ── Header ── */}
+      <div className="w-full max-w-sm flex items-center justify-center py-4 mb-1">
         <h1
-          className="gradient-text font-bold tracking-tight select-none flex-1 text-center"
+          className="gradient-text font-bold tracking-tight select-none text-center"
           style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}
         >
           Coincidence
         </h1>
-
-        <AnimatePresence mode="wait">
-          {isBoostActive ? (
-            <motion.div
-              key="active-pill"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
-              className="flex items-center gap-1 px-2.5 rounded-full text-xs font-semibold text-white"
-              style={{
-                height: "clamp(2rem, 9vw, 2.75rem)",
-                background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)",
-              }}
-            >
-              <motion.div
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
-              >
-                <StringIcon style={{ width: "clamp(0.7rem, 3vw, 0.85rem)", height: "clamp(0.7rem, 3vw, 0.85rem)" }} />
-              </motion.div>
-              {formatBoostTime(boostTimeLeft)} · {boostRadius}mi
-            </motion.div>
-          ) : (
-            <motion.button
-              key="idle-btn"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={pulse ? { scale: [1, 1.18, 1] } : { opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85 }}
-              transition={{ type: "spring", stiffness: 380, damping: 28 }}
-              onClick={handleActivate}
-              disabled={boostCredits === 0}
-              style={{ width: "clamp(2rem, 9vw, 2.75rem)", height: "clamp(2rem, 9vw, 2.75rem)" }}
-              className={`relative rounded-full flex items-center justify-center border transition-all
-                ${boostCredits > 0
-                  ? "bg-card border-white/10 hover:border-primary/60 active:scale-95 text-muted-foreground hover:text-primary"
-                  : "bg-card border-white/10 opacity-35 cursor-not-allowed text-muted-foreground"
-                }`}
-            >
-              <StringIcon style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
-              {boostCredits > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
-                  style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
-                >
-                  {boostCredits}
-                </span>
-              )}
-            </motion.button>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* ── Distance filter bar ── */}
