@@ -586,6 +586,15 @@ export async function addSwiped(profileId: string, liked = false) {
   );
 }
 
+export async function removeSwiped(profileId: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("user_swiped")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("profile_id", profileId);
+}
+
 /* ── distance helpers ─────────────────────────────────────── */
 
 function calcDistanceMi(lat1: number, lng1: number, lat2: number, lng2: number): number {

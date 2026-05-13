@@ -1212,6 +1212,12 @@ function AppShell() {
               setDiscoverProfiles((prev) => prev.filter(p => db.baseProfileId(p.id) !== baseId));
               db.addSwiped(baseId, liked);
             }}
+            onRewind={(profile) => {
+              const baseId = db.baseProfileId(profile.id);
+              setSwipedIds((prev) => prev.filter(id => id !== baseId));
+              setDiscoverProfiles((prev) => [profile, ...prev.filter(p => db.baseProfileId(p.id) !== baseId)]);
+              db.removeSwiped(baseId);
+            }}
             onRealRightSwipe={handleRealRightSwipe}
             discoverProfiles={discoverProfiles}
             isLoadingProfiles={isLoadingProfiles}

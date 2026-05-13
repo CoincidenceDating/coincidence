@@ -9,7 +9,7 @@ import {
   type PanInfo,
   type MotionValue,
 } from "framer-motion";
-import { Heart, X, HelpCircle, MapPin, MoreVertical } from "lucide-react";
+import { Heart, X, HelpCircle, MapPin, MoreVertical, RotateCcw } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Profile } from "@/lib/data";
 
@@ -442,9 +442,11 @@ interface SwipeCardProps {
   onDoubleString?: () => void;
   boostCredits?: number;
   onReport?: (reason: string) => void;
+  onRewind?: () => void;
+  canRewind?: boolean;
 }
 
-export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false, onDoubleString, boostCredits = 0, onReport }: SwipeCardProps) {
+export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progress, peekProfiles = [], blurName = false, onDoubleString, boostCredits = 0, onReport, onRewind, canRewind = false }: SwipeCardProps) {
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
   const [showReport, setShowReport] = useState(false);
@@ -704,6 +706,15 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
         </div>
 
         <div className="flex justify-center items-center gap-4 mt-2">
+          {/* Rewind — undo last swipe */}
+          <button
+            onClick={onRewind}
+            disabled={!canRewind || action !== "none"}
+            className="w-11 h-11 rounded-full bg-card border border-white/10 text-amber-400 hover:bg-amber-500/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-25 shadow-lg"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+
           {/* X — reject */}
           <button
             onClick={() => handleAction("left")}

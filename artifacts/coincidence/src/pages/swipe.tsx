@@ -25,6 +25,7 @@ interface SwipePageProps {
   blockedIds: string[];
   onSwiped: (id: string, liked: boolean) => void;
   onRealRightSwipe: (profile: Profile) => void;
+  onRewind: (profile: Profile) => void;
   discoverProfiles: Profile[];
   isLoadingProfiles: boolean;
   discoverRadius: number;
@@ -48,6 +49,7 @@ export default function SwipePage({
   blockedIds,
   onSwiped,
   onRealRightSwipe,
+  onRewind,
   discoverProfiles,
   isLoadingProfiles,
   discoverRadius,
@@ -60,6 +62,7 @@ export default function SwipePage({
   const [stringSentName, setStringSentName] = useState<string | null>(null);
   const [showRadiusPanel, setShowRadiusPanel] = useState(false);
   const [localRadius, setLocalRadius] = useState(discoverRadius);
+  const [lastSwiped, setLastSwiped] = useState<Profile | null>(null);
 
   const hasGps = gpsStatus === "granted";
 
@@ -74,6 +77,7 @@ export default function SwipePage({
 
   function handleSwipe(dir: "left" | "right" | "maybe") {
     if (!profile) return;
+    setLastSwiped(profile);
     if (dir === "right" && isRealUserId(profile.id)) {
       onRealRightSwipe(profile);
       setStringSentName(profile.name.split(" ")[0]);
@@ -87,9 +91,16 @@ export default function SwipePage({
 
   function handleDoubleString() {
     if (!profile || boostCredits < 2) return;
+    setLastSwiped(profile);
     onMatch({ profile, source: "swipe", matchedAt: Date.now(), superLike: true });
     onDoubleStringCredit();
     onSwiped(profile.id, true);
+  }
+
+  function handleRewind() {
+    if (!lastSwiped) return;
+    onRewind(lastSwiped);
+    setLastSwiped(null);
   }
 
   function handleActivate() {
@@ -360,6 +371,8 @@ export default function SwipePage({
               onDoubleString={handleDoubleString}
               boostCredits={boostCredits}
               onReport={(reason) => onReport(profile, reason)}
+              onRewind={handleRewind}
+              canRewind={lastSwiped !== null}
             />
           </motion.div>
         ) : (
