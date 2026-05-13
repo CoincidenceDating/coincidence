@@ -1044,9 +1044,8 @@ function AppShell() {
       {activeTab !== "swipe" && (
         <button
           onClick={() => {
-            if (activeTab === "profile") return; // profile page handles its own settings open
             setSettingsPending(true);
-            handleTabChange("profile");
+            if (activeTab !== "profile") handleTabChange("profile");
           }}
           style={{
             position: "fixed",

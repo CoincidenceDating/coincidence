@@ -282,14 +282,8 @@ export default function ProfilePage({
     <div className="flex flex-col px-4 pt-4 pb-28 max-w-md mx-auto w-full">
 
       {/* ── Top bar ── */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center mb-4">
         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Profile</span>
-        <button
-          onClick={() => setShowSettings(true)}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
-        >
-          <Settings className="w-5 h-5 text-muted-foreground" />
-        </button>
       </div>
 
       {/* ── Avatar + name ── */}
