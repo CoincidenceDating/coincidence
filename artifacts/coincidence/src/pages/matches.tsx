@@ -257,10 +257,12 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
     <div className="flex flex-col min-h-[calc(100vh-80px)] pb-6 max-w-md mx-auto w-full">
 
       {/* ── Header ── */}
-      <div className="flex items-center gap-2 px-4 pt-6 pb-4">
-        <Heart className="w-5 h-5 text-primary fill-primary" />
-        <h1 className="text-xl font-bold">Your Matches</h1>
-        <span className="ml-auto text-sm text-muted-foreground">
+      <div className="flex flex-col items-center px-4 pt-6 pb-4">
+        <div className="flex items-center gap-2">
+          <Heart className="w-5 h-5 text-primary fill-primary" />
+          <h1 className="text-xl font-bold">Your Matches</h1>
+        </div>
+        <span className="text-sm text-muted-foreground mt-0.5">
           {deduped.length} {deduped.length === 1 ? "match" : "matches"}
         </span>
       </div>
