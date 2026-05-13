@@ -613,7 +613,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
               </motion.div>
               <motion.div
                 style={{ opacity: maybeOpacity }}
-                className="absolute bottom-16 left-1/2 z-20 -translate-x-1/2 border-4 border-amber-400 text-amber-400 font-black text-xl px-4 py-1 rounded-lg select-none pointer-events-none whitespace-nowrap"
+                className="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2 border-4 border-amber-400 text-amber-400 font-black text-xl px-4 py-1 rounded-lg select-none pointer-events-none whitespace-nowrap"
                 initial={false}
               >
                 MAYBE
@@ -669,7 +669,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-5 pt-24 pb-5 text-white">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/70 to-transparent px-5 pt-28 pb-20 text-white">
                   <h2 className="text-2xl font-bold leading-tight">
                     {blurName ? (
                       <>
@@ -696,40 +696,43 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                   </div>
                   <p className="text-sm text-white/80 mt-2 leading-snug line-clamp-2">{profile.bio}</p>
                 </div>
+
+                {/* ── Action buttons overlaid on card ── */}
+                <div
+                  className="absolute bottom-4 left-0 right-0 flex justify-center items-center gap-5 z-30"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={() => handleAction("left")}
+                    disabled={action !== "none"}
+                    className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-95 transition-all shadow-lg"
+                    style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", border: "1.5px solid rgba(255,255,255,0.18)" }}
+                  >
+                    <X className="w-5 h-5 text-rose-400" />
+                  </button>
+
+                  <button
+                    onClick={() => handleAction("right")}
+                    disabled={action !== "none"}
+                    className="w-14 h-14 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-95 transition-all shadow-xl"
+                    style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+                  >
+                    <Heart className="w-6 h-6 text-white fill-white" />
+                  </button>
+
+                  <button
+                    onClick={() => handleAction("maybe")}
+                    disabled={action !== "none"}
+                    className="w-12 h-12 rounded-full flex items-center justify-center disabled:opacity-40 active:scale-95 transition-all shadow-lg"
+                    style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", border: "1.5px solid rgba(255,255,255,0.18)" }}
+                  >
+                    <HelpCircle className="w-5 h-5 text-violet-400" />
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>
           </div>{/* end card stack wrapper */}
-        </div>
-
-        <div className="flex justify-center items-center gap-4 mt-2">
-          {/* X — reject */}
-          <button
-            onClick={() => handleAction("left")}
-            disabled={action !== "none"}
-            className="w-11 h-11 rounded-full bg-card border border-white/10 text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          {/* Heart — like (large, pink-purple gradient) */}
-          <button
-            onClick={() => handleAction("right")}
-            disabled={action !== "none"}
-            className="w-13 h-13 rounded-full active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-xl shadow-primary/30"
-            style={{ width: 52, height: 52, background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
-          >
-            <Heart className="w-6 h-6 text-white fill-white" />
-          </button>
-
-          {/* Star — maybe/save */}
-          <button
-            onClick={() => handleAction("maybe")}
-            disabled={action !== "none"}
-            className="w-11 h-11 rounded-full bg-card border border-white/10 text-violet-400 hover:bg-violet-500/10 active:scale-95 transition-all flex items-center justify-center disabled:opacity-40 shadow-lg"
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Double String button */}
