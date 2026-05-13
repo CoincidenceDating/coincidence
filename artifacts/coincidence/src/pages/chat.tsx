@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Send, MoreVertical, UserX, Flag, X } from "lucide-react";
 import type { Match } from "@/lib/data";
@@ -52,7 +52,10 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
   const [isTyping, setIsTyping] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef        = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingChannelRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const typingClearRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBroadcastRef  = useRef<number>(0);
 
   const [showMenu, setShowMenu] = useState(false);
   const [showUnmatchConfirm, setShowUnmatchConfirm] = useState(false);
@@ -93,6 +96,48 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
       }
     };
   }, [match.profile.id, isRealUser]);
+
+  // ── Supabase broadcast typing indicator for real users ──────────────────────
+  useEffect(() => {
+    if (!isRealUser) return;
+
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Channel name is the same for both participants (sorted IDs)
+      const roomId = [user.id, match.profile.id].sort().join(":");
+      const ch = supabase.channel(`typing:${roomId}`, { config: { broadcast: { self: false } } });
+
+      ch.on("broadcast", { event: "typing" }, ({ payload }) => {
+        if (payload?.from === match.profile.id) {
+          setIsTyping(true);
+          if (typingClearRef.current) clearTimeout(typingClearRef.current);
+          typingClearRef.current = setTimeout(() => setIsTyping(false), 3000);
+        }
+      }).subscribe();
+
+      typingChannelRef.current = ch;
+    })();
+
+    return () => {
+      if (typingChannelRef.current) {
+        supabase.removeChannel(typingChannelRef.current);
+        typingChannelRef.current = null;
+      }
+      if (typingClearRef.current) clearTimeout(typingClearRef.current);
+    };
+  }, [match.profile.id, isRealUser]);
+
+  const broadcastTyping = useCallback(async () => {
+    if (!isRealUser || !typingChannelRef.current) return;
+    const now = Date.now();
+    if (now - lastBroadcastRef.current < 1000) return; // max once per second
+    lastBroadcastRef.current = now;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    typingChannelRef.current.send({ type: "broadcast", event: "typing", payload: { from: user.id } });
+  }, [isRealUser]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -282,32 +327,36 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
           })
         )}
 
-        {/* Typing indicator — only for fake profiles */}
-        {!isRealUser && isTyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="flex items-end gap-2"
-          >
-            <ProfileAvatar profile={match.profile} size={28} />
-            <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
-              {[0, 1, 2].map((i) => (
-                <motion.span
-                  key={i}
-                  className="w-1.5 h-1.5 rounded-full bg-muted-foreground block"
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{
-                    duration: 0.6,
-                    repeat: Infinity,
-                    delay: i * 0.15,
-                    ease: "easeInOut",
-                  }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
+        {/* Typing indicator */}
+        <AnimatePresence>
+          {isTyping && (
+            <motion.div
+              key="typing"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.18 }}
+              className="flex items-end gap-2"
+            >
+              <ProfileAvatar profile={match.profile} size={28} />
+              <div className="bg-muted rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center">
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-muted-foreground block"
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{
+                      duration: 0.6,
+                      repeat: Infinity,
+                      delay: i * 0.15,
+                      ease: "easeInOut",
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div ref={bottomRef} />
       </div>
@@ -318,7 +367,7 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
           ref={inputRef}
           type="text"
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => { setDraft(e.target.value); broadcastTyping(); }}
           onKeyDown={handleKey}
           placeholder={`Message ${firstName}...`}
           className="flex-1 px-4 py-2.5 rounded-full bg-muted text-sm outline-none focus:ring-2 focus:ring-primary/40 transition-all"
