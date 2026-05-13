@@ -42,6 +42,8 @@ interface CoincidencePageProps {
 // Without these, every return to the tab resets the throttle and re-hits the APIs.
 let _venueLastPos: { lat: number; lng: number } | null = null;
 let _venueLastLoadTime = 0;
+let _cachedNearbyLocations: LocationData[] | null = null;
+let _cachedVenueRealCounts: Record<string, number> = {};
 
 export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
@@ -51,9 +53,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const [justCheckedIn, setJustCheckedIn] = useState(false);
   const [coincidenceMatch, setCoincidenceMatch] = useState<Match | null>(null);
 
-  const [venueStatus, setVenueStatus] = useState<VenueStatus>("idle");
-  const [nearbyLocations, setNearbyLocations] = useState<LocationData[] | null>(null);
-  const [venueRealCounts, setVenueRealCounts] = useState<Record<string, number>>({});
+  const [venueStatus, setVenueStatus] = useState<VenueStatus>(_cachedNearbyLocations ? "ready" : "idle");
+  const [nearbyLocations, setNearbyLocations] = useState<LocationData[] | null>(_cachedNearbyLocations);
+  const [venueRealCounts, setVenueRealCounts] = useState<Record<string, number>>(_cachedVenueRealCounts);
   const [realUsers, setRealUsers] = useState<Profile[]>([]);
   const [isActivating, setIsActivating] = useState(false);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -99,10 +101,12 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     try {
       const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
       setNearbyLocations(fetched);
+      _cachedNearbyLocations = fetched;
       _venueLastLoadTime = Date.now();
       const venueIds = fetched.map((v) => v.id);
       const counts = await db.getVenuePresenceCounts(venueIds);
       setVenueRealCounts(counts);
+      _cachedVenueRealCounts = counts;
 
       if (presenceSubRef.current) supabase.removeChannel(presenceSubRef.current);
       presenceSubRef.current = db.subscribeToVenuePresence(venueIds, (venueId, delta) => {
