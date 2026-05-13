@@ -10,7 +10,7 @@ export function ProfileAvatar({ profile, size = 40, className = "" }: ProfileAva
   return (
     <div
       className={`relative rounded-full overflow-hidden shrink-0 ${className}`}
-      style={{ width: size, height: size, background: profile.gradient }}
+      style={{ width: size, height: size, background: profile.gradient, boxShadow: "0 0 0 2px rgba(232,56,125,0.65), 0 0 0 3.5px rgba(155,93,229,0.4), 0 0 10px 3px rgba(232,56,125,0.2)" }}
     >
       {profile.photo ? (
         <img

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   useMotionValue,
   useTransform,
+  useMotionTemplate,
   animate,
   motion,
   AnimatePresence,
@@ -483,6 +484,13 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
   const nopeOpacity  = useTransform(dragX, [-75, -25], [1, 0]);
   const maybeOpacity = useTransform(dragY, [25, 75], [0, 1]);
 
+  // Drag-reactive glow — pink-purple at rest, shifts green on yes, red on nope
+  const glowPink   = useTransform(dragX, [-160, 0, 160], [0.1,  0.55, 0.95]);
+  const glowPurple = useTransform(dragX, [-160, 0, 160], [0.12, 0.45, 0.15]);
+  const glowGreen  = useTransform(dragX, [20,  160],      [0,    0.6]);
+  const glowRed    = useTransform(dragX, [-160, -20],     [0.6,  0]);
+  const cardGlow   = useMotionTemplate`0 0 0 1.5px rgba(232,56,125,${glowPink}), 0 0 20px 5px rgba(155,93,229,${glowPurple}), 0 0 32px 10px rgba(52,211,153,${glowGreen}), 0 0 32px 10px rgba(239,68,68,${glowRed}), 0 0 48px 14px rgba(232,56,125,${glowPink})`;
+
   function handleAction(dir: "left" | "right" | "maybe") {
     if (action !== "none") return;
     const act: Action = dir === "left" ? "no" : dir === "right" ? "yes" : "maybe";
@@ -583,12 +591,12 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             drag
             dragConstraints={{ left: -500, right: 500, top: 0, bottom: 500 }}
             dragElastic={{ left: 0.05, right: 0.05, top: 0.02, bottom: 0.05 }}
-            style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity, position: "relative", zIndex: 10 }}
+            style={{ x: dragX, y: dragY, rotate: cardRotate, opacity: cardOpacity, position: "relative", zIndex: 10, boxShadow: cardGlow, borderRadius: "1.5rem" }}
             onDragStart={() => { isDragging.current = true; }}
             onDragEnd={(e, info) => { setTimeout(() => { isDragging.current = false; }, 80); handleDragEnd(e as never, info); }}
             className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
           >
-            <div className="relative rounded-3xl overflow-hidden" style={{ height: 520, boxShadow: "0 0 0 1.5px rgba(232,56,125,0.55), 0 0 18px 4px rgba(155,93,229,0.45), 0 0 40px 10px rgba(232,56,125,0.18)" }}>
+            <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 520 }}>
               <motion.div
                 style={{ opacity: yesOpacity }}
                 className="absolute top-8 left-5 z-20 border-4 border-emerald-400 text-emerald-400 font-black text-xl px-3 py-1 rounded-lg select-none pointer-events-none"
@@ -661,7 +669,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     <MoreVertical className="w-4 h-4" />
                   </button>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-5 pt-16 pb-5 text-white">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-5 pt-24 pb-5 text-white">
                   <h2 className="text-2xl font-bold leading-tight">
                     {blurName ? (
                       <>

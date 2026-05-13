@@ -1040,6 +1040,13 @@ function AppShell() {
   return (
     <div className="h-screen flex flex-col overflow-hidden relative bg-background">
 
+      {/* ── Ambient glow orbs — faint radial blobs behind all content ── */}
+      <div aria-hidden="true" style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: "-25%", left: "-15%", width: "75%", height: "75%", borderRadius: "50%", background: "radial-gradient(circle, rgba(232,56,125,0.09) 0%, transparent 68%)", filter: "blur(50px)" }} />
+        <div style={{ position: "absolute", bottom: "-15%", right: "-20%", width: "70%", height: "70%", borderRadius: "50%", background: "radial-gradient(circle, rgba(155,93,229,0.11) 0%, transparent 68%)", filter: "blur(50px)" }} />
+        <div style={{ position: "absolute", top: "38%", right: "0%", width: "45%", height: "45%", borderRadius: "50%", background: "radial-gradient(circle, rgba(232,56,125,0.07) 0%, transparent 68%)", filter: "blur(35px)" }} />
+      </div>
+
       {/* ── Global settings icon — top-right on every tab except Discover ── */}
       {activeTab !== "swipe" && (
         <button
@@ -1054,8 +1061,12 @@ function AppShell() {
             zIndex: 50,
             width: "clamp(2rem, 9vw, 2.75rem)",
             height: "clamp(2rem, 9vw, 2.75rem)",
+            background: "rgba(13,14,26,0.55)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.1)",
           }}
-          className="rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+          className="rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Open settings"
         >
           <Settings style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
@@ -1089,8 +1100,12 @@ function AppShell() {
             zIndex: 50,
             width: "clamp(2rem, 9vw, 2.75rem)",
             height: "clamp(2rem, 9vw, 2.75rem)",
+            background: "rgba(13,14,26,0.55)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.1)",
           }}
-          className="rounded-full bg-card border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shadow-sm"
+          className="rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Open profile"
         >
           <User style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
@@ -1211,7 +1226,7 @@ function AppShell() {
 
       {/* Nav bar */}
       <div className="sticky bottom-0" style={{ zIndex: 1 }}>
-        <div className="h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+        <div style={{ height: 1, background: "linear-gradient(90deg, transparent 0%, #E8387D 35%, #9B5DE5 65%, transparent 100%)", opacity: 0.7 }} />
         <nav className="bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 pb-safe">
           <div className="flex max-w-lg mx-auto">
             {tabs.map((tab) => (
