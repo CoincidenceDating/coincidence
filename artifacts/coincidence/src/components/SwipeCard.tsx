@@ -564,7 +564,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     top: depth * 9,
                     left: `${depth * 4}%`,
                     right: `${depth * 4}%`,
-                    height: 520,
+                    height: "clamp(300px, calc(100svh - 320px), 520px)",
                     borderRadius: 24,
                     overflow: "hidden",
                     background: p.gradient,
@@ -596,7 +596,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             onDragEnd={(e, info) => { setTimeout(() => { isDragging.current = false; }, 80); handleDragEnd(e as never, info); }}
             className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
           >
-            <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 520 }}>
+            <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: "clamp(300px, calc(100svh - 320px), 520px)" }}>
               <motion.div
                 style={{ opacity: yesOpacity }}
                 className="absolute top-8 left-5 z-20 border-4 border-emerald-400 text-emerald-400 font-black text-xl px-3 py-1 rounded-lg select-none pointer-events-none"
@@ -702,7 +702,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
           </div>{/* end card stack wrapper */}
         </div>
 
-        <div className="flex justify-center items-center gap-6 mt-5">
+        <div className="flex justify-center items-center gap-6 mt-3">
           {/* X — reject */}
           <button
             onClick={() => handleAction("left")}

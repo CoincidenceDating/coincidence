@@ -111,7 +111,7 @@ export default function SwipePage({
       : RADIUS_STEPS.length - 1;
 
   return (
-    <div className="relative flex flex-col items-center min-h-[calc(100vh-80px)] px-4 pt-0 pb-4">
+    <div className="relative flex flex-col items-center h-[calc(100svh-80px)] overflow-hidden px-4 pt-0 pb-3">
 
       {/* ── Boost — fixed top-right, mirrors the global profile icon ── */}
       <AnimatePresence mode="wait">
@@ -172,7 +172,7 @@ export default function SwipePage({
       </AnimatePresence>
 
       {/* ── Header ── */}
-      <div className="w-full max-w-sm flex items-center justify-center py-4 mb-1">
+      <div className="w-full max-w-sm flex items-center justify-center py-2 mb-1">
         <h1
           className="gradient-text font-bold tracking-tight select-none text-center"
           style={{ fontSize: "clamp(1.25rem, 5vw, 1.5rem)", fontFamily: "'Cormorant Garamond', Georgia, serif", fontStyle: "italic" }}
@@ -182,7 +182,7 @@ export default function SwipePage({
       </div>
 
       {/* ── Distance filter bar ── */}
-      <div className="w-full max-w-sm mb-3">
+      <div className="w-full max-w-sm mb-2">
         <button
           onClick={() => setShowRadiusPanel(v => !v)}
           className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-card/60 border border-white/8 hover:border-white/15 transition-all"
