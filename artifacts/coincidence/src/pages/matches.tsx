@@ -274,7 +274,7 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
             <span className="ml-auto text-xs text-muted-foreground">{sortedNewMatches.length}</span>
           </div>
           <div
-            className="flex gap-4 px-4 overflow-x-auto pb-2"
+            className="flex gap-4 px-4 overflow-x-auto pb-2 pt-1"
             style={{ scrollbarWidth: "none" }}
           >
             {sortedNewMatches.map((m) => (
