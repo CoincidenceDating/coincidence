@@ -564,7 +564,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     top: depth * 9,
                     left: `${depth * 4}%`,
                     right: `${depth * 4}%`,
-                    height: "clamp(360px, calc(100svh - 268px), 520px)",
+                    height: `calc(clamp(360px, calc(100svh - 268px), 520px) - ${depth * 9}px)`,
                     borderRadius: 24,
                     overflow: "hidden",
                     background: p.gradient,
