@@ -38,6 +38,11 @@ interface CoincidencePageProps {
   onRequestGps: () => void;
 }
 
+// Module-level: survive CoincidencePage unmount/remount (tab switches).
+// Without these, every return to the tab resets the throttle and re-hits the APIs.
+let _venueLastPos: { lat: number; lng: number } | null = null;
+let _venueLastLoadTime = 0;
+
 export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
@@ -53,8 +58,6 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const [isActivating, setIsActivating] = useState(false);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const venueUsersSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const lastVenueLoadRef = useRef<{ lat: number; lng: number } | null>(null);
-  const lastVenueLoadTimeRef = useRef<number>(0);
   const VENUE_REFRESH_MIN_MS = 5 * 60 * 1000; // 5 minutes between background refreshes
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
@@ -96,7 +99,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     try {
       const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
       setNearbyLocations(fetched);
-      lastVenueLoadTimeRef.current = Date.now();
+      _venueLastLoadTime = Date.now();
       const venueIds = fetched.map((v) => v.id);
       const counts = await db.getVenuePresenceCounts(venueIds);
       setVenueRealCounts(counts);
@@ -129,16 +132,15 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   //             to avoid hammering OSM Overpass and triggering rate-limit errors.
   useEffect(() => {
     if (gpsStatus !== "granted" || userLat == null || userLng == null) return;
-    const last = lastVenueLoadRef.current;
-    if (!last) {
-      // First fix ever — always load
-      lastVenueLoadRef.current = { lat: userLat, lng: userLng };
+    if (!_venueLastPos) {
+      // First fix ever (or first fix since app load) — always load
+      _venueLastPos = { lat: userLat, lng: userLng };
       loadVenues(userLat, userLng, false);
     } else {
-      const moved = haversineDistanceMiles(last.lat, last.lng, userLat, userLng);
-      const timeSinceLoad = Date.now() - lastVenueLoadTimeRef.current;
+      const moved = haversineDistanceMiles(_venueLastPos.lat, _venueLastPos.lng, userLat, userLng);
+      const timeSinceLoad = Date.now() - _venueLastLoadTime;
       if (moved >= VENUE_REFRESH_THRESHOLD_MI && timeSinceLoad >= VENUE_REFRESH_MIN_MS) {
-        lastVenueLoadRef.current = { lat: userLat, lng: userLng };
+        _venueLastPos = { lat: userLat, lng: userLng };
         loadVenues(userLat, userLng, true); // background: keep existing venues on failure
       }
     }
