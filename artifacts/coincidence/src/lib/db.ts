@@ -876,6 +876,34 @@ export function subscribeToIncomingVenueLikes(
     .subscribe();
 }
 
+/* ── who liked me realtime ────────────────────────────────── */
+
+// Fires whenever someone new likes the calling user (liked=true INSERT on user_swiped).
+// user_swiped already has realtime enabled (migration 025).
+export function subscribeToIncomingLikes(
+  myId: string,
+  onLike: () => void,
+) {
+  return supabase
+    .channel(`incoming-likes:${myId}:${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "user_swiped",
+        filter: `profile_id=eq.${myId}`,
+      },
+      (payload) => {
+        const row = payload.new as { user_id: string; liked: boolean };
+        if (row.liked) {
+          onLike();
+        }
+      },
+    )
+    .subscribe();
+}
+
 /* ── who liked me ─────────────────────────────────────────── */
 
 export async function getWhoLikedMeCount(): Promise<number> {
