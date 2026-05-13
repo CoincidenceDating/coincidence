@@ -2,7 +2,10 @@ import type Stripe from 'stripe';
 import { getUncachableStripeClient } from './stripeClient.js';
 import { logger } from './lib/logger.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
+// Strip any trailing /rest/v1[/] that may be included in the env var
+const rawSupabaseUrl = process.env.SUPABASE_URL ?? '';
+const restIdx = rawSupabaseUrl.indexOf('/rest');
+const SUPABASE_URL = (restIdx >= 0 ? rawSupabaseUrl.slice(0, restIdx) : rawSupabaseUrl).replace(/\/$/, '');
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 async function updateUserAfterPayment(session: Stripe.Checkout.Session): Promise<void> {
