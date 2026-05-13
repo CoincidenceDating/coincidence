@@ -30,28 +30,21 @@ async function updateUserAfterPayment(session: Stripe.Checkout.Session): Promise
   if (type === 'strings') {
     const qty = Math.max(0, Number(quantity ?? '0'));
 
-    const getResp = await fetch(
-      `${SUPABASE_URL}/rest/v1/user_boosts?user_id=eq.${encodeURIComponent(userId)}&select=credits`,
-      { headers: authHeaders },
-    );
-    const rows = (await getResp.json()) as Array<{ credits: number }>;
-    const current = rows[0]?.credits ?? 0;
-
-    const upsertResp = await fetch(`${SUPABASE_URL}/rest/v1/user_boosts`, {
+    // Atomic increment via RPC — avoids read-modify-write race condition
+    const rpcResp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/add_string_credits`, {
       method: 'POST',
       headers: {
         ...authHeaders,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
       },
-      body: JSON.stringify({ user_id: userId, credits: current + qty }),
+      body: JSON.stringify({ p_user_id: userId, p_qty: qty }),
     });
 
-    if (!upsertResp.ok) {
-      const text = await upsertResp.text();
-      logger.error({ userId, qty, status: upsertResp.status, body: text }, 'Webhook: failed to update user_boosts');
+    if (!rpcResp.ok) {
+      const text = await rpcResp.text();
+      logger.error({ userId, qty, status: rpcResp.status, body: text }, 'Webhook: failed to add string credits');
     } else {
-      logger.info({ userId, qty, newCredits: current + qty }, 'Webhook: strings added');
+      logger.info({ userId, qty }, 'Webhook: strings added (atomic)');
     }
 
   } else if (type === 'who_liked_me') {

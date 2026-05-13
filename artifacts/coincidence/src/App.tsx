@@ -234,13 +234,19 @@ function AppShell() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment_success") !== "1") return;
     window.history.replaceState({}, "", "/");
-    db.getBoost().then((b) => setBoostCredits(b.credits));
-    Promise.all([db.hasWhoLikedMeAccess(), db.getWhoLikedMeExpiry()]).then(([access, expiry]) => {
-      setHasWhoLikedMeAccess(access);
-      setWhoLikedMeExpiresAt(expiry);
-      if (access) db.getWhoLikedMe().then(setWhoLikedMeProfiles);
-    });
     toast({ title: "Payment successful", description: "Your purchase has been added to your account." });
+    // Read immediately, then re-read after 4 s to catch the Stripe webhook update
+    const refresh = () => {
+      db.getBoost().then((b) => setBoostCredits(b.credits));
+      Promise.all([db.hasWhoLikedMeAccess(), db.getWhoLikedMeExpiry()]).then(([access, expiry]) => {
+        setHasWhoLikedMeAccess(access);
+        setWhoLikedMeExpiresAt(expiry);
+        if (access) db.getWhoLikedMe().then(setWhoLikedMeProfiles);
+      });
+    };
+    refresh();
+    const t = setTimeout(refresh, 4000);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
