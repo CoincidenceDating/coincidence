@@ -1062,6 +1062,22 @@ function AppShell() {
         </button>
       )}
 
+      {/* ── "Profile" label — top-left on the profile tab ── */}
+      {activeTab === "profile" && (
+        <span
+          style={{
+            position: "fixed",
+            top: "max(env(safe-area-inset-top, 0px) + 12px, 14px)",
+            left: "max(env(safe-area-inset-left, 0px) + 16px, 16px)",
+            zIndex: 50,
+            lineHeight: "clamp(2rem, 9vw, 2.75rem)",
+          }}
+          className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+        >
+          Profile
+        </span>
+      )}
+
       {/* ── Global profile icon — top-left on every tab except profile ── */}
       {activeTab !== "profile" && (
         <button

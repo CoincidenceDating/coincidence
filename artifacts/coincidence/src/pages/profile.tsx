@@ -281,10 +281,6 @@ export default function ProfilePage({
   return (
     <div className="flex flex-col px-4 pt-4 pb-28 max-w-md mx-auto w-full">
 
-      {/* ── Top bar ── */}
-      <div className="flex items-center mb-4">
-        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Profile</span>
-      </div>
 
       {/* ── Avatar + name ── */}
       <div className="flex flex-col items-center text-center mb-6">
