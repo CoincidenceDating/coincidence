@@ -1,6 +1,4 @@
 import { Router, type IRouter } from "express";
-import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
 import { getUncachableStripeClient } from "../stripeClient.js";
 
 const router: IRouter = Router();
@@ -17,46 +15,33 @@ router.post("/stripe/checkout", async (req, res) => {
     return;
   }
 
-  let priceId: string | undefined;
-  try {
-    let rows: Array<{ price_id: unknown }>;
-    if (type === "strings") {
-      const result = await db.execute(
-        sql`SELECT pr.id AS price_id
-            FROM stripe.products p
-            JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
-            WHERE p.active = true
-              AND p.metadata->>'type' = ${type}
-              AND p.metadata->>'quantity' = ${String(quantity ?? 0)}
-            LIMIT 1`,
-      );
-      rows = result.rows as Array<{ price_id: unknown }>;
-    } else {
-      const result = await db.execute(
-        sql`SELECT pr.id AS price_id
-            FROM stripe.products p
-            JOIN stripe.prices pr ON pr.product = p.id AND pr.active = true
-            WHERE p.active = true
-              AND p.metadata->>'type' = ${type}
-            LIMIT 1`,
-      );
-      rows = result.rows as Array<{ price_id: unknown }>;
-    }
-
-    priceId = rows[0]?.price_id as string | undefined;
-  } catch (err) {
-    req.log.error({ err }, "Failed to query stripe prices");
-    res.status(503).json({ error: "Price lookup unavailable — Stripe not yet set up" });
-    return;
-  }
-
-  if (!priceId) {
-    res.status(404).json({ error: "Price not found — run the seed-products script first" });
-    return;
-  }
-
   try {
     const stripe = await getUncachableStripeClient();
+
+    // Look up the product by metadata directly from the Stripe API
+    const query =
+      type === "strings"
+        ? `active:'true' AND metadata['type']:'strings' AND metadata['quantity']:'${Number(quantity ?? 1)}'`
+        : `active:'true' AND metadata['type']:'who_liked_me'`;
+
+    const products = await stripe.products.search({ query, limit: 1 });
+
+    if (!products.data.length) {
+      req.log.error({ type, quantity }, "No Stripe product found for this type");
+      res.status(404).json({ error: "Product not found — run the seed-products script first" });
+      return;
+    }
+
+    const productId = products.data[0].id;
+    const prices = await stripe.prices.list({ product: productId, active: true, limit: 1 });
+
+    if (!prices.data.length) {
+      req.log.error({ productId }, "No active price found for product");
+      res.status(404).json({ error: "No active price found for this product" });
+      return;
+    }
+
+    const priceId = prices.data[0].id;
     const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
     const baseUrl = `https://${domain}`;
 
@@ -74,8 +59,8 @@ router.post("/stripe/checkout", async (req, res) => {
     });
 
     res.json({ url: session.url });
-  } catch (err) {
-    req.log.error({ err }, "Failed to create Stripe checkout session");
+  } catch (err: unknown) {
+    req.log.error({ err }, "Stripe checkout error");
     res.status(500).json({ error: "Failed to create checkout session" });
   }
 });
