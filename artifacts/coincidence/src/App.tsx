@@ -161,6 +161,7 @@ function AppShell() {
   const [whoLikedMeProfiles, setWhoLikedMeProfiles]   = useState<Profile[]>([]);
   const [hasWhoLikedMeAccess, setHasWhoLikedMeAccess] = useState(false);
   const [whoLikedMeExpiresAt, setWhoLikedMeExpiresAt] = useState<number | null>(null);
+  const [likesPulse, setLikesPulse] = useState(false);
 
   const matchesSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const unmatchSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -436,6 +437,7 @@ function AppShell() {
         if (likesSubRef.current) supabase.removeChannel(likesSubRef.current);
         likesSubRef.current = db.subscribeToIncomingLikes(user.id, () => {
           setWhoLikedMeCount((c) => c + 1);
+          setLikesPulse(true);
         });
       }
     } finally {
@@ -936,6 +938,7 @@ function AppShell() {
   function handleTabChange(tab: Tab) {
     if (tab === "matches") { setNewMatchCount(0); }
     if (tab === "undecided") setNewUndecidedCount(0);
+    if (tab === "liked") setLikesPulse(false);
     activeTabRef.current = tab;
     if (tab === "swipe") {
       db.getProfile().then((p) => {
@@ -1091,7 +1094,10 @@ function AppShell() {
           <Eye className={`w-5 h-5 ${a ? "text-primary" : ""}`} />
           {whoLikedMeCount > 0 && !hasWhoLikedMeAccess && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full gradient-btn text-white text-[10px] font-bold flex items-center justify-center leading-none">
-              {whoLikedMeCount > 9 ? "9+" : whoLikedMeCount}
+              {likesPulse && (
+                <span className="absolute inset-0 rounded-full bg-pink-500 opacity-75 animate-ping" />
+              )}
+              <span className="relative">{whoLikedMeCount > 9 ? "9+" : whoLikedMeCount}</span>
             </span>
           )}
         </div>
