@@ -588,7 +588,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             onDragEnd={(e, info) => { setTimeout(() => { isDragging.current = false; }, 80); handleDragEnd(e as never, info); }}
             className="w-full touch-none cursor-grab active:cursor-grabbing shrink-0"
           >
-            <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ height: 520 }}>
+            <div className="relative rounded-3xl overflow-hidden" style={{ height: 520, boxShadow: "0 0 0 1.5px rgba(232,56,125,0.55), 0 0 18px 4px rgba(155,93,229,0.45), 0 0 40px 10px rgba(232,56,125,0.18)" }}>
               <motion.div
                 style={{ opacity: yesOpacity }}
                 className="absolute top-8 left-5 z-20 border-4 border-emerald-400 text-emerald-400 font-black text-xl px-3 py-1 rounded-lg select-none pointer-events-none"
