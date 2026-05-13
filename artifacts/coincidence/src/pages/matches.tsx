@@ -274,12 +274,74 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
             <span className="ml-auto text-xs text-muted-foreground">{sortedNewMatches.length}</span>
           </div>
           <div
-            className="flex gap-4 px-4 overflow-x-auto pb-2 pt-1"
+            className="overflow-x-auto pb-2 pt-1"
             style={{ scrollbarWidth: "none" }}
           >
-            {sortedNewMatches.map((m) => (
-              <NewMatchBubble key={m.profile.id} match={m} />
-            ))}
+            {(() => {
+              const BUBBLE_W = 72;
+              const GAP      = 16;
+              const PAD      = 16;
+              const AVATAR_W = 52;
+              const AVATAR_OFFSET_X = (BUBBLE_W - AVATAR_W) / 2; // 10px
+              const centerY  = 27; // pt-1 + half of 52px avatar
+              const n        = sortedNewMatches.length;
+              const totalW   = PAD + n * BUBBLE_W + (n - 1) * GAP + PAD;
+
+              // Build SVG path: drooping segment between each pair of adjacent avatars
+              let d = "";
+              if (n > 1) {
+                for (let i = 0; i < n - 1; i++) {
+                  const x0 = PAD + i * (BUBBLE_W + GAP) + AVATAR_OFFSET_X + AVATAR_W; // right edge of avatar i
+                  const x1 = PAD + (i + 1) * (BUBBLE_W + GAP) + AVATAR_OFFSET_X;      // left edge of avatar i+1
+                  const cx = (x0 + x1) / 2;
+                  const cy = centerY + 8;
+                  d += `M ${x0} ${centerY} Q ${cx} ${cy} ${x1} ${centerY} `;
+                }
+              }
+
+              return (
+                <div className="relative flex gap-4 px-4" style={{ width: totalW }}>
+                  {/* String SVG — behind all bubbles */}
+                  {n > 1 && (
+                    <svg
+                      aria-hidden
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: totalW,
+                        height: 60,
+                        pointerEvents: "none",
+                        zIndex: 0,
+                        overflow: "visible",
+                      }}
+                    >
+                      <defs>
+                        <linearGradient id="bubble-string-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%"   stopColor="#E8387D" stopOpacity="0.6" />
+                          <stop offset="50%"  stopColor="#C060B8" stopOpacity="0.6" />
+                          <stop offset="100%" stopColor="#9B5DE5" stopOpacity="0.6" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d={d}
+                        fill="none"
+                        stroke="url(#bubble-string-grad)"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  )}
+
+                  {/* Bubbles — on top of string */}
+                  {sortedNewMatches.map((m) => (
+                    <div key={m.profile.id} className="relative" style={{ zIndex: 1 }}>
+                      <NewMatchBubble match={m} />
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           {/* Divider */}
           <div className="mt-4 mx-4 h-px bg-border/50" />
