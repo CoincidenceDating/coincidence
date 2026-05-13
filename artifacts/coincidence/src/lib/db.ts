@@ -518,6 +518,30 @@ export async function upsertBoost(credits: number, until: number | null, radius:
   );
 }
 
+export function subscribeToBoostCredits(
+  userId: string,
+  onChange: (credits: number) => void,
+) {
+  return supabase
+    .channel(`boost-credits:${userId}:${Date.now()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "user_boosts",
+        filter: `user_id=eq.${userId}`,
+      },
+      (payload) => {
+        const row = (payload.new ?? {}) as { credits?: number };
+        if (typeof row.credits === "number") {
+          onChange(row.credits);
+        }
+      },
+    )
+    .subscribe();
+}
+
 /* ── blocked ──────────────────────────────────────────────── */
 
 export async function getBlocked(): Promise<string[]> {

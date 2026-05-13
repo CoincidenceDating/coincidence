@@ -165,6 +165,7 @@ function AppShell() {
   const matchesSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const unmatchSubRef  = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inboxSubRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const boostSubRef    = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const inRecoveryRef  = useRef(false);
   // Kept as a ref so refreshDiscoverProfiles always has the latest value
   // without needing to be in the dependency chain.
@@ -427,6 +428,10 @@ function AppShell() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         subscribeToIncomingMatches(user.id);
+        if (boostSubRef.current) supabase.removeChannel(boostSubRef.current);
+        boostSubRef.current = db.subscribeToBoostCredits(user.id, (credits) => {
+          setBoostCredits(credits);
+        });
       }
     } finally {
       setDataLoading(false);
@@ -689,6 +694,10 @@ function AppShell() {
       supabase.removeChannel(unmatchSubRef.current);
       unmatchSubRef.current = null;
     }
+    if (boostSubRef.current) {
+      supabase.removeChannel(boostSubRef.current);
+      boostSubRef.current = null;
+    }
     await supabase.auth.signOut();
     setUndecided([]);
     setMatches([]);
@@ -721,6 +730,10 @@ function AppShell() {
     if (unmatchSubRef.current) {
       supabase.removeChannel(unmatchSubRef.current);
       unmatchSubRef.current = null;
+    }
+    if (boostSubRef.current) {
+      supabase.removeChannel(boostSubRef.current);
+      boostSubRef.current = null;
     }
     await db.deleteAllUserData();
     await supabase.auth.signOut();
