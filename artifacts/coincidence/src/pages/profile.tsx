@@ -84,6 +84,7 @@ interface ProfilePageProps {
   onBoostRadiusChange: (r: number) => void;
   onActivateBoost: () => void;
   onAddCredits: (count: number) => void;
+  onPurchaseStrings: (packId: string) => Promise<void>;
   onLogout: () => void;
   onDeleteAccount: () => void;
   onProfileUpdate?: (updated: EditableProfile) => void;
@@ -126,6 +127,7 @@ export default function ProfilePage({
   matches, checkIns,
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost, onAddCredits,
+  onPurchaseStrings,
   onLogout, onDeleteAccount, onProfileUpdate, account,
   autoOpenSettings, onSettingsAutoOpened,
 }: ProfilePageProps) {
@@ -1435,18 +1437,9 @@ export default function ProfilePage({
 
               <motion.button whileTap={{ scale: 0.97 }} disabled={!purchasedPack}
                 className="w-full py-4 rounded-2xl bg-foreground text-background font-semibold text-sm disabled:opacity-30 transition-opacity"
-                onClick={() => {
+                onClick={async () => {
                   if (!purchasedPack) return;
-                  const pack = STRING_PACKS.find(p => p.id === purchasedPack);
-                  if (pack) {
-                    onAddCredits(pack.count);
-                    setPurchaseSuccess(true);
-                    setTimeout(() => {
-                      setPurchaseSuccess(false);
-                      setPurchasedPack(null);
-                      setShowStore(false);
-                    }, 1200);
-                  }
+                  await onPurchaseStrings(purchasedPack);
                 }}>
                 {purchaseSuccess
                   ? `✦ ${STRING_PACKS.find(p => p.id === purchasedPack)?.label} added!`

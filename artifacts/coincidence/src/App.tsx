@@ -230,6 +230,20 @@ function AppShell() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment_success") !== "1") return;
+    window.history.replaceState({}, "", "/");
+    db.getBoost().then((b) => setBoostCredits(b.credits));
+    Promise.all([db.hasWhoLikedMeAccess(), db.getWhoLikedMeExpiry()]).then(([access, expiry]) => {
+      setHasWhoLikedMeAccess(access);
+      setWhoLikedMeExpiresAt(expiry);
+      if (access) db.getWhoLikedMe().then(setWhoLikedMeProfiles);
+    });
+    toast({ title: "Payment successful", description: "Your purchase has been added to your account." });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function subscribeToIncomingMatches(userId: string) {
     if (matchesSubRef.current) {
       supabase.removeChannel(matchesSubRef.current);
@@ -725,15 +739,45 @@ function AppShell() {
   }
 
   async function handleUnlockWhoLikedMe() {
-    // TODO: replace with Stripe checkout session when Stripe is connected
-    await db.grantWhoLikedMeAccess();
-    const [profiles, expiry] = await Promise.all([
-      db.getWhoLikedMe(),
-      db.getWhoLikedMeExpiry(),
-    ]);
-    setHasWhoLikedMeAccess(true);
-    setWhoLikedMeProfiles(profiles);
-    setWhoLikedMeExpiresAt(expiry);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    try {
+      const resp = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, type: "who_liked_me" }),
+      });
+      const data = await resp.json() as { url?: string; error?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Checkout unavailable", description: data.error ?? "Please try again later.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", description: "Could not start checkout. Please try again.", variant: "destructive" });
+    }
+  }
+
+  async function handlePurchaseStrings(packId: string) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const quantityMap: Record<string, number> = { s1: 1, s5: 5, s10: 10 };
+    const quantity = quantityMap[packId] ?? 1;
+    try {
+      const resp = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id, type: "strings", quantity }),
+      });
+      const data = await resp.json() as { url?: string; error?: string };
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Checkout unavailable", description: data.error ?? "Please try again later.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Something went wrong", description: "Could not start checkout. Please try again.", variant: "destructive" });
+    }
   }
 
   async function handleLikeBack(profile: Profile) {
@@ -1214,6 +1258,7 @@ function AppShell() {
                 return next;
               });
             }}
+            onPurchaseStrings={handlePurchaseStrings}
             onLogout={handleLogout}
             onDeleteAccount={handleDeleteAccount}
             onProfileUpdate={handleProfileUpdate}
