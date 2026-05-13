@@ -1,35 +1,36 @@
-import { runMigrations } from "stripe-replit-sync";
-import { getStripeSync } from "./stripeClient.js";
+import { getUncachableStripeClient } from "./stripeClient.js";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 
-async function initStripe() {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    logger.warn("DATABASE_URL not set — skipping Stripe schema init");
+async function registerWebhook() {
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
+  if (!domain) {
+    logger.warn("REPLIT_DOMAINS not set — skipping webhook registration");
     return;
   }
 
   try {
-    await runMigrations({ databaseUrl });
-    logger.info("Stripe schema ready");
+    const stripe = await getUncachableStripeClient();
+    const webhookUrl = `https://${domain}/api/stripe/webhook`;
 
-    const stripeSync = await getStripeSync();
-
-    const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
-    if (domain) {
-      const webhookUrl = `https://${domain}/api/stripe/webhook`;
-      await stripeSync.findOrCreateManagedWebhook(webhookUrl);
-      logger.info({ webhookUrl }, "Stripe webhook configured");
+    // Check if a webhook endpoint for this URL already exists
+    const existing = await stripe.webhookEndpoints.list({ limit: 100 });
+    const already = existing.data.find((e) => e.url === webhookUrl);
+    if (already) {
+      logger.info({ webhookUrl }, "Stripe webhook already registered");
+      return;
     }
 
-    stripeSync.syncBackfill().then(() => {
-      logger.info("Stripe data backfill complete");
-    }).catch((err: unknown) => {
-      logger.warn({ err }, "Stripe backfill failed (non-fatal)");
+    await stripe.webhookEndpoints.create({
+      url: webhookUrl,
+      enabled_events: ["checkout.session.completed"],
     });
+    logger.info({ webhookUrl }, "Stripe webhook registered");
+    logger.warn(
+      "Set STRIPE_WEBHOOK_SECRET to the signing secret shown in the Stripe dashboard for this endpoint."
+    );
   } catch (err: unknown) {
-    logger.warn({ err }, "Stripe init failed — payments unavailable until Stripe is connected");
+    logger.warn({ err }, "Stripe webhook registration failed (non-fatal)");
   }
 }
 
@@ -43,7 +44,10 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-await initStripe();
+// Register webhook in background — don't block server startup
+registerWebhook().catch((err: unknown) => {
+  logger.warn({ err }, "registerWebhook error");
+});
 
 app.listen(port, (err) => {
   if (err) {

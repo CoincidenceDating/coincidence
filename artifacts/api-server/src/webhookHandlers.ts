@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { getStripeCredentials, getStripeSync, getUncachableStripeClient } from './stripeClient.js';
+import { getUncachableStripeClient } from './stripeClient.js';
 import { logger } from './lib/logger.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL ?? '';
@@ -10,12 +10,12 @@ async function updateUserAfterPayment(session: Stripe.Checkout.Session): Promise
   const { userId, type, quantity } = meta;
 
   if (!userId || !type) {
-    logger.warn({ sessionId: session.id }, 'Webhook: missing userId or type in session metadata');
+    logger.warn({ sessionId: session.id }, 'Webhook: missing userId or type in metadata');
     return;
   }
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
-    logger.error('Webhook: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
+    logger.error('Webhook: missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
     return;
   }
 
@@ -48,7 +48,7 @@ async function updateUserAfterPayment(session: Stripe.Checkout.Session): Promise
       const text = await upsertResp.text();
       logger.error({ userId, qty, status: upsertResp.status, body: text }, 'Webhook: failed to update user_boosts');
     } else {
-      logger.info({ userId, qty, newCredits: current + qty }, 'Webhook: strings added to user_boosts');
+      logger.info({ userId, qty, newCredits: current + qty }, 'Webhook: strings added');
     }
 
   } else if (type === 'who_liked_me') {
@@ -77,19 +77,21 @@ export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string): Promise<void> {
     if (!Buffer.isBuffer(payload)) {
       throw new Error(
-        'STRIPE WEBHOOK ERROR: Payload must be a Buffer. ' +
-        'This usually means express.json() parsed the body before reaching this handler. ' +
-        'FIX: Ensure webhook route is registered BEFORE app.use(express.json()).'
+        'Payload must be a Buffer — ensure webhook route is registered BEFORE express.json().'
       );
     }
 
-    const { webhookSecret } = await getStripeCredentials();
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     const stripe = await getUncachableStripeClient();
 
-    const event = stripe.webhooks.constructEvent(payload, signature, webhookSecret ?? '');
-
-    const sync = await getStripeSync();
-    await sync.processWebhook(payload, signature);
+    let event: Stripe.Event;
+    if (webhookSecret) {
+      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } else {
+      // No webhook secret set yet — parse manually (only safe in dev)
+      event = JSON.parse(payload.toString()) as Stripe.Event;
+      logger.warn('STRIPE_WEBHOOK_SECRET not set — skipping signature verification (dev only)');
+    }
 
     if (event.type === 'checkout.session.completed') {
       await updateUserAfterPayment(event.data.object as Stripe.Checkout.Session);
