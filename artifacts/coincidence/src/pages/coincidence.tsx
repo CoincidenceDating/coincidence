@@ -292,7 +292,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     setVenueStatus("idle");
     setNearbyLocations(null);
     setSelectedLocation("");
-    lastVenueLoadRef.current = null;
+    _venueLastPos = null;
   }
 
   function handleCheckIn() {
