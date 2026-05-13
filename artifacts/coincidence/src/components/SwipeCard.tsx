@@ -544,10 +544,6 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
 
       <div className="w-full max-w-sm mx-auto">
         <div className="flex items-center justify-center" style={{ overflow: "visible" }}>
-          <div className="pointer-events-none shrink-0" style={{ marginRight: -8 }}>
-            <HStringVisual side="left" action={action} dragX={dragX} dragY={dragY} />
-          </div>
-
           {/* Card stack wrapper — ghost cards peek from behind, card fills full width */}
           <div className="relative shrink-0 w-full" style={{ overflow: "visible" }}>
             {peekProfiles.slice(0, 2).map((p, i) => {
@@ -696,10 +692,6 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             </div>
           </motion.div>
           </div>{/* end card stack wrapper */}
-
-          <div className="pointer-events-none shrink-0" style={{ marginLeft: -8 }}>
-            <HStringVisual side="right" action={action} dragX={dragX} dragY={dragY} />
-          </div>
         </div>
 
         <div className="flex justify-center items-center gap-6 mt-5">
