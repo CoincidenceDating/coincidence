@@ -67,6 +67,19 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
 
   const displayMessages = isRealUser ? localMessages : messages;
 
+  function formatMsgTime(ts: number): string {
+    if (!ts) return "";
+    const d = new Date(ts);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+    const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if (diffDays === 0) return time;
+    if (diffDays === 1) return `Yesterday ${time}`;
+    if (diffDays < 7) return `${d.toLocaleDateString([], { weekday: "short" })} ${time}`;
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  }
+
   useEffect(() => {
     if (!isRealUser) return;
 
@@ -300,29 +313,60 @@ export default function ChatPage({ match, messages, onSend, onBack, onUnmatch, o
             <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
           </div>
         ) : (
-          displayMessages.map((msg) => {
+          displayMessages.map((msg, idx) => {
             const isMe = msg.from === "me";
+            const next = displayMessages[idx + 1] ?? null;
+            const prev = displayMessages[idx - 1] ?? null;
+
+            // Show timestamp below this bubble if: last message, sender changes next, or 5+ min gap to next
+            const showTime = !next
+              || next.from !== msg.from
+              || (next.timestamp - msg.timestamp) > 5 * 60 * 1000;
+
+            // Show a time separator above if: first message, or 10+ min gap since previous
+            const showSeparator = !prev
+              || (msg.timestamp - prev.timestamp) > 10 * 60 * 1000;
+
             return (
-              <motion.div
-                key={msg.id}
-                initial={{ opacity: 0, y: 8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.18, ease: "easeOut" }}
-                className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-              >
-                {!isMe && (
-                  <ProfileAvatar profile={match.profile} size={28} className="mr-2 mt-1 self-end" />
+              <div key={msg.id}>
+                {/* Time separator */}
+                {showSeparator && msg.timestamp > 0 && idx > 0 && (
+                  <div className="flex items-center justify-center my-3">
+                    <span className="text-[10px] text-muted-foreground/50 bg-background px-2">
+                      {formatMsgTime(msg.timestamp)}
+                    </span>
+                  </div>
                 )}
-                <div
-                  className={`max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-                    isMe
-                      ? "bg-primary text-primary-foreground rounded-br-sm"
-                      : "bg-muted text-foreground rounded-bl-sm"
-                  }`}
+
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
+                  className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
                 >
-                  {msg.text}
-                </div>
-              </motion.div>
+                  <div className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                    {!isMe && (
+                      <ProfileAvatar profile={match.profile} size={28} className="self-end shrink-0" />
+                    )}
+                    <div
+                      className={`max-w-[72%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                        isMe
+                          ? "bg-primary text-primary-foreground rounded-br-sm"
+                          : "bg-muted text-foreground rounded-bl-sm"
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+
+                  {/* Timestamp below last bubble in a run */}
+                  {showTime && msg.timestamp > 0 && (
+                    <p className={`text-[10px] text-muted-foreground/50 mt-1 ${isMe ? "pr-1" : "pl-9"}`}>
+                      {formatMsgTime(msg.timestamp)}
+                    </p>
+                  )}
+                </motion.div>
+              </div>
             );
           })
         )}
