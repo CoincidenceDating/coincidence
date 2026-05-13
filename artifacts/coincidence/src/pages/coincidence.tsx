@@ -54,6 +54,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const venueUsersSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const lastVenueLoadRef = useRef<{ lat: number; lng: number } | null>(null);
+  const lastVenueLoadTimeRef = useRef<number>(0);
+  const VENUE_REFRESH_MIN_MS = 5 * 60 * 1000; // 5 minutes between background refreshes
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -87,11 +89,14 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const allMockUsers = locations.flatMap((l) => l.users);
 
 
-  const loadVenues = useCallback(async (lat: number, lng: number) => {
-    setVenueStatus("loading");
+  const loadVenues = useCallback(async (lat: number, lng: number, isBackground = false) => {
+    // Background refresh (we already have venues): stay in "ready" and fail silently
+    // to avoid wiping the UI or hitting rate limits showing errors repeatedly.
+    if (!isBackground) setVenueStatus("loading");
     try {
       const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
       setNearbyLocations(fetched);
+      lastVenueLoadTimeRef.current = Date.now();
       const venueIds = fetched.map((v) => v.id);
       const counts = await db.getVenuePresenceCounts(venueIds);
       setVenueRealCounts(counts);
@@ -106,7 +111,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
       setVenueStatus("ready");
     } catch {
-      setVenueStatus("error");
+      // On background refresh keep existing venues intact; only surface the error
+      // state on first load (when the user has nothing to look at yet).
+      if (!isBackground) setVenueStatus("error");
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -116,18 +123,23 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   // How far the user must move (in miles) before the venue list refreshes
   const VENUE_REFRESH_THRESHOLD_MI = 0.12; // ~200 m
 
-  // Load / refresh venues whenever the GPS position from App.tsx changes
+  // Load / refresh venues whenever the GPS position from App.tsx changes.
+  // Guards: (1) must have moved VENUE_REFRESH_THRESHOLD_MI since last load,
+  //         (2) must be at least VENUE_REFRESH_MIN_MS since last successful load
+  //             to avoid hammering OSM Overpass and triggering rate-limit errors.
   useEffect(() => {
     if (gpsStatus !== "granted" || userLat == null || userLng == null) return;
     const last = lastVenueLoadRef.current;
     if (!last) {
+      // First fix ever — always load
       lastVenueLoadRef.current = { lat: userLat, lng: userLng };
-      loadVenues(userLat, userLng);
+      loadVenues(userLat, userLng, false);
     } else {
       const moved = haversineDistanceMiles(last.lat, last.lng, userLat, userLng);
-      if (moved >= VENUE_REFRESH_THRESHOLD_MI) {
+      const timeSinceLoad = Date.now() - lastVenueLoadTimeRef.current;
+      if (moved >= VENUE_REFRESH_THRESHOLD_MI && timeSinceLoad >= VENUE_REFRESH_MIN_MS) {
         lastVenueLoadRef.current = { lat: userLat, lng: userLng };
-        loadVenues(userLat, userLng);
+        loadVenues(userLat, userLng, true); // background: keep existing venues on failure
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
