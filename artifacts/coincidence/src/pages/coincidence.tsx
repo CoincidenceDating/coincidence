@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { locations, filterByLookingFor, type Profile, type Match, type CheckIn, type LocationData } from "@/lib/data";
+import { type Profile, type Match, type CheckIn, type LocationData } from "@/lib/data";
 import { type GeoStatus, type VenueStatus, type GeoCoords, haversineDistanceMiles, formatDistance, fetchNearbyVenues } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
 import { SwipeCard } from "@/components/SwipeCard";
@@ -91,15 +91,12 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     };
   }, []);
 
-  const allMockUsers = locations.flatMap((l) => l.users);
-
-
   const loadVenues = useCallback(async (lat: number, lng: number, isBackground = false) => {
     // Background refresh (we already have venues): stay in "ready" and fail silently
     // to avoid wiping the UI or hitting rate limits showing errors repeatedly.
     if (!isBackground) setVenueStatus("loading");
     try {
-      const fetched = await fetchNearbyVenues(lat, lng, allMockUsers);
+      const fetched = await fetchNearbyVenues(lat, lng, []);
       setNearbyLocations(fetched);
       _cachedNearbyLocations = fetched;
       _venueLastLoadTime = Date.now();
@@ -153,13 +150,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
   const activeLocations = [...(nearbyLocations ?? [])].sort((a, b) => (venueRealCounts[b.id] ?? 0) - (venueRealCounts[a.id] ?? 0));
   const location = activeLocations.find((l) => l.id === selectedLocation);
-  const filteredMockUsers = filterByLookingFor(location?.users ?? [], lookingFor)
-    .filter((p) => !blockedIds.includes(p.id));
-  const filteredRealUsers = realUsers.filter((p) => !blockedIds.includes(p.id));
-  const users: Profile[] = [
-    ...filteredRealUsers,
-    ...filteredMockUsers.filter((p) => !filteredRealUsers.some((r) => r.id === p.id)),
-  ];
+  const users: Profile[] = realUsers.filter((p) => !blockedIds.includes(p.id));
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
