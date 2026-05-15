@@ -181,7 +181,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     }
   }, [venueStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const PROXIMITY_THRESHOLD_MI = 0.01243; // ~20 m — accounts for typical mobile GPS drift
+  const PROXIMITY_THRESHOLD_MI = 0.01553; // ~25 m — accounts for typical mobile GPS drift
 
   function getSelectedVenueDistMi(): number | null {
     if (!userCoords || !location || location.lat == null || location.lng == null) return null;
