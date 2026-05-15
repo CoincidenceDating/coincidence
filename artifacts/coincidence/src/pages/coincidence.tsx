@@ -60,6 +60,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const [isActivating, setIsActivating] = useState(false);
   const presenceSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const venueUsersSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeVenueIdRef = useRef<string | null>(null);
   const VENUE_REFRESH_MIN_MS = 5 * 60 * 1000; // 5 minutes between background refreshes
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
@@ -77,19 +79,36 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
   useEffect(() => {
     return () => {
-      if (presenceSubRef.current) {
-        supabase.removeChannel(presenceSubRef.current);
-      }
-      if (venueUsersSubRef.current) {
-        supabase.removeChannel(venueUsersSubRef.current);
-      }
-      if (venueLikeSubRef.current) {
-        supabase.removeChannel(venueLikeSubRef.current);
-      }
+      if (presenceSubRef.current) supabase.removeChannel(presenceSubRef.current);
+      if (venueUsersSubRef.current) supabase.removeChannel(venueUsersSubRef.current);
+      if (venueLikeSubRef.current) supabase.removeChannel(venueLikeSubRef.current);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (nudgeTimerRef.current) clearTimeout(nudgeTimerRef.current);
       db.clearPresence();
     };
   }, []);
+
+  function startVenuePoll(venueId: string) {
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    activeVenueIdRef.current = venueId;
+    pollIntervalRef.current = setInterval(async () => {
+      if (!activeVenueIdRef.current) return;
+      const fresh = await db.getActiveUsersAtVenue(activeVenueIdRef.current);
+      setRealUsers((prev) => {
+        const prevIds = new Set(prev.map((p) => p.id));
+        const toAdd = fresh.filter((p) => !prevIds.has(p.id));
+        // Also remove users who are no longer present
+        const freshIds = new Set(fresh.map((p) => p.id));
+        const kept = prev.filter((p) => freshIds.has(p.id));
+        return toAdd.length > 0 || kept.length !== prev.length ? [...kept, ...toAdd] : prev;
+      });
+    }, 15000); // poll every 15 seconds as a reliable fallback
+  }
+
+  function stopVenuePoll() {
+    if (pollIntervalRef.current) { clearInterval(pollIntervalRef.current); pollIntervalRef.current = null; }
+    activeVenueIdRef.current = null;
+  }
 
   const loadVenues = useCallback(async (lat: number, lng: number, isBackground = false) => {
     // Background refresh (we already have venues): stay in "ready" and fail silently
@@ -245,6 +264,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       }
       const real = await db.getActiveUsersAtVenue(location.id);
       setRealUsers(real);
+      startVenuePoll(location.id);
     } finally {
       setIsActivating(false);
       setCurrentIndex(0);
@@ -262,6 +282,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
   function handleDeactivate() {
     db.clearPresence();
+    stopVenuePoll();
     if (venueUsersSubRef.current) {
       supabase.removeChannel(venueUsersSubRef.current);
       venueUsersSubRef.current = null;
@@ -279,6 +300,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   function handleStopLocation() {
     // GPS watch is owned by App.tsx — just reset venue UI state here
     db.clearPresence();
+    stopVenuePoll();
     if (venueUsersSubRef.current) {
       supabase.removeChannel(venueUsersSubRef.current);
       venueUsersSubRef.current = null;
