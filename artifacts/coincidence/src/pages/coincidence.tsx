@@ -181,7 +181,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     }
   }, [venueStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const PROXIMITY_THRESHOLD_MI = 0.25; // ~400 m — generous enough for GPS + venue-coord inaccuracy
+  const PROXIMITY_THRESHOLD_MI = 0.00621; // ~10 m — must be physically inside the venue
 
   function getSelectedVenueDistMi(): number | null {
     if (!userCoords || !location || location.lat == null || location.lng == null) return null;
