@@ -123,6 +123,7 @@ function AppShell() {
   const [account, setAccount]           = useState<AccountData | null>(null);
   const [isLoggedOut, setIsLoggedOut]   = useState(false);
   const [activeTab, setActiveTab]       = useState<Tab>("swipe");
+  const [coincidenceActive, setCoincidenceActive] = useState(false);
   const [settingsPending, setSettingsPending] = useState(false);
 
   const hasAccount = !!localStorage.getItem("coincidence-has-account");
@@ -1129,8 +1130,8 @@ function AppShell() {
         <div style={{ position: "absolute", top: "38%", right: "0%", width: "45%", height: "45%", borderRadius: "50%", background: "radial-gradient(circle, rgba(232,56,125,0.07) 0%, transparent 68%)", filter: "blur(35px)" }} />
       </div>
 
-      {/* ── Global settings icon — top-right on every tab except Discover ── */}
-      {activeTab !== "swipe" && (
+      {/* ── Global settings icon — top-right on every tab except Discover and active coincidence ── */}
+      {activeTab !== "swipe" && !(activeTab === "coincidence" && coincidenceActive) && (
         <button
           onClick={() => {
             setSettingsPending(true);
@@ -1171,8 +1172,8 @@ function AppShell() {
         </span>
       )}
 
-      {/* ── Global profile icon — top-left on every tab except profile ── */}
-      {activeTab !== "profile" && (
+      {/* ── Global profile icon — top-left on every tab except profile and active coincidence ── */}
+      {activeTab !== "profile" && !(activeTab === "coincidence" && coincidenceActive) && (
         <button
           onClick={() => handleTabChange("profile")}
           style={{
@@ -1248,6 +1249,7 @@ function AppShell() {
             incomingCoincidenceMatch={coincidenceIncomingMatch}
             onClearIncomingCoincidenceMatch={() => setCoincidenceIncomingMatch(null)}
             onReport={handleReport}
+            onActiveChange={setCoincidenceActive}
             gpsStatus={gpsStatus}
             userLat={userLat}
             userLng={userLng}

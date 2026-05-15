@@ -31,6 +31,7 @@ interface CoincidencePageProps {
   incomingCoincidenceMatch?: Match | null;
   onClearIncomingCoincidenceMatch?: () => void;
   onReport: (profile: Profile, reason: string) => void;
+  onActiveChange?: (active: boolean) => void;
   // GPS state owned by App.tsx — no separate watch needed here
   gpsStatus: "idle" | "requesting" | "granted" | "denied";
   userLat: number | null;
@@ -45,7 +46,7 @@ let _venueLastLoadTime = 0;
 let _cachedNearbyLocations: LocationData[] | null = null;
 let _cachedVenueRealCounts: Record<string, number> = {};
 
-export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, onActiveChange, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -271,6 +272,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
       setDone(false);
       setIsActive(true);
       setJustCheckedIn(false);
+      onActiveChange?.(true);
     }
   }
 
@@ -295,6 +297,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     setRealUsers([]);
     setVenueLikeNudge(false);
     setIsActive(false); setSelectedLocation(""); setCurrentIndex(0); setDone(false); setJustCheckedIn(false);
+    onActiveChange?.(false);
   }
 
   function handleStopLocation() {
@@ -310,6 +313,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     setNearbyLocations(null);
     setSelectedLocation("");
     _venueLastPos = null;
+    onActiveChange?.(false);
   }
 
   function handleCheckIn() {
