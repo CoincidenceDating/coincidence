@@ -63,6 +63,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
   const venueUsersSubRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeVenueIdRef = useRef<string | null>(null);
+  const swipedVenueIds = useRef<Set<string>>(new Set());
   const VENUE_REFRESH_MIN_MS = 5 * 60 * 1000; // 5 minutes between background refreshes
 
   const [showVenueDropdown, setShowVenueDropdown] = useState(false);
@@ -170,7 +171,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
   const activeLocations = [...(nearbyLocations ?? [])].sort((a, b) => (venueRealCounts[b.id] ?? 0) - (venueRealCounts[a.id] ?? 0));
   const location = activeLocations.find((l) => l.id === selectedLocation);
-  const users: Profile[] = realUsers.filter((p) => !blockedIds.includes(p.id));
+  const users: Profile[] = realUsers.filter((p) => !blockedIds.includes(p.id) && !swipedVenueIds.current.has(p.id));
   const currentUser = users[currentIndex];
   const alreadyCheckedIn = selectedLocation ? checkedInLocations.has(selectedLocation) : false;
 
@@ -335,6 +336,9 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
 
     if (!currentUser || !location) return;
 
+    // Record the decision so this person is excluded if the user leaves and rejoins
+    if (db.isRealUserId(currentUser.id)) swipedVenueIds.current.add(currentUser.id);
+
     if (dir === "right") {
       if (db.isRealUserId(currentUser.id)) {
         // Real user — require mutual like before creating a match
@@ -365,6 +369,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     if (next >= users.length) setDone(true);
     else setCurrentIndex(next);
     onDoubleStringCredit();
+    if (db.isRealUserId(currentUser.id)) swipedVenueIds.current.add(currentUser.id);
 
     if (db.isRealUserId(currentUser.id)) {
       // Real user — still requires mutuality (premium signal, not instant match)
