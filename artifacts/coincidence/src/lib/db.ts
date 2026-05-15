@@ -808,6 +808,13 @@ export function subscribeToVenueUsers(
   onJoin: (profile: import("./data").Profile) => void,
   onLeave: (userId: string) => void,
 ) {
+  const handleJoin = (payload: { new: Record<string, unknown> }) => {
+    const row = payload.new as { user_id: string; venue_id: string; profile_data: object };
+    if (row.user_id !== myId && row.venue_id === venueId) {
+      onJoin(row.profile_data as import("./data").Profile);
+    }
+  };
+
   return supabase
     .channel(`venue-users:${venueId}:${Date.now()}`)
     .on(
@@ -818,12 +825,17 @@ export function subscribeToVenueUsers(
         table: "user_presence",
         filter: `venue_id=eq.${venueId}`,
       },
-      (payload) => {
-        const row = payload.new as { user_id: string; profile_data: object };
-        if (row.user_id !== myId) {
-          onJoin(row.profile_data as import("./data").Profile);
-        }
+      handleJoin,
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "user_presence",
+        filter: `venue_id=eq.${venueId}`,
       },
+      handleJoin,
     )
     .on(
       "postgres_changes",
