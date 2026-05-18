@@ -1,9 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { type Match, type CheckIn } from "@/lib/data";
 import { type Message } from "@/pages/chat";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Sparkles, Heart, Wine, Beer, Coffee, MapPin, MoreHorizontal, UserX, MessageCircle } from "lucide-react";
 import { useProfilePreview } from "@/contexts/ProfilePreviewContext";
+
+const COINCIDENCE_TIMEOUT_MS = 60 * 60 * 1000; // 1 hour
+
+function CoincidenceCountdown({ deadline }: { deadline: number }) {
+  const [remaining, setRemaining] = useState(() => deadline - Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setRemaining(deadline - Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [deadline]);
+
+  if (remaining <= 0) {
+    return <span className="text-[10px] font-semibold" style={{ color: "#E8387D" }}>Expired</span>;
+  }
+
+  const totalSecs = Math.max(0, Math.floor(remaining / 1000));
+  const mins = Math.floor(totalSecs / 60);
+  const secs = totalSecs % 60;
+  const label = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+
+  const isUrgent  = remaining < 5  * 60 * 1000;
+  const isWarning = remaining < 10 * 60 * 1000;
+  const color = isUrgent ? "#E8387D" : isWarning ? "#F59E0B" : "rgba(255,255,255,0.45)";
+
+  return (
+    <span
+      className={`text-[10px] font-mono font-semibold tabular-nums leading-none ${isUrgent ? "animate-pulse" : ""}`}
+      style={{ color }}
+    >
+      {label}
+    </span>
+  );
+}
 
 const locationIconMap: Record<string, React.ReactNode> = {
   wine:     <Wine     className="w-3 h-3" />,
@@ -236,6 +269,9 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
         <span className="mt-1.5 text-[11px] text-muted-foreground text-center truncate w-full px-0.5">
           {firstName}
         </span>
+        {isCoincidence && (
+          <CoincidenceCountdown deadline={match.matchedAt + COINCIDENCE_TIMEOUT_MS} />
+        )}
 
         {/* Long-press / right-click menu */}
         {isMenuOpen && (

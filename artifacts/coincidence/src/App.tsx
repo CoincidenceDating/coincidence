@@ -177,6 +177,7 @@ function AppShell() {
   const activeTabRef   = useRef<Tab>("swipe");
   const activeChatRef  = useRef<Match | null>(null);
   const matchesRef     = useRef<Match[]>([]);
+  const threadsRef     = useRef<Record<string, Message[]>>({});
   // GPS watch
   const gpsWatchRef       = useRef<number | null>(null);
   const lastWrittenLatRef = useRef<number | null>(null);
@@ -190,6 +191,32 @@ function AppShell() {
 
   // Keep refs in sync so subscription callbacks always see current values
   useEffect(() => { matchesRef.current = matches; }, [matches]);
+  useEffect(() => { threadsRef.current = threads; }, [threads]);
+
+  // Auto-expire unmessaged Coincidence matches after 1 hour
+  useEffect(() => {
+    const TIMEOUT_MS = 60 * 60 * 1000;
+    function checkExpired() {
+      const now = Date.now();
+      const expired = matchesRef.current.filter(
+        (m) => m.source !== "swipe" &&
+               (threadsRef.current[m.profile.id] ?? []).length === 0 &&
+               m.matchedAt + TIMEOUT_MS < now
+      );
+      if (expired.length === 0) return;
+      expired.forEach((m) => db.removeMatch(m.profile.id));
+      setMatches((prev) => prev.filter((m) => !expired.some((e) => e.profile.id === m.profile.id)));
+      toast({
+        title: expired.length === 1
+          ? `Match with ${expired[0].profile.name.split(" ")[0]} expired`
+          : `${expired.length} Coincidence matches expired`,
+        description: "Send a message within 1 hour to keep a Coincidence match.",
+      });
+    }
+    checkExpired();
+    const id = setInterval(checkExpired, 30_000);
+    return () => clearInterval(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { activeChatRef.current = activeChat; }, [activeChat]);
 
   // ── Session management ──────────────────────────────────────────────────
