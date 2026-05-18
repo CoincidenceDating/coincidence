@@ -183,7 +183,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     }
   }, [venueStatus]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const PROXIMITY_THRESHOLD_MI = 0.01553; // ~25 m — accounts for typical mobile GPS drift
+  const PROXIMITY_THRESHOLD_MI = 0.18641; // ~300 m
 
   function getSelectedVenueDistMi(): number | null {
     if (!userCoords || !location || location.lat == null || location.lng == null) return null;
@@ -585,7 +585,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                 <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Nearby Places</span>
                 {venueStatus === "ready" && (
                   <>
-                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">within 2 km</span>
+                    <span className="ml-1 text-[9px] text-muted-foreground/50 font-normal normal-case tracking-normal">within 300 m</span>
                     <button
                       onClick={handleStopLocation}
                       className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors group"
@@ -699,7 +699,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
                         {activeLocations.length === 0 && (
                           <div className="px-4 py-6 text-center">
                             <MapPin className="w-5 h-5 text-muted-foreground/40 mx-auto mb-2" />
-                            <p className="text-sm text-muted-foreground">No places found within 2 km</p>
+                            <p className="text-sm text-muted-foreground">No places found within 300 m</p>
                             <p className="text-xs text-muted-foreground/60 mt-1">Try moving to a busier area</p>
                           </div>
                         )}
