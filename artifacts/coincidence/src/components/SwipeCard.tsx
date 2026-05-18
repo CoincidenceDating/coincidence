@@ -9,7 +9,7 @@ import {
   type PanInfo,
   type MotionValue,
 } from "framer-motion";
-import { Heart, X, HelpCircle, MapPin, MoreVertical, RotateCcw } from "lucide-react";
+import { Heart, X, HelpCircle, MapPin, MoreVertical, RotateCcw, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Profile } from "@/lib/data";
 
@@ -431,6 +431,156 @@ function ReportSheet({
   );
 }
 
+function ProfilePreviewSheet({
+  profile,
+  blurName,
+  onClose,
+  onSwipe,
+}: {
+  profile: Profile;
+  blurName?: boolean;
+  onClose: () => void;
+  onSwipe: (dir: "left" | "right" | "maybe") => void;
+}) {
+  const allPhotos = profile.photos?.length ? profile.photos : profile.photo ? [profile.photo] : [];
+  const [photoIdx, setPhotoIdx] = useState(0);
+
+  function tapPhoto(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x > rect.width * 0.5) setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1));
+    else setPhotoIdx(i => Math.max(0, i - 1));
+  }
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex flex-col">
+      <motion.div
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className="absolute inset-x-0 bottom-0 flex flex-col bg-background rounded-t-3xl overflow-hidden"
+        style={{ maxHeight: "92svh" }}
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", stiffness: 380, damping: 34 }}
+      >
+        {/* drag handle */}
+        <div className="w-10 h-1 rounded-full bg-muted mx-auto mt-3 mb-0 shrink-0" />
+
+        {/* close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
+
+        <div className="overflow-y-auto flex-1">
+          {/* Photo */}
+          <div className="relative w-full bg-muted" style={{ height: "55svh" }} onClick={tapPhoto}>
+            {allPhotos.length > 0 ? (
+              <img
+                src={resolvePhoto(allPhotos[photoIdx])}
+                alt={profile.name}
+                className="w-full h-full object-cover object-top"
+                draggable={false}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ background: profile.gradient }}>
+                <span className="text-9xl font-black text-white/10 select-none">{profile.avatar}</span>
+              </div>
+            )}
+
+            {/* Photo dots */}
+            {allPhotos.length > 1 && (
+              <div className="absolute top-3 left-3 right-3 flex gap-1 pointer-events-none">
+                {allPhotos.map((_, i) => (
+                  <div key={i} className="flex-1 h-0.5 rounded-full transition-all" style={{ background: i === photoIdx ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)" }} />
+                ))}
+              </div>
+            )}
+
+            {/* Prev/next arrows */}
+            {allPhotos.length > 1 && (
+              <>
+                {photoIdx > 0 && (
+                  <button
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white pointer-events-auto"
+                    onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => Math.max(0, i - 1)); }}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                )}
+                {photoIdx < allPhotos.length - 1 && (
+                  <button
+                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white pointer-events-auto"
+                    onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1)); }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="px-5 pt-5 pb-4">
+            <h2 className="text-2xl font-bold leading-tight">
+              {blurName ? (
+                <>
+                  <span style={{ filter: "blur(9px)", userSelect: "none" }} aria-hidden="true">{profile.name}</span>
+                  <span className="sr-only">Name hidden</span>
+                  {", "}{profile.age}
+                </>
+              ) : (
+                <>{profile.name}, {profile.age}</>
+              )}
+            </h2>
+            {blurName && (
+              <p className="text-[10px] text-muted-foreground mt-0.5 italic">name revealed on match</p>
+            )}
+            <div className="flex items-center gap-1.5 mt-1.5">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="text-sm text-muted-foreground">{profile.distance}</span>
+            </div>
+            {profile.bio && (
+              <p className="text-sm text-foreground/80 mt-3 leading-relaxed">{profile.bio}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Action buttons */}
+        <div className="shrink-0 px-5 pb-8 pt-3 border-t border-border flex items-center justify-center gap-4">
+          <button
+            onClick={() => { onSwipe("left"); onClose(); }}
+            className="w-12 h-12 rounded-full bg-card border border-white/10 text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => { onSwipe("right"); onClose(); }}
+            className="w-14 h-14 rounded-full active:scale-95 transition-all flex items-center justify-center shadow-xl shadow-primary/30"
+            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+          >
+            <Heart className="w-6 h-6 text-white fill-white" />
+          </button>
+          <button
+            onClick={() => { onSwipe("maybe"); onClose(); }}
+            className="w-12 h-12 rounded-full bg-card border border-white/10 text-violet-400 hover:bg-violet-500/10 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+          >
+            <HelpCircle className="w-5 h-5" />
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 interface SwipeCardProps {
   profile: Profile;
   onSwipe: (direction: "left" | "right" | "maybe") => void;
@@ -450,6 +600,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
   const [action, setAction] = useState<Action>("none");
   const [showConfetti, setShowConfetti] = useState(false);
   const [showReport, setShowReport] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [photoIndex, setPhotoIndex] = useState(0);
   const isDragging = useRef(false);
 
@@ -548,6 +699,17 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
             profileName={blurName ? "this person" : profile.name.split(" ")[0]}
             onSelect={(reason) => { setShowReport(false); onReport?.(reason); }}
             onCancel={() => setShowReport(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPreview && (
+          <ProfilePreviewSheet
+            profile={profile}
+            blurName={blurName}
+            onClose={() => setShowPreview(false)}
+            onSwipe={(dir) => { handleAction(dir); }}
           />
         )}
       </AnimatePresence>
@@ -672,6 +834,15 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                   </button>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-5 pt-24 pb-5 text-white">
+                  {/* Info / expand button */}
+                  <button
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-white/25 active:scale-90 transition-all"
+                    onClick={(e) => { e.stopPropagation(); setShowPreview(true); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    aria-label="View full profile"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
                   <h2 className="text-2xl font-bold leading-tight">
                     {blurName ? (
                       <>
