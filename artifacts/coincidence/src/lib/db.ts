@@ -99,7 +99,7 @@ const GRADIENTS = [
 
 export function buildProfileSnapshot(raw: {
   user_id: string; name: string; age: number; bio: string;
-  photos: string[]; gender?: string; hobbies?: string[];
+  photos: string[]; gender?: string; hobbies?: string[]; height?: string;
 }): import("./data").Profile {
   const initials = raw.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "?";
   const gradientIdx = raw.user_id.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % GRADIENTS.length;
@@ -115,6 +115,7 @@ export function buildProfileSnapshot(raw: {
     photo: raw.photos?.[0],
     photos: raw.photos ?? [],
     hobbies: raw.hobbies ?? [],
+    height: raw.height,
   };
 }
 

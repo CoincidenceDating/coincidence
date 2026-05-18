@@ -12,6 +12,7 @@ export interface Profile {
   photo?: string;
   photos?: string[];
   hobbies?: string[];
+  height?: string;
   visitedLocations?: string[];
 }
 
