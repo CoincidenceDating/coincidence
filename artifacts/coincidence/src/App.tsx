@@ -948,6 +948,9 @@ function AppShell() {
     );
     if (!mutual) return null;
     const match: Match = { profile, source: locationId, locationName, locationIcon, matchedAt: Date.now() };
+    const baseId = db.baseProfileId(profile.id);
+    // Immediately remove from discover deck
+    setDiscoverProfiles((prev) => prev.filter((p) => db.baseProfileId(p.id) !== baseId));
     // Record in state + DB without triggering the App-level overlay
     setMatches((prev) => {
       const exists = prev.some((m) => m.profile.id === match.profile.id && m.source === match.source);
