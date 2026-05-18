@@ -665,7 +665,7 @@ export async function getDiscoverProfiles(
   type RpcRow = {
     user_id: string; name: string; age: number; bio: string;
     photos: string[]; gender: string; lat: number | null; lng: number | null;
-    looking_for?: string; hobbies?: string[];
+    looking_for?: string; hobbies?: string[]; height?: string;
   };
 
   const callerHasRadius = lat != null && lng != null && radiusMiles != null;
