@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, X, Heart, Lock, Clock } from "lucide-react";
 import type { Profile } from "@/lib/data";
+import { useProfilePreview } from "@/contexts/ProfilePreviewContext";
 
 interface LikedPageProps {
   whoLikedMeCount: number;
@@ -39,6 +40,7 @@ export default function LikedPage({
   onLikeBack,
   onPassLiker,
 }: LikedPageProps) {
+  const { openPreview } = useProfilePreview();
   const [unlocking, setUnlocking] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [timeStr, setTimeStr] = useState("");
@@ -145,14 +147,15 @@ export default function LikedPage({
               animate={{ opacity: 1, y: 0 }}
               className="flex items-center gap-3 p-3 pr-2 rounded-2xl border bg-card shadow-sm"
             >
-              <div
-                className="w-14 h-14 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-base font-bold text-white/70"
+              <button
+                className="w-14 h-14 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-base font-bold text-white/70 active:opacity-70 transition-opacity"
                 style={{ background: profile.gradient }}
+                onClick={() => openPreview(profile)}
               >
                 {profile.photo
                   ? <img src={profile.photo} alt={profile.name} className="w-full h-full object-cover" />
                   : profile.avatar}
-              </div>
+              </button>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-sm">{profile.name}, {profile.age}</p>
                 <p className="text-xs text-muted-foreground truncate mt-0.5">{profile.bio}</p>

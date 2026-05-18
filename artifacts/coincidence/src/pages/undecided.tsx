@@ -1,5 +1,6 @@
 import { type Match } from "@/lib/data";
 import { HelpCircle, Check, X, MapPin, Star } from "lucide-react";
+import { useProfilePreview } from "@/contexts/ProfilePreviewContext";
 
 interface UndecidedPageProps {
   undecided: Match[];
@@ -7,6 +8,7 @@ interface UndecidedPageProps {
 }
 
 export default function UndecidedPage({ undecided, onDecide }: UndecidedPageProps) {
+  const { openPreview } = useProfilePreview();
   if (undecided.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] px-4 text-center">
@@ -45,14 +47,15 @@ export default function UndecidedPage({ undecided, onDecide }: UndecidedPageProp
             key={`${match.profile.id}-${match.matchedAt}`}
             className="flex items-center gap-3 p-3 pr-2 rounded-2xl border bg-card shadow-sm"
           >
-            <div
-              className="w-14 h-14 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-base font-bold text-white/30"
+            <button
+              className="w-14 h-14 rounded-xl shrink-0 overflow-hidden flex items-center justify-center text-base font-bold text-white/30 active:opacity-70 transition-opacity"
               style={{ background: match.profile.gradient }}
+              onClick={() => openPreview(match.profile)}
             >
               {match.profile.photo
                 ? <img src={match.profile.photo} alt={match.profile.name} className="w-full h-full object-cover" />
                 : match.profile.avatar}
-            </div>
+            </button>
             <div className="min-w-0 flex-1">
               <p className="font-semibold text-sm">
                 {match.profile.name}, {match.profile.age}

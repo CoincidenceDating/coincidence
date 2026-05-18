@@ -19,6 +19,7 @@ import ReloginPage from "@/pages/relogin";
 import { Heart, Sparkles, HelpCircle, User, Loader2, Eye, MessageCircle, Settings } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import MatchOverlay from "@/components/MatchOverlay";
+import { ProfilePreviewProvider } from "@/contexts/ProfilePreviewContext";
 import type { Match, CheckIn, Profile } from "@/lib/data";
 import { supabase } from "@/lib/supabase";
 import * as db from "@/lib/db";
@@ -1396,8 +1397,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AppShell />
-        <Toaster />
+        <ProfilePreviewProvider>
+          <AppShell />
+          <Toaster />
+        </ProfilePreviewProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

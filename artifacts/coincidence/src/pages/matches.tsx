@@ -3,6 +3,7 @@ import { type Match, type CheckIn } from "@/lib/data";
 import { type Message } from "@/pages/chat";
 import { ProfileAvatar } from "@/components/ProfileAvatar";
 import { Sparkles, Heart, Wine, Beer, Coffee, MapPin, MoreHorizontal, UserX, MessageCircle } from "lucide-react";
+import { useProfilePreview } from "@/contexts/ProfilePreviewContext";
 
 const locationIconMap: Record<string, React.ReactNode> = {
   wine:     <Wine     className="w-3 h-3" />,
@@ -28,6 +29,7 @@ interface MatchesPageProps {
 }
 
 export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds, onOpenChat, onUnmatch }: MatchesPageProps) {
+  const { openPreview } = useProfilePreview();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmId, setConfirmId]   = useState<string | null>(null);
 
@@ -108,7 +110,10 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
             className="flex items-center gap-3 flex-1 min-w-0 text-left active:opacity-70 transition-opacity"
             onClick={() => { setMenuOpenId(null); onOpenChat(match); }}
           >
-            <div className="relative shrink-0">
+            <div
+              className="relative shrink-0"
+              onClick={(e) => { e.stopPropagation(); openPreview(match.profile); }}
+            >
               <ProfileAvatar profile={match.profile} size={44} />
               {isUnread && (
                 <span
@@ -196,7 +201,7 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
       <div className="relative flex flex-col items-center shrink-0 w-[72px]">
         <button
           className="relative active:opacity-70 transition-opacity"
-          onClick={() => { setMenuOpenId(null); onOpenChat(match); }}
+          onClick={() => { setMenuOpenId(null); openPreview(match.profile); }}
           onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(isMenuOpen ? null : match.profile.id); }}
         >
           {/* Gradient ring for Stars Aligned */}
