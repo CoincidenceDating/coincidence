@@ -177,6 +177,9 @@ function AppShell() {
   const activeTabRef   = useRef<Tab>("swipe");
   const activeChatRef  = useRef<Match | null>(null);
   const matchesRef     = useRef<Match[]>([]);
+  // Updated synchronously on every match so refreshDiscoverProfiles never
+  // races against the useEffect that syncs matchesRef after render.
+  const matchedIdsRef  = useRef<Set<string>>(new Set());
   const threadsRef     = useRef<Record<string, Message[]>>({});
   // GPS watch
   const gpsWatchRef       = useRef<number | null>(null);
@@ -190,7 +193,11 @@ function AppShell() {
   const checkedInLocations = new Set(checkIns.map((c) => c.locationId));
 
   // Keep refs in sync so subscription callbacks always see current values
-  useEffect(() => { matchesRef.current = matches; }, [matches]);
+  useEffect(() => {
+    matchesRef.current = matches;
+    // Rebuild the matched-IDs set whenever matches change (covers startup DB load)
+    matchedIdsRef.current = new Set(matches.map((m) => db.baseProfileId(m.profile.id)));
+  }, [matches]);
   useEffect(() => { threadsRef.current = threads; }, [threads]);
 
   // Auto-expire unmessaged Coincidence matches after 1 hour
@@ -496,9 +503,8 @@ function AppShell() {
         ),
         db.getBoostedProfileIds(),
       ]);
-      const matchedProfileIds = new Set(matchesRef.current.map((m) => db.baseProfileId(m.profile.id)));
       const allProfiles = spreadBoostedProfiles(profiles, boostedIds).filter(
-        (p) => !matchedProfileIds.has(db.baseProfileId(p.id))
+        (p) => !matchedIdsRef.current.has(db.baseProfileId(p.id))
       );
       setDiscoverProfiles(allProfiles);
     } finally {
@@ -894,6 +900,8 @@ function AppShell() {
 
   function handleMatch(match: Match) {
     const baseId = db.baseProfileId(match.profile.id);
+    // Update synchronously so refreshDiscoverProfiles sees it immediately
+    matchedIdsRef.current = new Set([...matchedIdsRef.current, baseId]);
     // Immediately purge from the discover deck so the user can't see them there
     setDiscoverProfiles((prev) => prev.filter((p) => db.baseProfileId(p.id) !== baseId));
     setMatches((prev) => {
@@ -949,6 +957,8 @@ function AppShell() {
     if (!mutual) return null;
     const match: Match = { profile, source: locationId, locationName, locationIcon, matchedAt: Date.now() };
     const baseId = db.baseProfileId(profile.id);
+    // Update synchronously so refreshDiscoverProfiles sees it immediately
+    matchedIdsRef.current = new Set([...matchedIdsRef.current, baseId]);
     // Immediately remove from discover deck
     setDiscoverProfiles((prev) => prev.filter((p) => db.baseProfileId(p.id) !== baseId));
     // Record in state + DB without triggering the App-level overlay
