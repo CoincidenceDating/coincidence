@@ -24,6 +24,7 @@ export function ProfilePreviewSheet({
 }) {
   const allPhotos = profile.photos?.length ? profile.photos : profile.photo ? [profile.photo] : [];
   const [photoIdx, setPhotoIdx] = useState(0);
+  const safeIdx = allPhotos.length > 0 ? Math.min(photoIdx, allPhotos.length - 1) : 0;
 
   const portalTarget = typeof document !== "undefined" ? document.body : null;
   if (!portalTarget) return null;
@@ -57,10 +58,14 @@ export function ProfilePreviewSheet({
         <div className="relative w-full" style={{ height: 440 }}>
           {allPhotos.length > 0 ? (
             <img
-              src={resolvePhoto(allPhotos[photoIdx])}
+              src={resolvePhoto(allPhotos[safeIdx])}
               alt={profile.name}
               className="w-full h-full object-cover object-top"
               draggable={false}
+              onError={() => {
+                const next = safeIdx + 1 < allPhotos.length ? safeIdx + 1 : 0;
+                if (next !== safeIdx) setPhotoIdx(next);
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ background: profile.gradient }}>

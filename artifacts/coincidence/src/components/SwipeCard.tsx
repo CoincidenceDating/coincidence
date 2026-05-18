@@ -458,9 +458,16 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
   const allPhotos = profile.photos?.length
     ? profile.photos
     : profile.photo ? [profile.photo] : [];
-  const currentPhoto = resolvePhoto(allPhotos[photoIndex]);
+  // Clamp index whenever the photos array shrinks (e.g. owner removed a photo)
+  const safeIndex = allPhotos.length > 0 ? Math.min(photoIndex, allPhotos.length - 1) : 0;
+  const currentPhoto = resolvePhoto(allPhotos[safeIndex]);
 
   useEffect(() => { setPhotoIndex(0); }, [profile.id]);
+  useEffect(() => {
+    if (allPhotos.length > 0 && photoIndex >= allPhotos.length) {
+      setPhotoIndex(allPhotos.length - 1);
+    }
+  }, [allPhotos.length, photoIndex]);
 
   function handleCardTap() {
     if (isDragging.current) return;
@@ -628,6 +635,11 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                     alt={profile.name}
                     className="absolute inset-0 w-full h-full object-cover object-top"
                     draggable={false}
+                    onError={() => {
+                      // Skip broken photo — try next, then wrap to first
+                      const next = safeIndex + 1 < allPhotos.length ? safeIndex + 1 : 0;
+                      if (next !== safeIndex) setPhotoIndex(next);
+                    }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
