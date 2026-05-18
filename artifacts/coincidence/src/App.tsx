@@ -893,6 +893,9 @@ function AppShell() {
   );
 
   function handleMatch(match: Match) {
+    const baseId = db.baseProfileId(match.profile.id);
+    // Immediately purge from the discover deck so the user can't see them there
+    setDiscoverProfiles((prev) => prev.filter((p) => db.baseProfileId(p.id) !== baseId));
     setMatches((prev) => {
       const exists = prev.some(
         (m) => m.profile.id === match.profile.id && m.source === match.source
