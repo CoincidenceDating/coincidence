@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart, MapPin, Wine, Beer, Coffee, Sparkles,
   ShoppingBag, X, Pencil, Plus, Home, Ruler, ChevronUp, ChevronDown,
-  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus, Star, User, ArrowLeft,
+  Settings, LogOut, Trash2, RotateCcw, Shield, FileText, ChevronRight, Bell, ImagePlus, Star, User, ArrowLeft, Eye,
 } from "lucide-react";
+import { ProfilePreviewSheet } from "@/components/ProfilePreviewSheet";
 import { Card, CardContent } from "@/components/ui/card";
 import { StringIcon } from "@/components/StringIcon";
 
@@ -135,6 +136,7 @@ export default function ProfilePage({
   const [editable, setEditable] = useState<EditableProfile>(loadProfile);
   const [draft, setDraft]     = useState<EditableProfile>(editable);
   const [isSaving, setIsSaving] = useState(false);
+  const [showOwnPreview, setShowOwnPreview] = useState(false);
   const [photos, setPhotos]       = useState<string[]>([]);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError]         = useState<string | null>(null);
@@ -335,13 +337,21 @@ export default function ProfilePage({
 
         <p className="text-sm mt-3 max-w-xs text-foreground/80 leading-relaxed">{editable.bio}</p>
 
-        {/* Edit button */}
-        <button
-          onClick={openEdit}
-          className="mt-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border hover:border-foreground/40 px-3 py-1.5 rounded-full transition-all"
-        >
-          <Pencil className="w-3 h-3" /> Edit profile
-        </button>
+        {/* Edit + Preview buttons */}
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            onClick={openEdit}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border hover:border-foreground/40 px-3 py-1.5 rounded-full transition-all"
+          >
+            <Pencil className="w-3 h-3" /> Edit profile
+          </button>
+          <button
+            onClick={() => setShowOwnPreview(true)}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground border border-border hover:border-foreground/40 px-3 py-1.5 rounded-full transition-all"
+          >
+            <Eye className="w-3 h-3" /> Preview
+          </button>
+        </div>
       </div>
 
       {/* ── Photos ── */}
@@ -1449,6 +1459,29 @@ export default function ProfilePage({
               </motion.button>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Own profile preview ── */}
+      <AnimatePresence>
+        {showOwnPreview && (
+          <ProfilePreviewSheet
+            profile={{
+              id: "self",
+              name: editable.name,
+              age: editable.age,
+              bio: editable.bio,
+              avatar: editable.name?.[0] ?? "?",
+              distance: "",
+              gradient: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)",
+              gender: (gender as "man" | "woman" | "non-binary") || "non-binary",
+              photos: photos,
+              photo: photos[0],
+              hobbies: editable.hobbies,
+              height: editable.height,
+            }}
+            onClose={() => setShowOwnPreview(false)}
+          />
         )}
       </AnimatePresence>
     </div>
