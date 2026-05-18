@@ -89,6 +89,7 @@ interface ProfilePageProps {
   onLogout: () => void;
   onDeleteAccount: () => void;
   onProfileUpdate?: (updated: EditableProfile) => void;
+  onPhotosChange?: (photos: string[]) => void;
   account?: { email: string; phone: string } | null;
   autoOpenSettings?: boolean;
   onSettingsAutoOpened?: () => void;
@@ -129,7 +130,7 @@ export default function ProfilePage({
   boostCredits, isBoostActive, boostTimeLeft,
   boostRadius, onBoostRadiusChange, onActivateBoost, onAddCredits,
   onPurchaseStrings,
-  onLogout, onDeleteAccount, onProfileUpdate, account,
+  onLogout, onDeleteAccount, onProfileUpdate, onPhotosChange, account,
   autoOpenSettings, onSettingsAutoOpened,
 }: ProfilePageProps) {
 
@@ -172,28 +173,32 @@ export default function ProfilePage({
     setPhotoError(null);
     const { url, error } = await db.uploadPhoto(file);
     if (url) {
-      const next = [...photos, url];
+      // Deduplicate — never add the same URL twice
+      const next = photos.includes(url) ? photos : [...photos, url];
       setPhotos(next);
+      onPhotosChange?.(next);
       await db.savePhotos(next);
     } else {
       setPhotoError(error ?? "Upload failed");
     }
     setPhotoUploading(false);
     if (photoInputRef.current) photoInputRef.current.value = "";
-  }, [photos]);
+  }, [photos, onPhotosChange]);
 
   const handleDeletePhoto = useCallback(async (url: string) => {
     setDeletingPhoto(url);
     const next = await db.deletePhoto(url, photos);
     setPhotos(next);
+    onPhotosChange?.(next);
     setDeletingPhoto(null);
-  }, [photos]);
+  }, [photos, onPhotosChange]);
 
   const handleSetProfilePhoto = useCallback(async (url: string) => {
     const next = [url, ...photos.filter(p => p !== url)];
     setPhotos(next);
+    onPhotosChange?.(next);
     await db.savePhotos(next);
-  }, [photos]);
+  }, [photos, onPhotosChange]);
   const [showEdit, setShowEdit] = useState(false);
   const [showStore, setShowStore] = useState(false);
   const [purchasedPack, setPurchasedPack] = useState<string | null>(null);

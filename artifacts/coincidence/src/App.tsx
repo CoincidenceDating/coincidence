@@ -722,6 +722,19 @@ function AppShell() {
     refreshDiscoverProfiles(lf, profilePrefs.ageMin, profilePrefs.ageMax);
   }
 
+  function handlePhotosChange(photos: string[]) {
+    setMyProfileSnapshot((prev) => prev ? db.buildProfileSnapshot({
+      user_id: prev.id,
+      name: prev.name,
+      age: prev.age,
+      bio: prev.bio,
+      photos,
+      gender: prev.gender ?? "",
+      hobbies: prev.hobbies ?? [],
+      height: prev.height,
+    }) : prev);
+  }
+
   function handleResetSetup() {
     db.upsertProfile({ setup_complete: false });
     setShowSetup(true);
@@ -1236,10 +1249,18 @@ function AppShell() {
             WebkitBackdropFilter: "blur(12px)",
             border: "1px solid rgba(255,255,255,0.1)",
           }}
-          className="rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          className="rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors overflow-hidden"
           aria-label="Open profile"
         >
-          <User style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
+          {myProfileSnapshot?.photo ? (
+            <img
+              src={myProfileSnapshot.photo}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <User style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
+          )}
         </button>
       )}
 
@@ -1357,6 +1378,7 @@ function AppShell() {
             onLogout={handleLogout}
             onDeleteAccount={handleDeleteAccount}
             onProfileUpdate={handleProfileUpdate}
+            onPhotosChange={handlePhotosChange}
             account={account}
             autoOpenSettings={settingsPending}
             onSettingsAutoOpened={() => setSettingsPending(false)}
