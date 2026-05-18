@@ -457,18 +457,15 @@ function ProfilePreviewSheet({
         onClick={onClose}
       />
 
-      {/* Sheet — full height from bottom */}
+      {/* Sheet — slides up from bottom, height driven by content up to max */}
       <motion.div
-        className="absolute inset-x-0 bottom-0 flex flex-col rounded-t-3xl overflow-hidden"
-        style={{ height: "94svh", background: "#0D0E1A", border: "1px solid rgba(232,56,125,0.18)", borderBottom: "none" }}
+        className="absolute inset-x-0 bottom-0 flex flex-col rounded-t-3xl"
+        style={{ maxHeight: "94svh", background: "#0D0E1A", border: "1px solid rgba(232,56,125,0.18)", borderBottom: "none", overflow: "hidden" }}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", stiffness: 340, damping: 32 }}
       >
-        {/* Gradient top line accent */}
-        <div className="shrink-0 h-[2px] w-full" style={{ background: "linear-gradient(90deg, #E8387D 0%, #9B5DE5 100%)" }} />
-
         {/* Drag handle + close */}
         <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
           <div className="w-8" />
@@ -485,7 +482,7 @@ function ProfilePreviewSheet({
         {/* Scrollable body */}
         <div className="flex-1 min-h-0 overflow-y-auto">
           {/* Photo carousel */}
-          <div className="relative w-full" style={{ height: "52svh" }}>
+          <div className="relative w-full" style={{ height: 280 }}>
             {allPhotos.length > 0 ? (
               <img
                 src={resolvePhoto(allPhotos[photoIdx])}
