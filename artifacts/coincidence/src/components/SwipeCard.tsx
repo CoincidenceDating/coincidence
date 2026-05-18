@@ -9,7 +9,7 @@ import {
   type PanInfo,
   type MotionValue,
 } from "framer-motion";
-import { Heart, X, HelpCircle, MapPin, MoreVertical, RotateCcw, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, X, HelpCircle, MapPin, MoreVertical, RotateCcw, ChevronLeft, ChevronRight } from "lucide-react";
 import { StringIcon } from "@/components/StringIcon";
 import type { Profile } from "@/lib/data";
 
@@ -611,15 +611,9 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
 
   useEffect(() => { setPhotoIndex(0); }, [profile.id]);
 
-  function handlePhotoTap(e: React.MouseEvent<HTMLDivElement>) {
-    if (isDragging.current || allPhotos.length <= 1) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x > rect.width * 0.5) {
-      setPhotoIndex(i => Math.min(allPhotos.length - 1, i + 1));
-    } else {
-      setPhotoIndex(i => Math.max(0, i - 1));
-    }
+  function handleCardTap() {
+    if (isDragging.current) return;
+    setShowPreview(true);
   }
 
   const dragX = useMotionValue(0);
@@ -786,7 +780,7 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
               <div
                 className="absolute inset-0"
                 style={{ background: profile.gradient }}
-                onClick={handlePhotoTap}
+                onClick={handleCardTap}
               >
                 {currentPhoto ? (
                   <img
@@ -834,15 +828,6 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                   </button>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/65 to-transparent px-5 pt-24 pb-5 text-white">
-                  {/* Info / expand button */}
-                  <button
-                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center text-white/80 hover:bg-white/25 active:scale-90 transition-all"
-                    onClick={(e) => { e.stopPropagation(); setShowPreview(true); }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    aria-label="View full profile"
-                  >
-                    <ChevronUp className="w-4 h-4" />
-                  </button>
                   <h2 className="text-2xl font-bold leading-tight">
                     {blurName ? (
                       <>
