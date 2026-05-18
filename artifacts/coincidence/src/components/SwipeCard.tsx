@@ -445,44 +445,47 @@ function ProfilePreviewSheet({
   const allPhotos = profile.photos?.length ? profile.photos : profile.photo ? [profile.photo] : [];
   const [photoIdx, setPhotoIdx] = useState(0);
 
-  function tapPhoto(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x > rect.width * 0.5) setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1));
-    else setPhotoIdx(i => Math.max(0, i - 1));
-  }
-
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col">
+    <div className="fixed inset-0 z-[9999]">
+      {/* Backdrop */}
       <motion.div
-        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+        className="absolute inset-0"
+        style={{ background: "rgba(13,14,26,0.85)", backdropFilter: "blur(8px)" }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
       />
+
+      {/* Sheet — full height from bottom */}
       <motion.div
-        className="absolute inset-x-0 bottom-0 flex flex-col bg-background rounded-t-3xl overflow-hidden"
-        style={{ maxHeight: "92svh" }}
+        className="absolute inset-x-0 bottom-0 flex flex-col rounded-t-3xl overflow-hidden"
+        style={{ height: "94svh", background: "#0D0E1A", border: "1px solid rgba(232,56,125,0.18)", borderBottom: "none" }}
         initial={{ y: "100%" }}
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
-        transition={{ type: "spring", stiffness: 380, damping: 34 }}
+        transition={{ type: "spring", stiffness: 340, damping: 32 }}
       >
-        {/* drag handle */}
-        <div className="w-10 h-1 rounded-full bg-muted mx-auto mt-3 mb-0 shrink-0" />
+        {/* Gradient top line accent */}
+        <div className="shrink-0 h-[2px] w-full" style={{ background: "linear-gradient(90deg, #E8387D 0%, #9B5DE5 100%)" }} />
 
-        {/* close */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-8 h-8 rounded-full bg-foreground/10 flex items-center justify-center text-foreground/60 hover:text-foreground transition-colors"
-        >
-          <X className="w-4 h-4" />
-        </button>
+        {/* Drag handle + close */}
+        <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
+          <div className="w-8" />
+          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.18)" }} />
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-        <div className="overflow-y-auto flex-1">
-          {/* Photo */}
-          <div className="relative w-full bg-muted" style={{ height: "55svh" }} onClick={tapPhoto}>
+        {/* Scrollable body */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          {/* Photo carousel */}
+          <div className="relative w-full" style={{ height: "52svh" }}>
             {allPhotos.length > 0 ? (
               <img
                 src={resolvePhoto(allPhotos[photoIdx])}
@@ -492,86 +495,118 @@ function ProfilePreviewSheet({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center" style={{ background: profile.gradient }}>
-                <span className="text-9xl font-black text-white/10 select-none">{profile.avatar}</span>
+                <span className="text-9xl font-black select-none" style={{ color: "rgba(255,255,255,0.08)" }}>{profile.avatar}</span>
               </div>
             )}
 
-            {/* Photo dots */}
+            {/* Gradient fade into dark bg */}
+            <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, #0D0E1A)" }} />
+
+            {/* Photo indicator dots */}
             {allPhotos.length > 1 && (
               <div className="absolute top-3 left-3 right-3 flex gap-1 pointer-events-none">
                 {allPhotos.map((_, i) => (
-                  <div key={i} className="flex-1 h-0.5 rounded-full transition-all" style={{ background: i === photoIdx ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)" }} />
+                  <div
+                    key={i}
+                    className="flex-1 h-0.5 rounded-full transition-all duration-200"
+                    style={{ background: i === photoIdx ? "rgba(232,56,125,0.95)" : "rgba(255,255,255,0.28)" }}
+                  />
                 ))}
               </div>
             )}
 
-            {/* Prev/next arrows */}
+            {/* Tap zones for photo cycling */}
             {allPhotos.length > 1 && (
               <>
+                <button
+                  className="absolute inset-y-0 left-0 w-1/2 opacity-0"
+                  onClick={() => setPhotoIdx(i => Math.max(0, i - 1))}
+                  aria-label="Previous photo"
+                />
+                <button
+                  className="absolute inset-y-0 right-0 w-1/2 opacity-0"
+                  onClick={() => setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1))}
+                  aria-label="Next photo"
+                />
                 {photoIdx > 0 && (
-                  <button
-                    className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white pointer-events-auto"
-                    onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => Math.max(0, i - 1)); }}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(13,14,26,0.6)" }}>
+                    <ChevronLeft className="w-4 h-4 text-white/70" />
+                  </div>
                 )}
                 {photoIdx < allPhotos.length - 1 && (
-                  <button
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white pointer-events-auto"
-                    onClick={(e) => { e.stopPropagation(); setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1)); }}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(13,14,26,0.6)" }}>
+                    <ChevronRight className="w-4 h-4 text-white/70" />
+                  </div>
                 )}
               </>
             )}
           </div>
 
-          {/* Info */}
-          <div className="px-5 pt-5 pb-4">
-            <h2 className="text-2xl font-bold leading-tight">
+          {/* Profile info */}
+          <div className="px-5 pt-1 pb-6">
+            {/* Name + age */}
+            <h2 className="text-3xl font-black leading-tight tracking-tight">
               {blurName ? (
                 <>
-                  <span style={{ filter: "blur(9px)", userSelect: "none" }} aria-hidden="true">{profile.name}</span>
+                  <span style={{ filter: "blur(9px)", userSelect: "none", background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }} aria-hidden="true">
+                    {profile.name}
+                  </span>
                   <span className="sr-only">Name hidden</span>
-                  {", "}{profile.age}
+                  <span className="text-white">, {profile.age}</span>
                 </>
               ) : (
-                <>{profile.name}, {profile.age}</>
+                <span style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                  {profile.name}<span style={{ WebkitTextFillColor: "rgba(255,255,255,0.9)" }}>, {profile.age}</span>
+                </span>
               )}
             </h2>
             {blurName && (
-              <p className="text-[10px] text-muted-foreground mt-0.5 italic">name revealed on match</p>
+              <p className="text-[10px] mt-0.5 italic" style={{ color: "rgba(255,255,255,0.35)" }}>name revealed on match</p>
             )}
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <span className="text-sm text-muted-foreground">{profile.distance}</span>
+
+            {/* Distance */}
+            <div className="flex items-center gap-1.5 mt-2">
+              <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "#E8387D" }} />
+              <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{profile.distance}</span>
             </div>
+
+            {/* Divider */}
+            <div className="mt-4 mb-4 h-px" style={{ background: "linear-gradient(90deg, rgba(232,56,125,0.3) 0%, rgba(155,93,229,0.15) 60%, transparent 100%)" }} />
+
+            {/* Bio */}
             {profile.bio && (
-              <p className="text-sm text-foreground/80 mt-3 leading-relaxed">{profile.bio}</p>
+              <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
+                {profile.bio}
+              </p>
             )}
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="shrink-0 px-5 pb-8 pt-3 border-t border-border flex items-center justify-center gap-4">
+        {/* Action bar — pinned at bottom */}
+        <div className="shrink-0 px-6 pb-8 pt-4 flex items-center justify-center gap-5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D0E1A" }}>
+          {/* Pass */}
           <button
             onClick={() => { onSwipe("left"); onClose(); }}
-            className="w-12 h-12 rounded-full bg-card border border-white/10 text-rose-400 hover:bg-rose-500/10 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+            className="w-13 h-13 rounded-full flex items-center justify-center active:scale-90 transition-all shadow-lg"
+            style={{ width: 52, height: 52, background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.35)", color: "#f87171" }}
           >
             <X className="w-5 h-5" />
           </button>
+
+          {/* Like — large gradient */}
           <button
             onClick={() => { onSwipe("right"); onClose(); }}
-            className="w-14 h-14 rounded-full active:scale-95 transition-all flex items-center justify-center shadow-xl shadow-primary/30"
-            style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
+            className="rounded-full flex items-center justify-center active:scale-90 transition-all"
+            style={{ width: 64, height: 64, background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", boxShadow: "0 0 28px rgba(232,56,125,0.5)" }}
           >
-            <Heart className="w-6 h-6 text-white fill-white" />
+            <Heart className="w-7 h-7 text-white fill-white" />
           </button>
+
+          {/* Maybe */}
           <button
             onClick={() => { onSwipe("maybe"); onClose(); }}
-            className="w-12 h-12 rounded-full bg-card border border-white/10 text-violet-400 hover:bg-violet-500/10 active:scale-95 transition-all flex items-center justify-center shadow-lg"
+            className="rounded-full flex items-center justify-center active:scale-90 transition-all shadow-lg"
+            style={{ width: 52, height: 52, background: "rgba(155,93,229,0.12)", border: "1.5px solid rgba(155,93,229,0.35)", color: "#a78bfa" }}
           >
             <HelpCircle className="w-5 h-5" />
           </button>
