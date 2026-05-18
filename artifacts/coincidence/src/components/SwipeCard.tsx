@@ -637,18 +637,6 @@ export function SwipeCard({ profile, onSwipe, locationIcon, locationName, progre
                   </div>
                 )}
 
-                {/* Photo progress dots */}
-                {allPhotos.length > 1 && (
-                  <div className="absolute top-3 left-3 right-3 z-10 flex gap-1 pointer-events-none">
-                    {allPhotos.map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 h-0.5 rounded-full transition-all duration-200"
-                        style={{ background: i === photoIndex ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)" }}
-                      />
-                    ))}
-                  </div>
-                )}
                 {locationIcon && locationName && (
                   <div className="absolute top-4 left-4 flex items-center gap-1.5 bg-black/40 backdrop-blur-sm text-white text-xs px-3 py-1.5 rounded-full">
                     {locationIcon}
