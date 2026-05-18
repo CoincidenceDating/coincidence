@@ -62,7 +62,7 @@ interface MatchesPageProps {
 }
 
 export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds, onOpenChat, onUnmatch }: MatchesPageProps) {
-  const { openPreview } = useProfilePreview();
+  const { openPreview, closePreview } = useProfilePreview();
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [confirmId, setConfirmId]   = useState<string | null>(null);
 
@@ -145,7 +145,7 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
           >
             <div
               className="relative shrink-0"
-              onClick={(e) => { e.stopPropagation(); openPreview(match.profile); }}
+              onClick={(e) => { e.stopPropagation(); openPreview(match.profile, { onMessage: () => { closePreview(); onOpenChat(match); } }); }}
             >
               <ProfileAvatar profile={match.profile} size={44} />
               {isUnread && (
@@ -234,7 +234,7 @@ export default function MatchesPage({ matches, threads = {}, checkIns, unreadIds
       <div className="relative flex flex-col items-center shrink-0 w-[72px]">
         <button
           className="relative active:opacity-70 transition-opacity"
-          onClick={() => { setMenuOpenId(null); openPreview(match.profile); }}
+          onClick={() => { setMenuOpenId(null); openPreview(match.profile, { onMessage: () => { closePreview(); onOpenChat(match); } }); }}
           onContextMenu={(e) => { e.preventDefault(); setMenuOpenId(isMenuOpen ? null : match.profile.id); }}
         >
           {/* Gradient ring for Stars Aligned */}

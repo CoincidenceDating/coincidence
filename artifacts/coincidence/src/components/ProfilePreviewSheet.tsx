@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Heart, X, HelpCircle, MapPin, Ruler } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, X, HelpCircle, MapPin, MessageCircle, Ruler } from "lucide-react";
 import type { Profile } from "@/lib/data";
 
 function resolvePhoto(url: string | undefined): string | undefined {
@@ -14,11 +14,13 @@ export function ProfilePreviewSheet({
   blurName,
   onClose,
   onSwipe,
+  onMessage,
 }: {
   profile: Profile;
   blurName?: boolean;
   onClose: () => void;
   onSwipe?: (dir: "left" | "right" | "maybe") => void;
+  onMessage?: () => void;
 }) {
   const allPhotos = profile.photos?.length ? profile.photos : profile.photo ? [profile.photo] : [];
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -158,7 +160,7 @@ export function ProfilePreviewSheet({
         </div>
       </div>
 
-      {/* ── Action bar — only shown when swipe callbacks are provided ── */}
+      {/* ── Action bar ── */}
       {onSwipe && (
         <div className="shrink-0 flex items-center justify-center gap-6 px-6 pt-4 pb-10"
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D0E1A" }}>
@@ -182,6 +184,19 @@ export function ProfilePreviewSheet({
             style={{ width: 56, height: 56, background: "rgba(155,93,229,0.12)", border: "1.5px solid rgba(155,93,229,0.4)", color: "#a78bfa" }}
           >
             <HelpCircle className="w-6 h-6" />
+          </button>
+        </div>
+      )}
+      {!onSwipe && onMessage && (
+        <div className="shrink-0 px-6 pt-4 pb-10"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D0E1A" }}>
+          <button
+            onClick={onMessage}
+            className="w-full flex items-center justify-center gap-2.5 rounded-2xl py-4 text-base font-semibold active:scale-95 transition-transform"
+            style={{ background: "linear-gradient(135deg,#E8387D,#9B5DE5)", boxShadow: "0 0 28px rgba(232,56,125,0.4)" }}
+          >
+            <MessageCircle className="w-5 h-5 text-white" />
+            <span className="text-white">Message</span>
           </button>
         </div>
       )}

@@ -6,6 +6,7 @@ import { ProfilePreviewSheet } from "@/components/ProfilePreviewSheet";
 type OpenPreviewOptions = {
   blurName?: boolean;
   onSwipe?: (dir: "left" | "right" | "maybe") => void;
+  onMessage?: () => void;
 };
 
 type ProfilePreviewContextValue = {
@@ -44,6 +45,7 @@ export function ProfilePreviewProvider({ children }: { children: React.ReactNode
             blurName={state.opts.blurName}
             onClose={closePreview}
             onSwipe={state.opts.onSwipe}
+            onMessage={state.opts.onMessage}
           />
         )}
       </AnimatePresence>
