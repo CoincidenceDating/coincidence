@@ -446,170 +446,132 @@ function ProfilePreviewSheet({
   const [photoIdx, setPhotoIdx] = useState(0);
 
   return (
-    <div className="fixed inset-0 z-[9999]">
-      {/* Backdrop */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ background: "rgba(13,14,26,0.85)", backdropFilter: "blur(8px)" }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={onClose}
-      />
+    <motion.div
+      className="fixed inset-0 z-[9999] flex flex-col"
+      style={{ background: "#0D0E1A" }}
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", stiffness: 340, damping: 32 }}
+    >
+      {/* ── Header: close button ── */}
+      <div className="shrink-0 flex items-center justify-between px-4 pt-10 pb-2">
+        <button
+          onClick={onClose}
+          className="flex items-center gap-2 text-sm font-medium active:opacity-60 transition-opacity"
+          style={{ color: "rgba(255,255,255,0.55)" }}
+        >
+          <ChevronLeft className="w-5 h-5" />
+          Back
+        </button>
+      </div>
 
-      {/* Sheet — slides up from bottom, height driven by content up to max */}
-      <motion.div
-        className="absolute inset-x-0 bottom-0 flex flex-col rounded-t-3xl"
-        style={{ maxHeight: "94svh", background: "#0D0E1A", border: "1px solid rgba(232,56,125,0.18)", borderBottom: "none", overflow: "hidden" }}
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", stiffness: 340, damping: 32 }}
-      >
-        {/* Drag handle + close */}
-        <div className="shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
-          <div className="w-8" />
-          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.18)" }} />
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
-            style={{ background: "rgba(255,255,255,0.07)", color: "rgba(255,255,255,0.5)" }}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+      {/* ── Photo (fixed height, never scrolls) ── */}
+      <div className="shrink-0 relative mx-4 rounded-2xl overflow-hidden" style={{ height: 300 }}>
+        {allPhotos.length > 0 ? (
+          <img
+            src={resolvePhoto(allPhotos[photoIdx])}
+            alt={profile.name}
+            className="w-full h-full object-cover object-top"
+            draggable={false}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center" style={{ background: profile.gradient }}>
+            <span className="text-9xl font-black select-none" style={{ color: "rgba(255,255,255,0.08)" }}>{profile.avatar}</span>
+          </div>
+        )}
 
-        {/* Scrollable body */}
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          {/* Photo carousel */}
-          <div className="relative w-full" style={{ height: 280 }}>
-            {allPhotos.length > 0 ? (
-              <img
-                src={resolvePhoto(allPhotos[photoIdx])}
-                alt={profile.name}
-                className="w-full h-full object-cover object-top"
-                draggable={false}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center" style={{ background: profile.gradient }}>
-                <span className="text-9xl font-black select-none" style={{ color: "rgba(255,255,255,0.08)" }}>{profile.avatar}</span>
+        {/* Gradient fade */}
+        <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, #0D0E1A)" }} />
+
+        {/* Photo dots */}
+        {allPhotos.length > 1 && (
+          <div className="absolute top-3 left-3 right-3 flex gap-1 pointer-events-none">
+            {allPhotos.map((_, i) => (
+              <div key={i} className="flex-1 h-0.5 rounded-full transition-all duration-200"
+                style={{ background: i === photoIdx ? "#E8387D" : "rgba(255,255,255,0.3)" }} />
+            ))}
+          </div>
+        )}
+
+        {/* Invisible tap zones */}
+        {allPhotos.length > 1 && (
+          <>
+            <button className="absolute inset-y-0 left-0 w-1/2 opacity-0" onClick={() => setPhotoIdx(i => Math.max(0, i - 1))} aria-label="Previous photo" />
+            <button className="absolute inset-y-0 right-0 w-1/2 opacity-0" onClick={() => setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1))} aria-label="Next photo" />
+            {photoIdx > 0 && (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(13,14,26,0.6)" }}>
+                <ChevronLeft className="w-4 h-4 text-white/70" />
               </div>
             )}
-
-            {/* Gradient fade into dark bg */}
-            <div className="absolute inset-x-0 bottom-0 h-20 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, #0D0E1A)" }} />
-
-            {/* Photo indicator dots */}
-            {allPhotos.length > 1 && (
-              <div className="absolute top-3 left-3 right-3 flex gap-1 pointer-events-none">
-                {allPhotos.map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 h-0.5 rounded-full transition-all duration-200"
-                    style={{ background: i === photoIdx ? "rgba(232,56,125,0.95)" : "rgba(255,255,255,0.28)" }}
-                  />
-                ))}
+            {photoIdx < allPhotos.length - 1 && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(13,14,26,0.6)" }}>
+                <ChevronRight className="w-4 h-4 text-white/70" />
               </div>
             )}
+          </>
+        )}
+      </div>
 
-            {/* Tap zones for photo cycling */}
-            {allPhotos.length > 1 && (
-              <>
-                <button
-                  className="absolute inset-y-0 left-0 w-1/2 opacity-0"
-                  onClick={() => setPhotoIdx(i => Math.max(0, i - 1))}
-                  aria-label="Previous photo"
-                />
-                <button
-                  className="absolute inset-y-0 right-0 w-1/2 opacity-0"
-                  onClick={() => setPhotoIdx(i => Math.min(allPhotos.length - 1, i + 1))}
-                  aria-label="Next photo"
-                />
-                {photoIdx > 0 && (
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(13,14,26,0.6)" }}>
-                    <ChevronLeft className="w-4 h-4 text-white/70" />
-                  </div>
-                )}
-                {photoIdx < allPhotos.length - 1 && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center pointer-events-none" style={{ background: "rgba(13,14,26,0.6)" }}>
-                    <ChevronRight className="w-4 h-4 text-white/70" />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Profile info */}
-          <div className="px-5 pt-1 pb-6">
-            {/* Name + age */}
-            <h2 className="text-3xl font-black leading-tight tracking-tight">
-              {blurName ? (
-                <>
-                  <span style={{ filter: "blur(9px)", userSelect: "none", background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }} aria-hidden="true">
-                    {profile.name}
-                  </span>
-                  <span className="sr-only">Name hidden</span>
-                  <span className="text-white">, {profile.age}</span>
-                </>
-              ) : (
-                <span style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                  {profile.name}<span style={{ WebkitTextFillColor: "rgba(255,255,255,0.9)" }}>, {profile.age}</span>
-                </span>
-              )}
-            </h2>
-            {blurName && (
-              <p className="text-[10px] mt-0.5 italic" style={{ color: "rgba(255,255,255,0.35)" }}>name revealed on match</p>
-            )}
-
-            {/* Distance */}
-            <div className="flex items-center gap-1.5 mt-2">
-              <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "#E8387D" }} />
-              <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{profile.distance}</span>
-            </div>
-
-            {/* Divider */}
-            <div className="mt-4 mb-4 h-px" style={{ background: "linear-gradient(90deg, rgba(232,56,125,0.3) 0%, rgba(155,93,229,0.15) 60%, transparent 100%)" }} />
-
-            {/* Bio */}
-            {profile.bio && (
-              <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>
-                {profile.bio}
-              </p>
-            )}
-          </div>
+      {/* ── Scrollable info ── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 pt-4 pb-2">
+        <h2 className="text-3xl font-black leading-tight tracking-tight">
+          {blurName ? (
+            <>
+              <span style={{ filter: "blur(9px)", userSelect: "none", background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }} aria-hidden="true">
+                {profile.name}
+              </span>
+              <span className="sr-only">Name hidden</span>
+              <span style={{ color: "rgba(255,255,255,0.9)" }}>, {profile.age}</span>
+            </>
+          ) : (
+            <>
+              <span style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+                {profile.name}
+              </span>
+              <span style={{ color: "rgba(255,255,255,0.9)" }}>, {profile.age}</span>
+            </>
+          )}
+        </h2>
+        {blurName && (
+          <p className="text-[10px] mt-0.5 italic" style={{ color: "rgba(255,255,255,0.35)" }}>name revealed on match</p>
+        )}
+        <div className="flex items-center gap-1.5 mt-2">
+          <MapPin className="w-3.5 h-3.5 shrink-0" style={{ color: "#E8387D" }} />
+          <span className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>{profile.distance}</span>
         </div>
+        <div className="mt-4 mb-4 h-px" style={{ background: "linear-gradient(90deg, rgba(232,56,125,0.3) 0%, rgba(155,93,229,0.15) 60%, transparent 100%)" }} />
+        {profile.bio && (
+          <p className="text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.75)" }}>{profile.bio}</p>
+        )}
+      </div>
 
-        {/* Action bar — pinned at bottom */}
-        <div className="shrink-0 px-6 pb-8 pt-4 flex items-center justify-center gap-5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#0D0E1A" }}>
-          {/* Pass */}
-          <button
-            onClick={() => { onSwipe("left"); onClose(); }}
-            className="w-13 h-13 rounded-full flex items-center justify-center active:scale-90 transition-all shadow-lg"
-            style={{ width: 52, height: 52, background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.35)", color: "#f87171" }}
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          {/* Like — large gradient */}
-          <button
-            onClick={() => { onSwipe("right"); onClose(); }}
-            className="rounded-full flex items-center justify-center active:scale-90 transition-all"
-            style={{ width: 64, height: 64, background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", boxShadow: "0 0 28px rgba(232,56,125,0.5)" }}
-          >
-            <Heart className="w-7 h-7 text-white fill-white" />
-          </button>
-
-          {/* Maybe */}
-          <button
-            onClick={() => { onSwipe("maybe"); onClose(); }}
-            className="rounded-full flex items-center justify-center active:scale-90 transition-all shadow-lg"
-            style={{ width: 52, height: 52, background: "rgba(155,93,229,0.12)", border: "1.5px solid rgba(155,93,229,0.35)", color: "#a78bfa" }}
-          >
-            <HelpCircle className="w-5 h-5" />
-          </button>
-        </div>
-      </motion.div>
-    </div>
+      {/* ── Action bar (always visible, never scrolls) ── */}
+      <div className="shrink-0 flex items-center justify-center gap-6 px-6 pt-4 pb-10"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <button
+          onClick={() => { onSwipe("left"); onClose(); }}
+          className="rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          style={{ width: 56, height: 56, background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.4)", color: "#f87171" }}
+        >
+          <X className="w-6 h-6" />
+        </button>
+        <button
+          onClick={() => { onSwipe("right"); onClose(); }}
+          className="rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          style={{ width: 68, height: 68, background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)", boxShadow: "0 0 30px rgba(232,56,125,0.55)" }}
+        >
+          <Heart className="w-7 h-7 text-white fill-white" />
+        </button>
+        <button
+          onClick={() => { onSwipe("maybe"); onClose(); }}
+          className="rounded-full flex items-center justify-center active:scale-90 transition-transform"
+          style={{ width: 56, height: 56, background: "rgba(155,93,229,0.12)", border: "1.5px solid rgba(155,93,229,0.4)", color: "#a78bfa" }}
+        >
+          <HelpCircle className="w-6 h-6" />
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
