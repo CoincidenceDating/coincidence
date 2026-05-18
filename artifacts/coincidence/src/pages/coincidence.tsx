@@ -28,6 +28,7 @@ interface CoincidencePageProps {
   boostCredits: number;
   onDoubleStringCredit: () => void;
   blockedIds: string[];
+  matchedIds: string[];
   incomingCoincidenceMatch?: Match | null;
   onClearIncomingCoincidenceMatch?: () => void;
   onReport: (profile: Profile, reason: string) => void;
@@ -46,7 +47,8 @@ let _venueLastLoadTime = 0;
 let _cachedNearbyLocations: LocationData[] | null = null;
 let _cachedVenueRealCounts: Record<string, number> = {};
 
-export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, onActiveChange, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
+export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckIn, onSendMessage, checkedInLocations, lookingFor, boostCredits, onDoubleStringCredit, blockedIds, matchedIds, incomingCoincidenceMatch, onClearIncomingCoincidenceMatch, onReport, onActiveChange, gpsStatus, userLat, userLng, onRequestGps }: CoincidencePageProps) {
+  const matchedIdSet = new Set(matchedIds);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
   const [isActive, setIsActive] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -95,7 +97,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
     activeVenueIdRef.current = venueId;
     pollIntervalRef.current = setInterval(async () => {
       if (!activeVenueIdRef.current) return;
-      const fresh = await db.getActiveUsersAtVenue(activeVenueIdRef.current);
+      const fresh = (await db.getActiveUsersAtVenue(activeVenueIdRef.current))
+        .filter((p) => !matchedIdSet.has(p.id));
       setRealUsers((prev) => {
         const prevIds = new Set(prev.map((p) => p.id));
         const toAdd = fresh.filter((p) => !prevIds.has(p.id));
@@ -242,6 +245,7 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
           location.id,
           ownProfile.user_id,
           (profile) => {
+            if (matchedIdSet.has(profile.id)) return;
             setRealUsers((prev) =>
               prev.some((p) => p.id === profile.id) ? prev : [...prev, profile]
             );
@@ -264,7 +268,8 @@ export default function CoincidencePage({ onMatch, onMaybe, onRealLike, onCheckI
           },
         );
       }
-      const real = await db.getActiveUsersAtVenue(location.id);
+      const real = (await db.getActiveUsersAtVenue(location.id))
+        .filter((p) => !matchedIdSet.has(p.id));
       setRealUsers(real);
       startVenuePoll(location.id);
     } finally {

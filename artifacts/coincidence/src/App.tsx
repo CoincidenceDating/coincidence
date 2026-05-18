@@ -496,7 +496,11 @@ function AppShell() {
         ),
         db.getBoostedProfileIds(),
       ]);
-      setDiscoverProfiles(spreadBoostedProfiles(profiles, boostedIds));
+      const matchedProfileIds = new Set(matchesRef.current.map((m) => db.baseProfileId(m.profile.id)));
+      const allProfiles = spreadBoostedProfiles(profiles, boostedIds).filter(
+        (p) => !matchedProfileIds.has(db.baseProfileId(p.id))
+      );
+      setDiscoverProfiles(allProfiles);
     } finally {
       setIsLoadingProfiles(false);
     }
@@ -1274,6 +1278,7 @@ function AppShell() {
             boostCredits={boostCredits}
             onDoubleStringCredit={handleDoubleStringCredit}
             blockedIds={blockedIds}
+            matchedIds={matches.map((m) => m.profile.id)}
             incomingCoincidenceMatch={coincidenceIncomingMatch}
             onClearIncomingCoincidenceMatch={() => setCoincidenceIncomingMatch(null)}
             onReport={handleReport}
