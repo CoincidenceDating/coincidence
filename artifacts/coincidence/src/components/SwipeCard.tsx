@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   useMotionValue,
   useTransform,
@@ -445,7 +446,10 @@ function ProfilePreviewSheet({
   const allPhotos = profile.photos?.length ? profile.photos : profile.photo ? [profile.photo] : [];
   const [photoIdx, setPhotoIdx] = useState(0);
 
-  return (
+  const portalTarget = typeof document !== "undefined" ? document.body : null;
+  if (!portalTarget) return null;
+
+  return createPortal(
     <motion.div
       className="fixed inset-0 z-[9999] flex flex-col"
       style={{ background: "#0D0E1A" }}
@@ -571,7 +575,8 @@ function ProfilePreviewSheet({
           <HelpCircle className="w-6 h-6" />
         </button>
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 }
 
