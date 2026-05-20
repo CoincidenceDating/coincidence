@@ -145,7 +145,7 @@ export default function SwipePage({
               animate={{ opacity: [1, 0.4, 1] }}
               transition={{ duration: 1.3, repeat: Infinity, ease: "easeInOut" }}
             >
-              <StringIcon style={{ width: "clamp(0.7rem, 3vw, 0.85rem)", height: "clamp(0.7rem, 3vw, 0.85rem)" }} />
+              <StringIcon />
             </motion.div>
             {formatBoostTime(boostTimeLeft)} · {boostRadius}mi
           </motion.div>
@@ -170,7 +170,7 @@ export default function SwipePage({
               height: "clamp(2rem, 9vw, 2.75rem)",
             }}
           >
-            <StringIcon style={{ width: "clamp(0.9rem, 4vw, 1.15rem)", height: "clamp(0.9rem, 4vw, 1.15rem)" }} />
+            <StringIcon />
             {boostCredits > 0 && (
               <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
                 style={{ background: "linear-gradient(135deg, #E8387D 0%, #9B5DE5 100%)" }}
